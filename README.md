@@ -7,7 +7,7 @@ A web comments layer built on [AT Protocol](https://atproto.com) that lets you a
 ## Project Structure
 
 ```
-project-agua/
+margin/
 ├── lexicons/           # AT Protocol lexicon schemas
 │   └── at/margin/
 │       ├── annotation.json
@@ -37,8 +37,6 @@ cd backend
 go mod tidy
 go run ./cmd/server
 ```
-
-Server runs on http://localhost:8080
 
 Server runs on http://localhost:8080
 
