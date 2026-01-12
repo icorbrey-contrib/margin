@@ -45,7 +45,7 @@ Server runs on http://localhost:8080
 Run the full stack (Backend + Postgres) with Docker:
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### Web App
