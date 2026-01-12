@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+main
+margin-backend
+backend/server
+
+# Environment
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite
+
+# Keys
+oauth_private_key.pem
+*.pem
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+backend/vendor/
+
+# other
+NOTES.md
+extension.zip

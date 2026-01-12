@@ -1,0 +1,88 @@
+name: Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update Manifest Version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "Updating manifests to version $VERSION"
+          
+          cd extension
+          for manifest in manifest.json manifest.chrome.json manifest.firefox.json; do
+            if [ -f "$manifest" ]; then
+              tmp=$(mktemp)
+              jq --arg v "$VERSION" '.version = $v' "$manifest" > "$tmp" && mv "$tmp" "$manifest"
+              echo "Updated $manifest"
+            fi
+          done
+          cd ..
+
+      - name: Build Extension (Chrome)
+        run: |
+          cd extension
+          cp manifest.chrome.json manifest.json
+          zip -r ../margin-extension-chrome.zip . -x "*.DS_Store" -x "*.git*" -x "manifest.*.json"
+          cd ..
+          
+      - name: Build Extension (Firefox)
+        run: |
+          cd extension
+          cp manifest.firefox.json manifest.json
+          zip -r ../margin-extension-firefox.xpi . -x "*.DS_Store" -x "*.git*" -x "manifest.*.json"
+          cd ..
+
+      - name: Publish to Chrome Web Store
+        continue-on-error: true
+        uses: mobilefirstllc/cws-publish@latest
+        with:
+          action: publish
+          client_id: ${{ secrets.CHROME_CLIENT_ID }}
+          client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
+          zip_file: margin-extension-chrome.zip
+
+      # - name: Publish to Edge Add-ons
+      #   uses: nicholaslee119/edge-addon-upload@master
+      #   with:
+      #     product_id: ${{ secrets.EDGE_PRODUCT_ID }}
+      #     client_id: ${{ secrets.EDGE_CLIENT_ID }}
+      #     client_secret: ${{ secrets.EDGE_CLIENT_SECRET }}
+      #     access_token_url: ${{ secrets.EDGE_ACCESS_TOKEN_URL }}
+      #     file_path: margin-extension-chrome.zip
+
+      - name: Publish to Firefox AMO
+        continue-on-error: true
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          cd extension
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "{\"release_notes\": {\"en-US\": \"$COMMIT_MSG\"}, \"notes\": \"Thank you!\"}" > amo-metadata.json
+          npx web-ext sign --channel=listed --api-key=$AMO_JWT_ISSUER --api-secret=$AMO_JWT_SECRET --source-dir=. --artifacts-dir=../web-ext-artifacts --approval-timeout=300000 --amo-metadata=amo-metadata.json || echo "Web-ext sign timed out (expected), continuing..."
+          rm amo-metadata.json
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            margin-extension-chrome.zip
+            margin-extension-firefox.xpi
+          generate_release_notes: true
+          draft: false
+          prerelease: false

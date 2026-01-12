@@ -1,0 +1,36 @@
+services:
+  margin:
+    image: ghcr.io/margin-at/margin:latest
+    container_name: margin-at
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://margin:margin@margin-db:5432/margin?sslmode=disable
+      - STATIC_DIR=dist
+      - OAUTH_KEY_PATH=/data/oauth_private_key.pem
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    container_name: margin-db
+    environment:
+      - POSTGRES_USER=margin
+      - POSTGRES_PASSWORD=margin
+      - POSTGRES_DB=margin
+
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - margin-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U margin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  db-data:
+  margin-data:
