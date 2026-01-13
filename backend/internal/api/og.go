@@ -101,6 +101,60 @@ var crawlerUserAgents = []string{
 	"Bluesky",
 }
 
+var lucideToEmoji = map[string]string{
+	"folder":    "📁",
+	"star":      "⭐",
+	"heart":     "❤️",
+	"bookmark":  "🔖",
+	"lightbulb": "💡",
+	"zap":       "⚡",
+	"coffee":    "☕",
+	"music":     "🎵",
+	"camera":    "📷",
+	"code":      "💻",
+	"globe":     "🌍",
+	"flag":      "🚩",
+	"tag":       "🏷️",
+	"box":       "📦",
+	"archive":   "🗄️",
+	"file":      "📄",
+	"image":     "🖼️",
+	"video":     "🎬",
+	"mail":      "✉️",
+	"pin":       "📍",
+	"calendar":  "📅",
+	"clock":     "🕐",
+	"search":    "🔍",
+	"settings":  "⚙️",
+	"user":      "👤",
+	"users":     "👥",
+	"home":      "🏠",
+	"briefcase": "💼",
+	"gift":      "🎁",
+	"award":     "🏆",
+	"target":    "🎯",
+	"trending":  "📈",
+	"activity":  "📊",
+	"cpu":       "🔲",
+	"database":  "🗃️",
+	"cloud":     "☁️",
+	"sun":       "☀️",
+	"moon":      "🌙",
+	"flame":     "🔥",
+	"leaf":      "🍃",
+}
+
+func iconToEmoji(icon string) string {
+	if strings.HasPrefix(icon, "icon:") {
+		name := strings.TrimPrefix(icon, "icon:")
+		if emoji, ok := lucideToEmoji[name]; ok {
+			return emoji
+		}
+		return "📁"
+	}
+	return icon
+}
+
 func isCrawler(userAgent string) bool {
 	ua := strings.ToLower(userAgent)
 	for _, bot := range crawlerUserAgents {
@@ -153,6 +207,39 @@ func (h *OGHandler) HandleAnnotationPage(w http.ResponseWriter, r *http.Request)
 
 	collectionURI := fmt.Sprintf("at://%s/at.margin.collection/%s", did, rkey)
 	collection, err := h.db.GetCollectionByURI(collectionURI)
+	if err == nil && collection != nil {
+		h.serveCollectionOG(w, collection)
+		return
+	}
+
+	h.serveIndexHTML(w, r)
+}
+
+func (h *OGHandler) HandleCollectionPage(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	prefix := "/collection/"
+	if !strings.HasPrefix(path, prefix) {
+		h.serveIndexHTML(w, r)
+		return
+	}
+
+	uriParam := strings.TrimPrefix(path, prefix)
+	if uriParam == "" {
+		h.serveIndexHTML(w, r)
+		return
+	}
+
+	uri, err := url.QueryUnescape(uriParam)
+	if err != nil {
+		uri = uriParam
+	}
+
+	if !isCrawler(r.UserAgent()) {
+		h.serveIndexHTML(w, r)
+		return
+	}
+
+	collection, err := h.db.GetCollectionByURI(uri)
 	if err == nil && collection != nil {
 		h.serveCollectionOG(w, collection)
 		return
@@ -347,7 +434,7 @@ func (h *OGHandler) serveHighlightOG(w http.ResponseWriter, highlight *db.Highli
 func (h *OGHandler) serveCollectionOG(w http.ResponseWriter, collection *db.Collection) {
 	icon := "📁"
 	if collection.Icon != nil && *collection.Icon != "" {
-		icon = *collection.Icon
+		icon = iconToEmoji(*collection.Icon)
 	}
 
 	title := fmt.Sprintf("%s %s", icon, collection.Name)
@@ -663,7 +750,7 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 
 					icon := "📁"
 					if collection.Icon != nil && *collection.Icon != "" {
-						icon = *collection.Icon
+						icon = iconToEmoji(*collection.Icon)
 					}
 					text = fmt.Sprintf("%s %s", icon, collection.Name)
 					if collection.Description != nil && *collection.Description != "" {
