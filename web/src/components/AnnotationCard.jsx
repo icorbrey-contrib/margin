@@ -736,6 +736,7 @@ export function HighlightCard({ highlight, onDelete }) {
         >
           <HighlightIcon size={14} /> Highlight
         </span>
+        <ShareMenu uri={data.uri} text={highlightedText} />
         <button
           className="annotation-action"
           onClick={() => {

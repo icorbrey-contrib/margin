@@ -144,6 +144,20 @@ func (h *OGHandler) HandleAnnotationPage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	highlightURI := fmt.Sprintf("at://%s/at.margin.highlight/%s", did, rkey)
+	highlight, err := h.db.GetHighlightByURI(highlightURI)
+	if err == nil && highlight != nil {
+		h.serveHighlightOG(w, highlight)
+		return
+	}
+
+	collectionURI := fmt.Sprintf("at://%s/at.margin.collection/%s", did, rkey)
+	collection, err := h.db.GetCollectionByURI(collectionURI)
+	if err == nil && collection != nil {
+		h.serveCollectionOG(w, collection)
+		return
+	}
+
 	h.serveIndexHTML(w, r)
 }
 
@@ -179,6 +193,194 @@ func (h *OGHandler) serveBookmarkOG(w http.ResponseWriter, bookmark *db.Bookmark
 
 	pageURL := fmt.Sprintf("%s/at/%s", h.baseURL, url.PathEscape(bookmark.URI[5:]))
 	ogImageURL := fmt.Sprintf("%s/og-image?uri=%s", h.baseURL, url.QueryEscape(bookmark.URI))
+
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>%s - Margin</title>
+    <meta name="description" content="%s">
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="%s">
+    <meta property="og:description" content="%s">
+    <meta property="og:url" content="%s">
+    <meta property="og:image" content="%s">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Margin">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="%s">
+    <meta name="twitter:description" content="%s">
+    <meta name="twitter:image" content="%s">
+    
+    <!-- Author -->
+    <meta property="article:author" content="%s">
+    
+    <meta http-equiv="refresh" content="0; url=%s">
+</head>
+<body>
+    <p>Redirecting to <a href="%s">%s</a>...</p>
+</body>
+</html>`,
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(pageURL),
+		html.EscapeString(ogImageURL),
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(ogImageURL),
+		html.EscapeString(authorHandle),
+		html.EscapeString(pageURL),
+		html.EscapeString(pageURL),
+		html.EscapeString(title),
+	)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(htmlContent))
+}
+
+func (h *OGHandler) serveHighlightOG(w http.ResponseWriter, highlight *db.Highlight) {
+	title := "Highlight on Margin"
+	description := ""
+
+	if highlight.SelectorJSON != nil && *highlight.SelectorJSON != "" {
+		var selector struct {
+			Exact string `json:"exact"`
+		}
+		if err := json.Unmarshal([]byte(*highlight.SelectorJSON), &selector); err == nil && selector.Exact != "" {
+			description = fmt.Sprintf("\"%s\"", selector.Exact)
+			if len(description) > 200 {
+				description = description[:197] + "...\""
+			}
+		}
+	}
+
+	if highlight.TargetTitle != nil && *highlight.TargetTitle != "" {
+		title = fmt.Sprintf("Highlight on: %s", *highlight.TargetTitle)
+		if len(title) > 60 {
+			title = title[:57] + "..."
+		}
+	}
+
+	sourceDomain := ""
+	if highlight.TargetSource != "" {
+		if parsed, err := url.Parse(highlight.TargetSource); err == nil {
+			sourceDomain = parsed.Host
+		}
+	}
+
+	authorHandle := highlight.AuthorDID
+	profiles := fetchProfilesForDIDs([]string{highlight.AuthorDID})
+	if profile, ok := profiles[highlight.AuthorDID]; ok && profile.Handle != "" {
+		authorHandle = "@" + profile.Handle
+	}
+
+	if description == "" {
+		description = fmt.Sprintf("A highlight by %s", authorHandle)
+		if sourceDomain != "" {
+			description += fmt.Sprintf(" on %s", sourceDomain)
+		}
+	}
+
+	pageURL := fmt.Sprintf("%s/at/%s", h.baseURL, url.PathEscape(highlight.URI[5:]))
+	ogImageURL := fmt.Sprintf("%s/og-image?uri=%s", h.baseURL, url.QueryEscape(highlight.URI))
+
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>%s - Margin</title>
+    <meta name="description" content="%s">
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="%s">
+    <meta property="og:description" content="%s">
+    <meta property="og:url" content="%s">
+    <meta property="og:image" content="%s">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Margin">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="%s">
+    <meta name="twitter:description" content="%s">
+    <meta name="twitter:image" content="%s">
+    
+    <!-- Author -->
+    <meta property="article:author" content="%s">
+    
+    <meta http-equiv="refresh" content="0; url=%s">
+</head>
+<body>
+    <p>Redirecting to <a href="%s">%s</a>...</p>
+</body>
+</html>`,
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(pageURL),
+		html.EscapeString(ogImageURL),
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(ogImageURL),
+		html.EscapeString(authorHandle),
+		html.EscapeString(pageURL),
+		html.EscapeString(pageURL),
+		html.EscapeString(title),
+	)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(htmlContent))
+}
+
+func (h *OGHandler) serveCollectionOG(w http.ResponseWriter, collection *db.Collection) {
+	icon := "📁"
+	if collection.Icon != nil && *collection.Icon != "" {
+		icon = *collection.Icon
+	}
+
+	title := fmt.Sprintf("%s %s", icon, collection.Name)
+	description := ""
+	if collection.Description != nil && *collection.Description != "" {
+		description = *collection.Description
+		if len(description) > 200 {
+			description = description[:197] + "..."
+		}
+	}
+
+	authorHandle := collection.AuthorDID
+	var avatarURL string
+	profiles := fetchProfilesForDIDs([]string{collection.AuthorDID})
+	if profile, ok := profiles[collection.AuthorDID]; ok {
+		if profile.Handle != "" {
+			authorHandle = "@" + profile.Handle
+		}
+		if profile.Avatar != "" {
+			avatarURL = profile.Avatar
+		}
+	}
+
+	if description == "" {
+		description = fmt.Sprintf("A collection by %s", authorHandle)
+	} else {
+		description = fmt.Sprintf("By %s • %s", authorHandle, description)
+	}
+
+	pageURL := fmt.Sprintf("%s/collection/%s", h.baseURL, url.PathEscape(collection.URI))
+	ogImageURL := fmt.Sprintf("%s/og-image?uri=%s", h.baseURL, url.QueryEscape(collection.URI))
+
+	_ = avatarURL
 
 	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en">
@@ -417,8 +619,61 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		} else {
-			http.Error(w, "Record not found", http.StatusNotFound)
-			return
+			highlight, err := h.db.GetHighlightByURI(uri)
+			if err == nil && highlight != nil {
+				authorHandle = highlight.AuthorDID
+				profiles := fetchProfilesForDIDs([]string{highlight.AuthorDID})
+				if profile, ok := profiles[highlight.AuthorDID]; ok {
+					if profile.Handle != "" {
+						authorHandle = "@" + profile.Handle
+					}
+					if profile.Avatar != "" {
+						avatarURL = profile.Avatar
+					}
+				}
+
+				text = "Highlight"
+				if highlight.SelectorJSON != nil && *highlight.SelectorJSON != "" {
+					var selector struct {
+						Exact string `json:"exact"`
+					}
+					if err := json.Unmarshal([]byte(*highlight.SelectorJSON), &selector); err == nil && selector.Exact != "" {
+						quote = selector.Exact
+					}
+				}
+
+				if highlight.TargetSource != "" {
+					if parsed, err := url.Parse(highlight.TargetSource); err == nil {
+						sourceDomain = parsed.Host
+					}
+				}
+			} else {
+				collection, err := h.db.GetCollectionByURI(uri)
+				if err == nil && collection != nil {
+					authorHandle = collection.AuthorDID
+					profiles := fetchProfilesForDIDs([]string{collection.AuthorDID})
+					if profile, ok := profiles[collection.AuthorDID]; ok {
+						if profile.Handle != "" {
+							authorHandle = "@" + profile.Handle
+						}
+						if profile.Avatar != "" {
+							avatarURL = profile.Avatar
+						}
+					}
+
+					icon := "📁"
+					if collection.Icon != nil && *collection.Icon != "" {
+						icon = *collection.Icon
+					}
+					text = fmt.Sprintf("%s %s", icon, collection.Name)
+					if collection.Description != nil && *collection.Description != "" {
+						quote = *collection.Description
+					}
+				} else {
+					http.Error(w, "Record not found", http.StatusNotFound)
+					return
+				}
+			}
 		}
 	}
 

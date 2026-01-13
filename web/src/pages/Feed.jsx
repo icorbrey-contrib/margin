@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import BookmarkCard from "../components/BookmarkCard";
 import CollectionItemCard from "../components/CollectionItemCard";
-import { getAnnotationFeed } from "../api/client";
+import { getAnnotationFeed, deleteHighlight } from "../api/client";
 import { AlertIcon, InboxIcon } from "../components/Icons";
 
 export default function Feed() {
@@ -129,7 +129,19 @@ export default function Feed() {
               item.type === "Highlight" ||
               item.motivation === "highlighting"
             ) {
-              return <HighlightCard key={item.id} highlight={item} />;
+              return (
+                <HighlightCard
+                  key={item.id}
+                  highlight={item}
+                  onDelete={async (uri) => {
+                    const rkey = uri.split("/").pop();
+                    await deleteHighlight(rkey);
+                    setAnnotations((prev) =>
+                      prev.filter((a) => a.id !== item.id),
+                    );
+                  }}
+                />
+              );
             }
             if (item.type === "Bookmark" || item.motivation === "bookmarking") {
               return <BookmarkCard key={item.id} bookmark={item} />;
