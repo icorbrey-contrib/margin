@@ -169,7 +169,7 @@ export default function Notifications() {
             >
               <div
                 className="notification-avatar-container"
-                style={{ marginRight: 12 }}
+                style={{ marginRight: 12, position: "relative" }}
               >
                 {n.actor?.avatar ? (
                   <img
