@@ -835,37 +835,57 @@ func generateOGImagePNG(author, text, quote, source, avatarURL string) image.Ima
 	contentWidth := width - (padding * 2)
 
 	if text != "" {
-		if len(text) > 300 {
-			text = text[:297] + "..."
+		textLen := len(text)
+		textSize := 32
+		textLineHeight := 42
+		maxTextLines := 6
+
+		if textLen > 200 {
+			textSize = 28
+			textLineHeight = 36
+			maxTextLines = 7
 		}
-		lines := wrapTextToWidth(text, contentWidth, 32)
-		for i, line := range lines {
-			if i >= 6 {
-				break
+
+		lines := wrapTextToWidth(text, contentWidth, textSize)
+		numLines := min(len(lines), maxTextLines)
+
+		for i := 0; i < numLines; i++ {
+			line := lines[i]
+			if i == numLines-1 && len(lines) > numLines {
+				line += "..."
 			}
-			drawText(img, line, padding, yPos+(i*42), textPrimary, 32, false)
+			drawText(img, line, padding, yPos+(i*textLineHeight), textPrimary, float64(textSize), false)
 		}
-		yPos += (len(lines) * 42) + 40
+		yPos += (numLines * textLineHeight) + 40
 	}
 
 	if quote != "" {
-		if len(quote) > 100 {
-			quote = quote[:97] + "..."
+		quoteLen := len(quote)
+		quoteSize := 24
+		quoteLineHeight := 32
+		maxQuoteLines := 2
+
+		if quoteLen > 150 {
+			quoteSize = 20
+			quoteLineHeight = 28
+			maxQuoteLines = 3
 		}
 
-		lines := wrapTextToWidth(quote, contentWidth-30, 24)
-		numLines := min(len(lines), 2)
-		barHeight := numLines*32 + 10
+		lines := wrapTextToWidth(quote, contentWidth-30, quoteSize)
+		numLines := min(len(lines), maxQuoteLines)
+		barHeight := numLines*quoteLineHeight + 10
 
 		draw.Draw(img, image.Rect(padding, yPos, padding+6, yPos+barHeight), &image.Uniform{accent}, image.Point{}, draw.Src)
 
-		for i, line := range lines {
-			if i >= 2 {
-				break
+		for i := 0; i < numLines; i++ {
+			line := lines[i]
+			isLast := i == numLines-1
+			if isLast && len(lines) > numLines {
+				line += "..."
 			}
-			drawText(img, "\""+line+"\"", padding+24, yPos+28+(i*32), textTertiary, 24, true)
+			drawText(img, "\""+line+"\"", padding+24, yPos+28+(i*quoteLineHeight), textTertiary, float64(quoteSize), true)
 		}
-		yPos += 30 + (numLines * 32) + 30
+		yPos += 30 + (numLines * quoteLineHeight) + 30
 	}
 
 	drawText(img, source, padding, 580, textTertiary, 20, false)
@@ -1156,27 +1176,37 @@ func generateHighlightOGImagePNG(author, pageTitle, quote, source, avatarURL str
 	drawText(img, author, avatarX+avatarSize+24, avatarY+42, textSecondary, 28, false)
 
 	contentWidth := width - (padding * 2)
-	yPos := 240
-
+	yPos := 220
 	if quote != "" {
-		if len(quote) > 200 {
-			quote = quote[:197] + "..."
+		quoteLen := len(quote)
+		fontSize := 42.0
+		lineHeight := 56
+		maxLines := 4
+
+		if quoteLen > 200 {
+			fontSize = 32.0
+			lineHeight = 44
+			maxLines = 6
+		} else if quoteLen > 100 {
+			fontSize = 36.0
+			lineHeight = 48
+			maxLines = 5
 		}
 
-		barHeight := 0
-
-		lines := wrapTextToWidth(quote, contentWidth-40, 42)
-		barHeight = len(lines) * 56
+		lines := wrapTextToWidth(quote, contentWidth-40, int(fontSize))
+		numLines := min(len(lines), maxLines)
+		barHeight := numLines * lineHeight
 
 		draw.Draw(img, image.Rect(padding, yPos, padding+8, yPos+barHeight), &image.Uniform{accent}, image.Point{}, draw.Src)
 
-		for i, line := range lines {
-			if i >= 5 {
-				break
+		for i := 0; i < numLines; i++ {
+			line := lines[i]
+			if i == numLines-1 && len(lines) > numLines {
+				line += "..."
 			}
-			drawText(img, line, padding+40, yPos+42+(i*56), textPrimary, 42, false)
+			drawText(img, line, padding+40, yPos+42+(i*lineHeight), textPrimary, fontSize, false)
 		}
-		yPos += barHeight + 60
+		yPos += barHeight + 40
 	}
 
 	draw.Draw(img, image.Rect(padding, yPos, width-padding, yPos+1), &image.Uniform{border}, image.Point{}, draw.Src)
