@@ -793,60 +793,47 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 func generateOGImagePNG(author, text, quote, source, avatarURL string) image.Image {
 	width := 1200
 	height := 630
-	padding := 120
+	padding := 100
 
 	bgPrimary := color.RGBA{12, 10, 20, 255}
 	accent := color.RGBA{168, 85, 247, 255}
 	textPrimary := color.RGBA{244, 240, 255, 255}
 	textSecondary := color.RGBA{168, 158, 200, 255}
-	textTertiary := color.RGBA{107, 95, 138, 255}
 	border := color.RGBA{45, 38, 64, 255}
 
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
 	draw.Draw(img, img.Bounds(), &image.Uniform{bgPrimary}, image.Point{}, draw.Src)
-	draw.Draw(img, image.Rect(0, 0, width, 6), &image.Uniform{accent}, image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(0, 0, width, 12), &image.Uniform{accent}, image.Point{}, draw.Src)
 
-	if logoImage != nil {
-		logoHeight := 50
-		logoWidth := int(float64(logoImage.Bounds().Dx()) * (float64(logoHeight) / float64(logoImage.Bounds().Dy())))
-		drawScaledImage(img, logoImage, padding, 80, logoWidth, logoHeight)
-	} else {
-		drawText(img, "Margin", padding, 120, accent, 36, true)
-	}
-
-	avatarSize := 80
+	avatarSize := 64
 	avatarX := padding
-	avatarY := 180
+	avatarY := padding
+
 	avatarImg := fetchAvatarImage(avatarURL)
 	if avatarImg != nil {
 		drawCircularAvatar(img, avatarImg, avatarX, avatarY, avatarSize)
 	} else {
 		drawDefaultAvatar(img, author, avatarX, avatarY, avatarSize, accent)
 	}
-
-	handleX := avatarX + avatarSize + 24
-	drawText(img, author, handleX, avatarY+50, textSecondary, 24, false)
-
-	yPos := 280
-	draw.Draw(img, image.Rect(padding, yPos, width-padding, yPos+1), &image.Uniform{border}, image.Point{}, draw.Src)
-	yPos += 40
+	drawText(img, author, avatarX+avatarSize+24, avatarY+42, textSecondary, 28, false)
 
 	contentWidth := width - (padding * 2)
+	yPos := 220
 
 	if text != "" {
 		textLen := len(text)
-		textSize := 32
+		textSize := 32.0
 		textLineHeight := 42
-		maxTextLines := 6
+		maxTextLines := 5
 
 		if textLen > 200 {
-			textSize = 28
+			textSize = 28.0
 			textLineHeight = 36
-			maxTextLines = 7
+			maxTextLines = 6
 		}
 
-		lines := wrapTextToWidth(text, contentWidth, textSize)
+		lines := wrapTextToWidth(text, contentWidth, int(textSize))
 		numLines := min(len(lines), maxTextLines)
 
 		for i := 0; i < numLines; i++ {
@@ -854,41 +841,42 @@ func generateOGImagePNG(author, text, quote, source, avatarURL string) image.Ima
 			if i == numLines-1 && len(lines) > numLines {
 				line += "..."
 			}
-			drawText(img, line, padding, yPos+(i*textLineHeight), textPrimary, float64(textSize), false)
+			drawText(img, line, padding, yPos+(i*textLineHeight), textPrimary, textSize, false)
 		}
 		yPos += (numLines * textLineHeight) + 40
 	}
 
 	if quote != "" {
 		quoteLen := len(quote)
-		quoteSize := 24
+		quoteSize := 24.0
 		quoteLineHeight := 32
-		maxQuoteLines := 2
+		maxQuoteLines := 3
 
 		if quoteLen > 150 {
-			quoteSize = 20
+			quoteSize = 20.0
 			quoteLineHeight = 28
-			maxQuoteLines = 3
+			maxQuoteLines = 4
 		}
 
-		lines := wrapTextToWidth(quote, contentWidth-30, quoteSize)
+		lines := wrapTextToWidth(quote, contentWidth-30, int(quoteSize))
 		numLines := min(len(lines), maxQuoteLines)
-		barHeight := numLines*quoteLineHeight + 10
+		barHeight := numLines * quoteLineHeight
 
 		draw.Draw(img, image.Rect(padding, yPos, padding+6, yPos+barHeight), &image.Uniform{accent}, image.Point{}, draw.Src)
 
 		for i := 0; i < numLines; i++ {
 			line := lines[i]
-			isLast := i == numLines-1
-			if isLast && len(lines) > numLines {
+			if i == numLines-1 && len(lines) > numLines {
 				line += "..."
 			}
-			drawText(img, "\""+line+"\"", padding+24, yPos+28+(i*quoteLineHeight), textTertiary, float64(quoteSize), true)
+			drawText(img, line, padding+24, yPos+24+(i*quoteLineHeight), textSecondary, quoteSize, true)
 		}
-		yPos += 30 + (numLines * quoteLineHeight) + 30
+		yPos += barHeight + 40
 	}
 
-	drawText(img, source, padding, 580, textTertiary, 20, false)
+	draw.Draw(img, image.Rect(padding, yPos, width-padding, yPos+1), &image.Uniform{border}, image.Point{}, draw.Src)
+	yPos += 40
+	drawText(img, source, padding, yPos+32, textSecondary, 24, false)
 
 	return img
 }
