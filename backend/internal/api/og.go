@@ -719,7 +719,11 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
-				text = "Highlight"
+				targetTitle := ""
+				if highlight.TargetTitle != nil {
+					targetTitle = *highlight.TargetTitle
+				}
+
 				if highlight.SelectorJSON != nil && *highlight.SelectorJSON != "" {
 					var selector struct {
 						Exact string `json:"exact"`
@@ -734,6 +738,13 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 						sourceDomain = parsed.Host
 					}
 				}
+
+				img := generateHighlightOGImagePNG(authorHandle, targetTitle, quote, sourceDomain, avatarURL)
+
+				w.Header().Set("Content-Type", "image/png")
+				w.Header().Set("Cache-Control", "public, max-age=86400")
+				png.Encode(w, img)
+				return
 			} else {
 				collection, err := h.db.GetCollectionByURI(uri)
 				if err == nil && collection != nil {
@@ -752,10 +763,18 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 					if collection.Icon != nil && *collection.Icon != "" {
 						icon = iconToEmoji(*collection.Icon)
 					}
-					text = fmt.Sprintf("%s %s", icon, collection.Name)
+
+					description := ""
 					if collection.Description != nil && *collection.Description != "" {
-						quote = *collection.Description
+						description = *collection.Description
 					}
+
+					img := generateCollectionOGImagePNG(authorHandle, collection.Name, description, icon, avatarURL)
+
+					w.Header().Set("Content-Type", "image/png")
+					w.Header().Set("Cache-Control", "public, max-age=86400")
+					png.Encode(w, img)
+					return
 				} else {
 					http.Error(w, "Record not found", http.StatusNotFound)
 					return
@@ -815,6 +834,20 @@ func generateOGImagePNG(author, text, quote, source, avatarURL string) image.Ima
 
 	contentWidth := width - (padding * 2)
 
+	if text != "" {
+		if len(text) > 300 {
+			text = text[:297] + "..."
+		}
+		lines := wrapTextToWidth(text, contentWidth, 32)
+		for i, line := range lines {
+			if i >= 6 {
+				break
+			}
+			drawText(img, line, padding, yPos+(i*42), textPrimary, 32, false)
+		}
+		yPos += (len(lines) * 42) + 40
+	}
+
 	if quote != "" {
 		if len(quote) > 100 {
 			quote = quote[:97] + "..."
@@ -833,19 +866,6 @@ func generateOGImagePNG(author, text, quote, source, avatarURL string) image.Ima
 			drawText(img, "\""+line+"\"", padding+24, yPos+28+(i*32), textTertiary, 24, true)
 		}
 		yPos += 30 + (numLines * 32) + 30
-	}
-
-	if text != "" {
-		if len(text) > 300 {
-			text = text[:297] + "..."
-		}
-		lines := wrapTextToWidth(text, contentWidth, 32)
-		for i, line := range lines {
-			if i >= 6 {
-				break
-			}
-			drawText(img, line, padding, yPos+(i*42), textPrimary, 32, false)
-		}
 	}
 
 	drawText(img, source, padding, 580, textTertiary, 20, false)
@@ -1003,4 +1023,175 @@ func wrapTextToWidth(text string, maxWidth int, fontSize int) []string {
 		lines = append(lines, currentLine)
 	}
 	return lines
+}
+
+func generateCollectionOGImagePNG(author, collectionName, description, icon, avatarURL string) image.Image {
+	width := 1200
+	height := 630
+	padding := 120
+
+	bgPrimary := color.RGBA{12, 10, 20, 255}
+	accent := color.RGBA{168, 85, 247, 255}
+	textPrimary := color.RGBA{244, 240, 255, 255}
+	textSecondary := color.RGBA{168, 158, 200, 255}
+	textTertiary := color.RGBA{107, 95, 138, 255}
+	border := color.RGBA{45, 38, 64, 255}
+
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	draw.Draw(img, img.Bounds(), &image.Uniform{bgPrimary}, image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(0, 0, width, 12), &image.Uniform{accent}, image.Point{}, draw.Src)
+
+	iconY := 120
+	var iconWidth int
+	if icon != "" {
+		emojiImg := fetchTwemojiImage(icon)
+		if emojiImg != nil {
+			iconSize := 96
+			drawScaledImage(img, emojiImg, padding, iconY, iconSize, iconSize)
+			iconWidth = iconSize + 32
+		} else {
+			drawText(img, icon, padding, iconY+70, textPrimary, 80, true)
+			iconWidth = 100
+		}
+	}
+
+	drawText(img, collectionName, padding+iconWidth, iconY+65, textPrimary, 64, true)
+
+	yPos := 280
+	contentWidth := width - (padding * 2)
+
+	if description != "" {
+		if len(description) > 200 {
+			description = description[:197] + "..."
+		}
+		lines := wrapTextToWidth(description, contentWidth, 32)
+		for i, line := range lines {
+			if i >= 4 {
+				break
+			}
+			drawText(img, line, padding, yPos+(i*42), textSecondary, 32, false)
+		}
+	} else {
+		drawText(img, "A collection on Margin", padding, yPos, textTertiary, 32, false)
+	}
+
+	yPos = 480
+	draw.Draw(img, image.Rect(padding, yPos, width-padding, yPos+1), &image.Uniform{border}, image.Point{}, draw.Src)
+
+	avatarSize := 64
+	avatarX := padding
+	avatarY := yPos + 40
+
+	avatarImg := fetchAvatarImage(avatarURL)
+	if avatarImg != nil {
+		drawCircularAvatar(img, avatarImg, avatarX, avatarY, avatarSize)
+	} else {
+		drawDefaultAvatar(img, author, avatarX, avatarY, avatarSize, accent)
+	}
+
+	handleX := avatarX + avatarSize + 24
+	drawText(img, author, handleX, avatarY+42, textTertiary, 28, false)
+
+	return img
+}
+
+func fetchTwemojiImage(emoji string) image.Image {
+	var codes []string
+	for _, r := range emoji {
+		codes = append(codes, fmt.Sprintf("%x", r))
+	}
+	hexCode := strings.Join(codes, "-")
+
+	url := fmt.Sprintf("https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/%s.png", hexCode)
+
+	resp, err := http.Get(url)
+	if err != nil || resp.StatusCode != 200 {
+		if strings.Contains(hexCode, "-fe0f") {
+			simpleHex := strings.ReplaceAll(hexCode, "-fe0f", "")
+			url = fmt.Sprintf("https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/%s.png", simpleHex)
+			resp, err = http.Get(url)
+			if err != nil || resp.StatusCode != 200 {
+				return nil
+			}
+		} else {
+			return nil
+		}
+	}
+	defer resp.Body.Close()
+
+	img, _, err := image.Decode(resp.Body)
+	if err != nil {
+		return nil
+	}
+	return img
+}
+
+func generateHighlightOGImagePNG(author, pageTitle, quote, source, avatarURL string) image.Image {
+	width := 1200
+	height := 630
+	padding := 100
+
+	bgPrimary := color.RGBA{12, 10, 20, 255}
+	accent := color.RGBA{250, 204, 21, 255}
+	textPrimary := color.RGBA{244, 240, 255, 255}
+	textSecondary := color.RGBA{168, 158, 200, 255}
+	border := color.RGBA{45, 38, 64, 255}
+
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	draw.Draw(img, img.Bounds(), &image.Uniform{bgPrimary}, image.Point{}, draw.Src)
+	draw.Draw(img, image.Rect(0, 0, width, 12), &image.Uniform{accent}, image.Point{}, draw.Src)
+
+	avatarSize := 64
+	avatarX := padding
+	avatarY := padding
+
+	avatarImg := fetchAvatarImage(avatarURL)
+	if avatarImg != nil {
+		drawCircularAvatar(img, avatarImg, avatarX, avatarY, avatarSize)
+	} else {
+		drawDefaultAvatar(img, author, avatarX, avatarY, avatarSize, accent)
+	}
+	drawText(img, author, avatarX+avatarSize+24, avatarY+42, textSecondary, 28, false)
+
+	contentWidth := width - (padding * 2)
+	yPos := 240
+
+	if quote != "" {
+		if len(quote) > 200 {
+			quote = quote[:197] + "..."
+		}
+
+		barHeight := 0
+
+		lines := wrapTextToWidth(quote, contentWidth-40, 42)
+		barHeight = len(lines) * 56
+
+		draw.Draw(img, image.Rect(padding, yPos, padding+8, yPos+barHeight), &image.Uniform{accent}, image.Point{}, draw.Src)
+
+		for i, line := range lines {
+			if i >= 5 {
+				break
+			}
+			drawText(img, line, padding+40, yPos+42+(i*56), textPrimary, 42, false)
+		}
+		yPos += barHeight + 60
+	}
+
+	draw.Draw(img, image.Rect(padding, yPos, width-padding, yPos+1), &image.Uniform{border}, image.Point{}, draw.Src)
+	yPos += 40
+
+	if pageTitle != "" {
+		if len(pageTitle) > 60 {
+			pageTitle = pageTitle[:57] + "..."
+		}
+		drawText(img, pageTitle, padding, yPos+32, textSecondary, 32, true)
+	}
+
+	if source != "" {
+		drawText(img, source, padding, yPos+80, textSecondary, 24, false)
+	}
+
+	return img
 }
