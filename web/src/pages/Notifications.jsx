@@ -4,15 +4,18 @@ import { useAuth } from "../context/AuthContext";
 import { getNotifications, markNotificationsRead } from "../api/client";
 import { BellIcon, HeartIcon, ReplyIcon } from "../components/Icons";
 
-function getContentRoute(subjectUri) {
-  if (!subjectUri) return "/";
-  if (subjectUri.includes("at.margin.bookmark")) {
+function getNotificationRoute(n) {
+  if (n.type === "reply" && n.subject?.inReplyTo) {
+    return `/annotation/${encodeURIComponent(n.subject.inReplyTo)}`;
+  }
+  if (!n.subjectUri) return "/";
+  if (n.subjectUri.includes("at.margin.bookmark")) {
     return `/bookmarks`;
   }
-  if (subjectUri.includes("at.margin.highlight")) {
+  if (n.subjectUri.includes("at.margin.highlight")) {
     return `/highlights`;
   }
-  return `/annotation/${encodeURIComponent(subjectUri)}`;
+  return `/annotation/${encodeURIComponent(n.subjectUri)}`;
 }
 
 export default function Notifications() {
@@ -163,7 +166,7 @@ export default function Notifications() {
           {notifications.map((n, i) => (
             <Link
               key={n.id || i}
-              to={getContentRoute(n.subjectUri)}
+              to={getNotificationRoute(n)}
               className="notification-item card"
               style={{ alignItems: "center" }}
             >

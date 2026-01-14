@@ -515,7 +515,7 @@ func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, err := hydrateNotifications(notifications)
+	enriched, err := hydrateNotifications(h.db, notifications)
 	if err != nil {
 		log.Printf("Failed to hydrate notifications: %v\n", err)
 	}

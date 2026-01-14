@@ -118,13 +118,14 @@ type APICollectionItem struct {
 }
 
 type APINotification struct {
-	ID         int        `json:"id"`
-	Recipient  Author     `json:"recipient"`
-	Actor      Author     `json:"actor"`
-	Type       string     `json:"type"`
-	SubjectURI string     `json:"subjectUri"`
-	CreatedAt  time.Time  `json:"createdAt"`
-	ReadAt     *time.Time `json:"readAt,omitempty"`
+	ID         int         `json:"id"`
+	Recipient  Author      `json:"recipient"`
+	Actor      Author      `json:"actor"`
+	Type       string      `json:"type"`
+	SubjectURI string      `json:"subjectUri"`
+	Subject    interface{} `json:"subject,omitempty"`
+	CreatedAt  time.Time   `json:"createdAt"`
+	ReadAt     *time.Time  `json:"readAt,omitempty"`
 }
 
 func hydrateAnnotations(annotations []db.Annotation) ([]APIAnnotation, error) {
@@ -498,7 +499,7 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem) ([]APICo
 	return result, nil
 }
 
-func hydrateNotifications(notifications []db.Notification) ([]APINotification, error) {
+func hydrateNotifications(database *db.DB, notifications []db.Notification) ([]APINotification, error) {
 	if len(notifications) == 0 {
 		return []APINotification{}, nil
 	}
@@ -518,14 +519,45 @@ func hydrateNotifications(notifications []db.Notification) ([]APINotification, e
 
 	profiles := fetchProfilesForDIDs(dids)
 
+	replyURIs := make([]string, 0)
+	for _, n := range notifications {
+		if n.Type == "reply" {
+			replyURIs = append(replyURIs, n.SubjectURI)
+		}
+	}
+
+	replyMap := make(map[string]APIReply)
+	if len(replyURIs) > 0 {
+		var replies []db.Reply
+		for _, uri := range replyURIs {
+			r, err := database.GetReplyByURI(uri)
+			if err == nil {
+				replies = append(replies, *r)
+			}
+		}
+
+		hydratedReplies, _ := hydrateReplies(replies)
+		for _, r := range hydratedReplies {
+			replyMap[r.ID] = r
+		}
+	}
+
 	result := make([]APINotification, len(notifications))
 	for i, n := range notifications {
+		var subject interface{}
+		if n.Type == "reply" {
+			if val, ok := replyMap[n.SubjectURI]; ok {
+				subject = val
+			}
+		}
+
 		result[i] = APINotification{
 			ID:         n.ID,
 			Recipient:  profiles[n.RecipientDID],
 			Actor:      profiles[n.ActorDID],
 			Type:       n.Type,
 			SubjectURI: n.SubjectURI,
+			Subject:    subject,
 			CreatedAt:  n.CreatedAt,
 			ReadAt:     n.ReadAt,
 		}
