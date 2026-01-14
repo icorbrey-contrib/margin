@@ -205,7 +205,7 @@ func (c *Client) CreateDPoPProof(dpopKey *ecdsa.PrivateKey, method, uri, nonce, 
 		"jti": base64.RawURLEncoding.EncodeToString(jti),
 		"htm": method,
 		"htu": uri,
-		"iat": now.Unix(),
+		"iat": now.Add(-30 * time.Second).Unix(),
 		"exp": now.Add(5 * time.Minute).Unix(),
 	}
 	if nonce != "" {
@@ -243,7 +243,7 @@ func (c *Client) CreateClientAssertion(issuer string) (string, error) {
 		Issuer:   c.ClientID,
 		Subject:  c.ClientID,
 		Audience: jwt.Audience{issuer},
-		IssuedAt: jwt.NewNumericDate(now.Add(-5 * time.Minute)),
+		IssuedAt: jwt.NewNumericDate(now.Add(-30 * time.Second)),
 		Expiry:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
 		ID:       base64.RawURLEncoding.EncodeToString(jti),
 	}
