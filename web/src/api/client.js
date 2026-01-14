@@ -283,42 +283,45 @@ export function normalizeAnnotation(item) {
 
   if (item.type === "Annotation") {
     return {
-      uri: item.id,
-      author: item.creator,
-      url: item.target?.source,
-      title: item.target?.title,
-      text: item.body?.value,
-      selector: item.target?.selector,
+      type: item.type,
+      uri: item.uri || item.id,
+      author: item.author || item.creator,
+      url: item.url || item.target?.source,
+      title: item.title || item.target?.title,
+      text: item.text || item.body?.value,
+      selector: item.selector || item.target?.selector,
       motivation: item.motivation,
       tags: item.tags || [],
-      createdAt: item.created,
+      createdAt: item.createdAt || item.created,
       cid: item.cid || item.CID,
     };
   }
 
   if (item.type === "Bookmark") {
     return {
-      uri: item.id,
-      author: item.creator,
-      url: item.source,
+      type: item.type,
+      uri: item.uri || item.id,
+      author: item.author || item.creator,
+      url: item.url || item.source,
       title: item.title,
       description: item.description,
       tags: item.tags || [],
-      createdAt: item.created,
+      createdAt: item.createdAt || item.created,
       cid: item.cid || item.CID,
     };
   }
 
   if (item.type === "Highlight") {
     return {
-      uri: item.id,
-      author: item.creator,
-      url: item.target?.source,
-      title: item.target?.title,
-      selector: item.target?.selector,
+      type: item.type,
+      uri: item.uri || item.id,
+      author: item.author || item.creator,
+      url: item.url || item.target?.source,
+      title: item.title || item.target?.title,
+      selector: item.selector || item.target?.selector,
       color: item.color,
       tags: item.tags || [],
-      createdAt: item.created,
+      createdAt: item.createdAt || item.created,
       cid: item.cid || item.CID,
     };
   }
@@ -340,26 +343,26 @@ export function normalizeAnnotation(item) {
 
 export function normalizeHighlight(highlight) {
   return {
-    uri: highlight.id,
-    author: highlight.creator,
-    url: highlight.target?.source,
-    title: highlight.target?.title,
-    selector: highlight.target?.selector,
+    uri: highlight.uri || highlight.id,
+    author: highlight.author || highlight.creator,
+    url: highlight.url || highlight.target?.source,
+    title: highlight.title || highlight.target?.title,
+    selector: highlight.selector || highlight.target?.selector,
     color: highlight.color,
     tags: highlight.tags || [],
-    createdAt: highlight.created,
+    createdAt: highlight.createdAt || highlight.created,
   };
 }
 
 export function normalizeBookmark(bookmark) {
   return {
-    uri: bookmark.id,
-    author: bookmark.creator,
-    url: bookmark.source,
+    uri: bookmark.uri || bookmark.id,
+    author: bookmark.author || bookmark.creator,
+    url: bookmark.url || bookmark.source,
     title: bookmark.title,
     description: bookmark.description,
     tags: bookmark.tags || [],
-    createdAt: bookmark.created,
+    createdAt: bookmark.createdAt || bookmark.created,
   };
 }
 
