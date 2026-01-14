@@ -1,21 +1,43 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import BookmarkCard from "../components/BookmarkCard";
 import CollectionItemCard from "../components/CollectionItemCard";
 import { getAnnotationFeed, deleteHighlight } from "../api/client";
 import { AlertIcon, InboxIcon } from "../components/Icons";
+import { useAuth } from "../context/AuthContext";
+
+import AddToCollectionModal from "../components/AddToCollectionModal";
 
 export default function Feed() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tagFilter = searchParams.get("tag");
   const [annotations, setAnnotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [collectionModalState, setCollectionModalState] = useState({
+    isOpen: false,
+    uri: null,
+  });
+
+  const { user } = useAuth();
 
   useEffect(() => {
     async function fetchFeed() {
       try {
         setLoading(true);
-        const data = await getAnnotationFeed();
+        let creatorDid = "";
+        if (filter === "my-tags" && user?.did) {
+          creatorDid = user.did;
+        }
+
+        const data = await getAnnotationFeed(
+          50,
+          0,
+          tagFilter || "",
+          creatorDid,
+        );
         setAnnotations(data.items || []);
       } catch (err) {
         setError(err.message);
@@ -24,10 +46,10 @@ export default function Feed() {
       }
     }
     fetchFeed();
-  }, []);
+  }, [tagFilter, filter, user]);
 
   const filteredAnnotations =
-    filter === "all"
+    filter === "all" || filter === "my-tags"
       ? annotations
       : annotations.filter((a) => {
           if (filter === "commenting")
@@ -46,6 +68,29 @@ export default function Feed() {
         <p className="page-description">
           See what people are annotating, highlighting, and bookmarking
         </p>
+        {tagFilter && (
+          <div
+            style={{
+              marginTop: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span
+              style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}
+            >
+              Filtering by tag: <strong>#{tagFilter}</strong>
+            </span>
+            <button
+              onClick={() => setSearchParams({})}
+              className="btn btn-sm"
+              style={{ padding: "2px 8px", fontSize: "0.8rem" }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       {}
@@ -56,6 +101,14 @@ export default function Feed() {
         >
           All
         </button>
+        {user && (
+          <button
+            className={`filter-tab ${filter === "my-tags" ? "active" : ""}`}
+            onClick={() => setFilter("my-tags")}
+          >
+            My Feed
+          </button>
+        )}
         <button
           className={`filter-tab ${filter === "commenting" ? "active" : ""}`}
           onClick={() => setFilter("commenting")}
@@ -140,15 +193,51 @@ export default function Feed() {
                       prev.filter((a) => a.id !== item.id),
                     );
                   }}
+                  onAddToCollection={() =>
+                    setCollectionModalState({
+                      isOpen: true,
+                      uri: item.uri || item.id,
+                    })
+                  }
                 />
               );
             }
             if (item.type === "Bookmark" || item.motivation === "bookmarking") {
-              return <BookmarkCard key={item.id} bookmark={item} />;
+              return (
+                <BookmarkCard
+                  key={item.id}
+                  bookmark={item}
+                  onAddToCollection={() =>
+                    setCollectionModalState({
+                      isOpen: true,
+                      uri: item.uri || item.id,
+                    })
+                  }
+                />
+              );
             }
-            return <AnnotationCard key={item.id} annotation={item} />;
+            return (
+              <AnnotationCard
+                key={item.id}
+                annotation={item}
+                onAddToCollection={() =>
+                  setCollectionModalState({
+                    isOpen: true,
+                    uri: item.uri || item.id,
+                  })
+                }
+              />
+            );
           })}
         </div>
+      )}
+
+      {collectionModalState.isOpen && (
+        <AddToCollectionModal
+          isOpen={collectionModalState.isOpen}
+          onClose={() => setCollectionModalState({ isOpen: false, uri: null })}
+          annotationUri={collectionModalState.uri}
+        />
       )}
     </div>
   );

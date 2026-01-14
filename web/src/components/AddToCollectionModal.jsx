@@ -23,10 +23,14 @@ export default function AddToCollectionModal({
 
   useEffect(() => {
     if (isOpen && user) {
+      if (!annotationUri) {
+        setLoading(false);
+        return;
+      }
       loadCollections();
       setError(null);
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, annotationUri]);
 
   const loadCollections = async () => {
     try {
@@ -71,7 +75,7 @@ export default function AddToCollectionModal({
           className="modal-container"
           style={{
             maxWidth: "380px",
-            maxHeight: "80vh",
+            maxHeight: "80dvh",
             display: "flex",
             flexDirection: "column",
           }}

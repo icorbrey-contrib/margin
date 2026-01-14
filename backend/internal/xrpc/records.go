@@ -78,7 +78,7 @@ type HighlightRecord struct {
 	CreatedAt string           `json:"createdAt"`
 }
 
-func NewHighlightRecord(url, urlHash string, selector interface{}, color string) *HighlightRecord {
+func NewHighlightRecord(url, urlHash string, selector interface{}, color string, tags []string) *HighlightRecord {
 	return &HighlightRecord{
 		Type: CollectionHighlight,
 		Target: AnnotationTarget{
@@ -87,6 +87,7 @@ func NewHighlightRecord(url, urlHash string, selector interface{}, color string)
 			Selector:   selector,
 		},
 		Color:     color,
+		Tags:      tags,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 }

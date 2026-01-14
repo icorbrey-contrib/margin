@@ -140,40 +140,52 @@ textarea {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 24px;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .card:hover {
   border-color: var(--border-hover);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .annotation-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .annotation-header {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
 }
 
+.annotation-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
 .annotation-avatar {
-  width: 42px;
-  height: 42px;
-  min-width: 42px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--accent), #a855f7);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: white;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .annotation-avatar img {
@@ -183,12 +195,20 @@ textarea {
 }
 
 .annotation-meta {
-  flex: 1;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.3;
 }
 
 .annotation-avatar-link {
   text-decoration: none;
+  border-radius: var(--radius-full);
+  transition: transform 0.15s ease;
+}
+
+.annotation-avatar-link:hover {
+  transform: scale(1.05);
 }
 
 .annotation-author-row {
@@ -201,81 +221,116 @@ textarea {
 .annotation-author {
   font-weight: 600;
   color: var(--text-primary);
+  font-size: 0.95rem;
 }
 
 .annotation-handle {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-tertiary);
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .annotation-handle:hover {
   color: var(--accent);
-  text-decoration: underline;
 }
 
 .annotation-time {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-tertiary);
+}
+
+.annotation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .annotation-source {
-  display: block;
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
   color: var(--text-tertiary);
   text-decoration: none;
-  margin-bottom: 8px;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  width: fit-content;
+  transition: all 0.15s ease;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .annotation-source:hover {
-  color: var(--accent);
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .annotation-source-title {
   color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .annotation-highlight {
   display: block;
-  padding: 12px 16px;
+  position: relative;
+  padding: 16px 20px;
   background: linear-gradient(
     135deg,
-    rgba(79, 70, 229, 0.05),
-    rgba(168, 85, 247, 0.05)
+    rgba(79, 70, 229, 0.03),
+    rgba(168, 85, 247, 0.03)
   );
   border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-radius: 4px var(--radius-md) var(--radius-md) 4px;
   text-decoration: none;
-  transition: all 0.15s ease;
-  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  margin: 4px 0;
 }
 
 .annotation-highlight:hover {
   background: linear-gradient(
     135deg,
-    rgba(79, 70, 229, 0.1),
-    rgba(168, 85, 247, 0.1)
+    rgba(79, 70, 229, 0.08),
+    rgba(168, 85, 247, 0.08)
   );
+  transform: translateX(2px);
 }
 
 .annotation-highlight mark {
   background: transparent;
   color: var(--text-primary);
   font-style: italic;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  font-weight: 400;
+  display: inline;
 }
 
 .annotation-text {
   font-size: 1rem;
   line-height: 1.65;
   color: var(--text-primary);
+  white-space: pre-wrap;
 }
 
 .annotation-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding-top: 8px;
+  justify-content: space-between;
+  padding-top: 16px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.annotation-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .annotation-action {
@@ -284,34 +339,53 @@ textarea {
   gap: 6px;
   color: var(--text-tertiary);
   font-size: 0.85rem;
+  font-weight: 500;
   padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  transition: all 0.15s ease;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  background: transparent;
+  cursor: pointer;
 }
 
 .annotation-action:hover {
   color: var(--text-secondary);
-  background: var(--bg-tertiary);
+  background: var(--bg-elevated);
 }
 
 .annotation-action.liked {
   color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.annotation-action.liked:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.annotation-action.active {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.action-icon-only {
+  padding: 8px;
 }
 
 .annotation-delete {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 8px;
   font-size: 1rem;
   color: var(--text-tertiary);
-  transition: all 0.15s ease;
-  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  border-radius: var(--radius-md);
+  opacity: 0.6;
 }
 
 .annotation-delete:hover {
   color: var(--error);
   background: rgba(239, 68, 68, 0.1);
+  opacity: 1;
 }
 
 .annotation-delete:disabled {
@@ -1043,34 +1117,6 @@ textarea {
   border-bottom-color: var(--accent);
 }
 
-.bookmark-card {
-  padding: 16px 20px;
-}
-
-.bookmark-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.bookmark-link {
-  text-decoration: none;
-  flex: 1;
-}
-
-.bookmark-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-  line-height: 1.4;
-}
-
-.bookmark-title:hover {
-  color: var(--accent);
-}
-
 .bookmark-description {
   font-size: 0.9rem;
   color: var(--text-secondary);
@@ -1368,6 +1414,31 @@ textarea {
   color: var(--text-tertiary);
 }
 
+.composer-tags {
+  margin-top: 12px;
+}
+
+.composer-tags-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+}
+
+.composer-tags-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.composer-tags-input::placeholder {
+  color: var(--text-tertiary);
+}
+
 .composer-footer {
   display: flex;
   justify-content: space-between;
@@ -1393,6 +1464,62 @@ textarea {
   border-radius: var(--radius-md);
   color: var(--error);
   font-size: 0.9rem;
+}
+
+.annotation-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.annotation-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+.annotation-tag:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border);
+  transform: translateY(-1px);
+}
+
+.url-input-wrapper {
+  margin-bottom: 24px;
+}
+
+.url-input {
+  width: 100%;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.url-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-subtle);
+  background: var(--bg-primary);
+}
+
+.url-input::placeholder {
+  color: var(--text-tertiary);
 }
 
 .annotation-detail-page {
@@ -2929,22 +3056,129 @@ div:hover > .item-delete-overlay {
   padding: 1rem;
 }
 
+.form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.color-input-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.color-input-wrapper {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.color-input-wrapper:hover {
+  transform: scale(1.1);
+  border-color: var(--accent);
+}
+
+.color-input-wrapper input[type="color"] {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+}
+
 .bookmark-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .bookmark-preview {
   display: flex;
-  align-items: stretch;
-  gap: 16px;
-  padding: 14px 16px;
+  flex-direction: column;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  overflow: hidden;
   text-decoration: none;
   transition: all 0.2s ease;
+  position: relative;
+}
+
+.bookmark-preview:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.bookmark-preview::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+.bookmark-preview-content {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bookmark-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.bookmark-preview-site {
+  font-size: 0.75rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bookmark-preview-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.bookmark-preview-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.bookmark-preview-arrow {
+  display: none;
 }
 
 .bookmark-preview:hover {

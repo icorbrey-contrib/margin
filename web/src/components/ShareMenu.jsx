@@ -125,6 +125,16 @@ export default function ShareMenu({ uri, text, customUrl, handle, type }) {
         setIsOpen(false);
       }
     };
+
+    const card = menuRef.current?.closest(".card");
+    if (card) {
+      if (isOpen) {
+        card.style.zIndex = "50";
+      } else {
+        card.style.zIndex = "";
+      }
+    }
+
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }

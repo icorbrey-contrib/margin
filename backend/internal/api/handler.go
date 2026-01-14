@@ -81,6 +81,7 @@ func (h *Handler) GetAnnotations(w http.ResponseWriter, r *http.Request) {
 	limit := parseIntParam(r, "limit", 50)
 	offset := parseIntParam(r, "offset", 0)
 	motivation := r.URL.Query().Get("motivation")
+	tag := r.URL.Query().Get("tag")
 
 	var annotations []db.Annotation
 	var err error
@@ -90,6 +91,8 @@ func (h *Handler) GetAnnotations(w http.ResponseWriter, r *http.Request) {
 		annotations, err = h.db.GetAnnotationsByTargetHash(urlHash, limit, offset)
 	} else if motivation != "" {
 		annotations, err = h.db.GetAnnotationsByMotivation(motivation, limit, offset)
+	} else if tag != "" {
+		annotations, err = h.db.GetAnnotationsByTag(tag, limit, offset)
 	} else {
 		annotations, err = h.db.GetRecentAnnotations(limit, offset)
 	}
@@ -112,22 +115,42 @@ func (h *Handler) GetAnnotations(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	limit := parseIntParam(r, "limit", 50)
+	tag := r.URL.Query().Get("tag")
+	creator := r.URL.Query().Get("creator")
 
-	annotations, _ := h.db.GetRecentAnnotations(limit, 0)
-	highlights, _ := h.db.GetRecentHighlights(limit, 0)
-	bookmarks, _ := h.db.GetRecentBookmarks(limit, 0)
+	var annotations []db.Annotation
+	var highlights []db.Highlight
+	var bookmarks []db.Bookmark
+	var collectionItems []db.CollectionItem
+	var err error
+
+	if tag != "" {
+		if creator != "" {
+			annotations, _ = h.db.GetAnnotationsByTagAndAuthor(tag, creator, limit, 0)
+			highlights, _ = h.db.GetHighlightsByTagAndAuthor(tag, creator, limit, 0)
+			bookmarks, _ = h.db.GetBookmarksByTagAndAuthor(tag, creator, limit, 0)
+			collectionItems = []db.CollectionItem{}
+		} else {
+			annotations, _ = h.db.GetAnnotationsByTag(tag, limit, 0)
+			highlights, _ = h.db.GetHighlightsByTag(tag, limit, 0)
+			bookmarks, _ = h.db.GetBookmarksByTag(tag, limit, 0)
+			collectionItems = []db.CollectionItem{}
+		}
+	} else {
+		annotations, _ = h.db.GetRecentAnnotations(limit, 0)
+		highlights, _ = h.db.GetRecentHighlights(limit, 0)
+		bookmarks, _ = h.db.GetRecentBookmarks(limit, 0)
+		collectionItems, err = h.db.GetRecentCollectionItems(limit, 0)
+		if err != nil {
+			log.Printf("Error fetching collection items: %v\n", err)
+		}
+	}
 
 	authAnnos, _ := hydrateAnnotations(annotations)
 	authHighs, _ := hydrateHighlights(highlights)
 	authBooks, _ := hydrateBookmarks(bookmarks)
 
-	collectionItems, err := h.db.GetRecentCollectionItems(limit, 0)
-	if err != nil {
-		log.Printf("Error fetching collection items: %v\n", err)
-	}
-	// log.Printf("Fetched %d collection items\n", len(collectionItems))
 	authCollectionItems, _ := hydrateCollectionItems(h.db, collectionItems)
-	// log.Printf("Hydrated %d collection items\n", len(authCollectionItems))
 
 	var feed []interface{}
 	for _, a := range authAnnos {
@@ -276,15 +299,21 @@ func (h *Handler) GetByTarget(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetHighlights(w http.ResponseWriter, r *http.Request) {
 	did := r.URL.Query().Get("creator")
+	tag := r.URL.Query().Get("tag")
 	limit := parseIntParam(r, "limit", 50)
 	offset := parseIntParam(r, "offset", 0)
 
-	if did == "" {
-		http.Error(w, "creator parameter required", http.StatusBadRequest)
-		return
+	var highlights []db.Highlight
+	var err error
+
+	if did != "" {
+		highlights, err = h.db.GetHighlightsByAuthor(did, limit, offset)
+	} else if tag != "" {
+		highlights, err = h.db.GetHighlightsByTag(tag, limit, offset)
+	} else {
+		highlights, err = h.db.GetRecentHighlights(limit, offset)
 	}
 
-	highlights, err := h.db.GetHighlightsByAuthor(did, limit, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

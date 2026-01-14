@@ -23,10 +23,16 @@ export async function getURLMetadata(url) {
   return request(`${API_BASE}/url-metadata?url=${encodeURIComponent(url)}`);
 }
 
-export async function getAnnotationFeed(limit = 50, offset = 0) {
-  return request(
-    `${API_BASE}/annotations/feed?limit=${limit}&offset=${offset}`,
-  );
+export async function getAnnotationFeed(
+  limit = 50,
+  offset = 0,
+  tag = "",
+  creator = "",
+) {
+  let url = `${API_BASE}/annotations/feed?limit=${limit}&offset=${offset}`;
+  if (tag) url += `&tag=${encodeURIComponent(tag)}`;
+  if (creator) url += `&creator=${encodeURIComponent(creator)}`;
+  return request(url);
 }
 
 export async function getAnnotations({
@@ -210,10 +216,24 @@ export async function deleteBookmark(rkey) {
   });
 }
 
-export async function createAnnotation({ url, text, quote, title, selector }) {
+export async function createHighlight({ url, title, selector, color, tags }) {
+  return request(`${API_BASE}/highlights`, {
+    method: "POST",
+    body: JSON.stringify({ url, title, selector, color, tags }),
+  });
+}
+
+export async function createAnnotation({
+  url,
+  text,
+  quote,
+  title,
+  selector,
+  tags,
+}) {
   return request(`${API_BASE}/annotations`, {
     method: "POST",
-    body: JSON.stringify({ url, text, quote, title, selector }),
+    body: JSON.stringify({ url, text, quote, title, selector, tags }),
   });
 }
 

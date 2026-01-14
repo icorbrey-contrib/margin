@@ -27,7 +27,6 @@ import {
   BookmarkIcon,
 } from "./Icons";
 import { Folder, Edit2, Save, X, Clock } from "lucide-react";
-import AddToCollectionModal from "./AddToCollectionModal";
 import ShareMenu from "./ShareMenu";
 
 function buildTextFragmentUrl(baseUrl, selector) {
@@ -60,16 +59,20 @@ const truncateUrl = (url, maxLength = 60) => {
   }
 };
 
-export default function AnnotationCard({ annotation, onDelete }) {
+export default function AnnotationCard({
+  annotation,
+  onDelete,
+  onAddToCollection,
+}) {
   const { user, login } = useAuth();
   const data = normalizeAnnotation(annotation);
 
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showAddToCollection, setShowAddToCollection] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(data.text || "");
+  const [editTags, setEditTags] = useState(data.tags?.join(", ") || "");
   const [saving, setSaving] = useState(false);
 
   const [showHistory, setShowHistory] = useState(false);
@@ -182,10 +185,16 @@ export default function AnnotationCard({ annotation, onDelete }) {
   const handleSaveEdit = async () => {
     try {
       setSaving(true);
-      await updateAnnotation(data.uri, editText, data.tags);
+      const tagList = editTags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      await updateAnnotation(data.uri, editText, tagList);
       setIsEditing(false);
       if (annotation.body) annotation.body.value = editText;
       else if (annotation.text) annotation.text = editText;
+      if (annotation.tags) annotation.tags = tagList;
+      data.tags = tagList;
     } catch (err) {
       alert("Failed to update: " + err.message);
     } finally {
@@ -288,78 +297,79 @@ export default function AnnotationCard({ annotation, onDelete }) {
   return (
     <article className="card annotation-card">
       <header className="annotation-header">
-        <Link to={marginProfileUrl || "#"} className="annotation-avatar-link">
-          <div className="annotation-avatar">
-            {authorAvatar ? (
-              <img src={authorAvatar} alt={authorDisplayName} />
-            ) : (
-              <span>
-                {(authorDisplayName || authorHandle || "??")
-                  ?.substring(0, 2)
-                  .toUpperCase()}
-              </span>
-            )}
-          </div>
-        </Link>
-        <div className="annotation-meta">
-          <div className="annotation-author-row">
-            <Link
-              to={marginProfileUrl || "#"}
-              className="annotation-author-link"
-            >
-              <span className="annotation-author">{authorDisplayName}</span>
-            </Link>
-            {authorHandle && (
-              <a
-                href={`https://bsky.app/profile/${authorHandle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="annotation-handle"
-              >
-                @{authorHandle} <ExternalLinkIcon size={12} />
-              </a>
-            )}
-          </div>
-          <div className="annotation-time">{formatDate(data.createdAt)}</div>
-        </div>
-        <div className="action-buttons">
-          {}
-          {hasEditHistory && !data.color && !data.description && (
-            <button
-              className="annotation-edit-btn"
-              onClick={fetchHistory}
-              title="View Edit History"
-            >
-              <Clock size={16} />
-            </button>
-          )}
-          {}
-          {isOwner && (
-            <>
-              {!data.color && !data.description && (
-                <button
-                  className="annotation-edit-btn"
-                  onClick={() => setIsEditing(!isEditing)}
-                  title="Edit"
-                >
-                  <Edit2 size={16} />
-                </button>
+        <div className="annotation-header-left">
+          <Link to={marginProfileUrl || "#"} className="annotation-avatar-link">
+            <div className="annotation-avatar">
+              {authorAvatar ? (
+                <img src={authorAvatar} alt={authorDisplayName} />
+              ) : (
+                <span>
+                  {(authorDisplayName || authorHandle || "??")
+                    ?.substring(0, 2)
+                    .toUpperCase()}
+                </span>
               )}
-              <button
-                className="annotation-delete"
-                onClick={handleDelete}
-                disabled={deleting}
-                title="Delete"
+            </div>
+          </Link>
+          <div className="annotation-meta">
+            <div className="annotation-author-row">
+              <Link
+                to={marginProfileUrl || "#"}
+                className="annotation-author-link"
               >
-                <TrashIcon size={16} />
+                <span className="annotation-author">{authorDisplayName}</span>
+              </Link>
+              {authorHandle && (
+                <a
+                  href={`https://bsky.app/profile/${authorHandle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="annotation-handle"
+                >
+                  @{authorHandle}
+                </a>
+              )}
+            </div>
+            <div className="annotation-time">{formatDate(data.createdAt)}</div>
+          </div>
+        </div>
+        <div className="annotation-header-right">
+          <div style={{ display: "flex", gap: "4px" }}>
+            {hasEditHistory && !data.color && !data.description && (
+              <button
+                className="annotation-action action-icon-only"
+                onClick={fetchHistory}
+                title="View Edit History"
+              >
+                <Clock size={16} />
               </button>
-            </>
-          )}
+            )}
+
+            {isOwner && (
+              <>
+                {!data.color && !data.description && (
+                  <button
+                    className="annotation-action action-icon-only"
+                    onClick={() => setIsEditing(!isEditing)}
+                    title="Edit"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                )}
+                <button
+                  className="annotation-action action-icon-only"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  title="Delete"
+                >
+                  <TrashIcon size={16} />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      {}
-      {}
       {showHistory && (
         <div className="history-panel">
           <div className="history-header">
@@ -391,108 +401,127 @@ export default function AnnotationCard({ annotation, onDelete }) {
         </div>
       )}
 
-      <a
-        href={data.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="annotation-source"
-      >
-        {truncateUrl(data.url)}
-        {data.title && (
-          <span className="annotation-source-title"> • {data.title}</span>
-        )}
-      </a>
-
-      {highlightedText && (
+      <div className="annotation-content">
         <a
-          href={fragmentUrl}
+          href={data.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="annotation-highlight"
+          className="annotation-source"
         >
-          <mark>"{highlightedText}"</mark>
+          {truncateUrl(data.url)}
+          {data.title && (
+            <span className="annotation-source-title"> • {data.title}</span>
+          )}
         </a>
-      )}
 
-      {isEditing ? (
-        <div className="mt-3">
-          <textarea
-            value={editText}
-            onChange={(e) => setEditText(e.target.value)}
-            className="reply-input"
-            rows={3}
-            style={{ marginBottom: "8px" }}
-          />
-          <div className="action-buttons-end">
-            <button
-              onClick={() => setIsEditing(false)}
-              className="btn btn-ghost"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveEdit}
-              disabled={saving}
-              className="btn btn-primary btn-sm"
-            >
-              {saving ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Save size={14} /> Save
-                </>
-              )}
-            </button>
+        {highlightedText && (
+          <a
+            href={fragmentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="annotation-highlight"
+            style={{
+              borderLeftColor: isEditing ? editColor : data.color || "#f59e0b",
+            }}
+          >
+            <mark>"{highlightedText}"</mark>
+          </a>
+        )}
+
+        {isEditing ? (
+          <div className="mt-3">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="reply-input"
+              rows={3}
+              style={{ marginBottom: "8px" }}
+            />
+            <input
+              type="text"
+              className="reply-input"
+              placeholder="Tags (comma separated)..."
+              value={editTags}
+              onChange={(e) => setEditTags(e.target.value)}
+              style={{ marginBottom: "8px" }}
+            />
+            <div className="action-buttons-end">
+              <button
+                onClick={() => setIsEditing(false)}
+                className="btn btn-ghost"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="btn btn-primary btn-sm"
+              >
+                {saving ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save size={14} /> Save
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
-      ) : (
-        data.text && <p className="annotation-text">{data.text}</p>
-      )}
+        ) : (
+          data.text && <p className="annotation-text">{data.text}</p>
+        )}
 
-      {data.tags?.length > 0 && (
-        <div className="annotation-tags">
-          {data.tags.map((tag, i) => (
-            <span key={i} className="annotation-tag">
-              #{tag}
-            </span>
-          ))}
-        </div>
-      )}
+        {data.tags?.length > 0 && (
+          <div className="annotation-tags">
+            {data.tags.map((tag, i) => (
+              <Link
+                key={i}
+                to={`/?tag=${encodeURIComponent(tag)}`}
+                className="annotation-tag"
+              >
+                #{tag}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       <footer className="annotation-actions">
-        <button
-          className={`annotation-action ${isLiked ? "liked" : ""}`}
-          onClick={handleLike}
-        >
-          <HeartIcon filled={isLiked} size={16} />
-          {likeCount > 0 && <span>{likeCount}</span>}
-        </button>
-        <button
-          className={`annotation-action ${showReplies ? "active" : ""}`}
-          onClick={() => setShowReplies(!showReplies)}
-        >
-          <MessageIcon size={16} />
-          <span>{replyCount > 0 ? `${replyCount}` : "Reply"}</span>
-        </button>
-        <ShareMenu
-          uri={data.uri}
-          text={data.title || data.url}
-          handle={data.author?.handle}
-          type="Annotation"
-        />
-        <button
-          className="annotation-action"
-          onClick={() => {
-            if (!user) {
-              login();
-              return;
-            }
-            setShowAddToCollection(true);
-          }}
-        >
-          <Folder size={16} />
-          <span>Collect</span>
-        </button>
+        <div className="annotation-actions-left">
+          <button
+            className={`annotation-action ${isLiked ? "liked" : ""}`}
+            onClick={handleLike}
+          >
+            <HeartIcon filled={isLiked} size={16} />
+            {likeCount > 0 && <span>{likeCount}</span>}
+          </button>
+          <button
+            className={`annotation-action ${showReplies ? "active" : ""}`}
+            onClick={() => setShowReplies(!showReplies)}
+          >
+            <MessageIcon size={16} />
+            <span>{replyCount > 0 ? `${replyCount}` : "Reply"}</span>
+          </button>
+          <ShareMenu
+            uri={data.uri}
+            text={data.title || data.url}
+            handle={data.author?.handle}
+            type="Annotation"
+          />
+          <button
+            className="annotation-action"
+            onClick={() => {
+              if (!user) {
+                login();
+                return;
+              }
+              if (onAddToCollection) onAddToCollection();
+            }}
+          >
+            <Folder size={16} />
+            <span>Collect</span>
+          </button>
+        </div>
       </footer>
 
       {showReplies && (
@@ -584,33 +613,34 @@ export default function AnnotationCard({ annotation, onDelete }) {
           </div>
         </div>
       )}
-
-      <AddToCollectionModal
-        isOpen={showAddToCollection}
-        onClose={() => setShowAddToCollection(false)}
-        annotationUri={data.uri}
-      />
     </article>
   );
 }
 
-export function HighlightCard({ highlight, onDelete }) {
+export function HighlightCard({ highlight, onDelete, onAddToCollection }) {
   const { user, login } = useAuth();
   const data = normalizeHighlight(highlight);
   const highlightedText =
     data.selector?.type === "TextQuoteSelector" ? data.selector.exact : null;
   const fragmentUrl = buildTextFragmentUrl(data.url, data.selector);
   const isOwner = user?.did && data.author?.did === user.did;
-  const [showAddToCollection, setShowAddToCollection] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editColor, setEditColor] = useState(data.color || "#f59e0b");
+  const [editTags, setEditTags] = useState(data.tags?.join(", ") || "");
 
   const handleSaveEdit = async () => {
     try {
-      await updateHighlight(data.uri, editColor, []);
+      const tagList = editTags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      await updateHighlight(data.uri, editColor, tagList);
       setIsEditing(false);
 
       if (highlight.color) highlight.color = editColor;
+      if (highlight.tags) highlight.tags = tagList;
+      else highlight.value = { ...highlight.value, tags: tagList };
     } catch (err) {
       alert("Failed to update: " + err.message);
     }
@@ -639,134 +669,214 @@ export function HighlightCard({ highlight, onDelete }) {
   return (
     <article className="card annotation-card">
       <header className="annotation-header">
-        <Link
-          to={data.author?.did ? `/profile/${data.author.did}` : "#"}
-          className="annotation-avatar-link"
-        >
-          <div className="annotation-avatar">
-            {data.author?.avatar ? (
-              <img src={data.author.avatar} alt="avatar" />
-            ) : (
-              <span>??</span>
+        <div className="annotation-header-left">
+          <Link
+            to={data.author?.did ? `/profile/${data.author.did}` : "#"}
+            className="annotation-avatar-link"
+          >
+            <div className="annotation-avatar">
+              {data.author?.avatar ? (
+                <img src={data.author.avatar} alt="avatar" />
+              ) : (
+                <span>??</span>
+              )}
+            </div>
+          </Link>
+          <div className="annotation-meta">
+            <Link to="#" className="annotation-author-link">
+              <span className="annotation-author">
+                {data.author?.displayName || "Unknown"}
+              </span>
+            </Link>
+            <div className="annotation-time">{formatDate(data.createdAt)}</div>
+            {data.author?.handle && (
+              <a
+                href={`https://bsky.app/profile/${data.author.handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="annotation-handle"
+              >
+                @{data.author.handle}
+              </a>
             )}
           </div>
-        </Link>
-        <div className="annotation-meta">
-          <Link to="#" className="annotation-author-link">
-            <span className="annotation-author">
-              {data.author?.displayName || "Unknown"}
-            </span>
-          </Link>
-          <div className="annotation-time">{formatDate(data.createdAt)}</div>
         </div>
-        <div className="action-buttons">
-          {isOwner && (
-            <>
-              <button
-                className="annotation-edit-btn"
-                onClick={() => setIsEditing(!isEditing)}
-                title="Edit Color"
-              >
-                <Edit2 size={16} />
-              </button>
-              <button
-                className="annotation-delete"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onDelete && onDelete(highlight.id || highlight.uri);
-                }}
-              >
-                <TrashIcon size={16} />
-              </button>
-            </>
-          )}
+
+        <div className="annotation-header-right">
+          <div style={{ display: "flex", gap: "4px" }}>
+            {isOwner && (
+              <>
+                <button
+                  className="annotation-action action-icon-only"
+                  onClick={() => setIsEditing(!isEditing)}
+                  title="Edit Color"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  className="annotation-action action-icon-only"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete && onDelete(highlight.id || highlight.uri);
+                  }}
+                >
+                  <TrashIcon size={16} />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      <a
-        href={data.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="annotation-source"
-      >
-        {truncateUrl(data.url)}
-      </a>
-
-      {highlightedText && (
+      <div className="annotation-content">
         <a
-          href={fragmentUrl}
+          href={data.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="annotation-highlight"
-          style={{
-            borderLeftColor: isEditing ? editColor : data.color || "#f59e0b",
-          }}
+          className="annotation-source"
         >
-          <mark>"{highlightedText}"</mark>
+          {truncateUrl(data.url)}
         </a>
-      )}
 
-      {isEditing && (
-        <div
-          className="mt-3"
-          style={{ display: "flex", alignItems: "center", gap: "8px" }}
-        >
-          <span style={{ fontSize: "0.9rem" }}>Color:</span>
-          <input
-            type="color"
-            value={editColor}
-            onChange={(e) => setEditColor(e.target.value)}
+        {highlightedText && (
+          <a
+            href={fragmentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="annotation-highlight"
             style={{
-              height: "32px",
-              width: "64px",
-              padding: 0,
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              overflow: "hidden",
+              borderLeftColor: isEditing ? editColor : data.color || "#f59e0b",
             }}
-          />
-          <button
-            onClick={handleSaveEdit}
-            className="btn btn-primary btn-sm"
-            style={{ marginLeft: "auto" }}
           >
-            Save
-          </button>
-        </div>
-      )}
+            <mark>"{highlightedText}"</mark>
+          </a>
+        )}
+
+        {isEditing && (
+          <div
+            className="mt-3"
+            style={{
+              display: "flex",
+              gap: "8px",
+              alignItems: "center",
+              padding: "8px",
+              background: "var(--bg-secondary)",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div
+              className="color-picker-compact"
+              style={{
+                position: "relative",
+                width: "28px",
+                height: "28px",
+                flexShrink: 0,
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: editColor,
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  border: "2px solid var(--bg-card)",
+                  boxShadow: "0 0 0 1px var(--border)",
+                }}
+              />
+              <input
+                type="color"
+                value={editColor}
+                onChange={(e) => setEditColor(e.target.value)}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  opacity: 0,
+                  cursor: "pointer",
+                }}
+                title="Change Color"
+              />
+            </div>
+
+            <input
+              type="text"
+              className="reply-input"
+              placeholder="e.g. tag1, tag2"
+              value={editTags}
+              onChange={(e) => setEditTags(e.target.value)}
+              style={{
+                margin: 0,
+                flex: 1,
+                fontSize: "0.9rem",
+                padding: "6px 10px",
+                height: "32px",
+                border: "none",
+                background: "transparent",
+              }}
+            />
+
+            <button
+              onClick={handleSaveEdit}
+              className="btn btn-primary btn-sm"
+              style={{ padding: "0 10px", height: "32px", minWidth: "auto" }}
+              title="Save"
+            >
+              <Save size={16} />
+            </button>
+          </div>
+        )}
+
+        {data.tags?.length > 0 && (
+          <div className="annotation-tags">
+            {data.tags.map((tag, i) => (
+              <Link
+                key={i}
+                to={`/?tag=${encodeURIComponent(tag)}`}
+                className="annotation-tag"
+              >
+                #{tag}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       <footer className="annotation-actions">
-        <span
-          className="annotation-action annotation-type-badge"
-          style={{ color: data.color || "#f59e0b" }}
-        >
-          <HighlightIcon size={14} /> Highlight
-        </span>
-        <ShareMenu
-          uri={data.uri}
-          text={data.title || data.description}
-          handle={data.author?.handle}
-          type="Highlight"
-        />
-        <button
-          className="annotation-action"
-          onClick={() => {
-            if (!user) {
-              login();
-              return;
-            }
-            setShowAddToCollection(true);
-          }}
-        >
-          <Folder size={16} />
-          <span>Collect</span>
-        </button>
+        <div className="annotation-actions-left">
+          <span
+            className="annotation-action"
+            style={{
+              color: data.color || "#f59e0b",
+              background: "none",
+              paddingLeft: 0,
+            }}
+          >
+            <HighlightIcon size={14} /> Highlight
+          </span>
+          <ShareMenu
+            uri={data.uri}
+            text={data.title || data.description}
+            handle={data.author?.handle}
+            type="Highlight"
+          />
+          <button
+            className="annotation-action"
+            onClick={() => {
+              if (!user) {
+                login();
+                return;
+              }
+              if (onAddToCollection) onAddToCollection();
+            }}
+          >
+            <Folder size={16} />
+            <span>Collect</span>
+          </button>
+        </div>
       </footer>
-      <AddToCollectionModal
-        isOpen={showAddToCollection}
-        onClose={() => setShowAddToCollection(false)}
-        annotationUri={data.uri}
-      />
     </article>
   );
 }

@@ -47,8 +47,13 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if req.URL == "" || req.Text == "" {
-		http.Error(w, "URL and text are required", http.StatusBadRequest)
+	if req.URL == "" {
+		http.Error(w, "URL is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.Text == "" && req.Selector == nil && len(req.Tags) == 0 {
+		http.Error(w, "Must provide text, selector, or tags", http.StatusBadRequest)
 		return
 	}
 
@@ -498,6 +503,7 @@ type CreateHighlightRequest struct {
 	Title    string      `json:"title,omitempty"`
 	Selector interface{} `json:"selector"`
 	Color    string      `json:"color,omitempty"`
+	Tags     []string    `json:"tags,omitempty"`
 }
 
 func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Request) {
@@ -519,7 +525,7 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 	}
 
 	urlHash := db.HashURL(req.URL)
-	record := xrpc.NewHighlightRecord(req.URL, urlHash, req.Selector, req.Color)
+	record := xrpc.NewHighlightRecord(req.URL, urlHash, req.Selector, req.Color, req.Tags)
 
 	var result *xrpc.CreateRecordOutput
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
@@ -549,6 +555,13 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 		colorPtr = &req.Color
 	}
 
+	var tagsJSONPtr *string
+	if len(req.Tags) > 0 {
+		tagsBytes, _ := json.Marshal(req.Tags)
+		tagsStr := string(tagsBytes)
+		tagsJSONPtr = &tagsStr
+	}
+
 	cid := result.CID
 	highlight := &db.Highlight{
 		URI:          result.URI,
@@ -558,6 +571,7 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 		TargetTitle:  titlePtr,
 		SelectorJSON: selectorJSONPtr,
 		Color:        colorPtr,
+		TagsJSON:     tagsJSONPtr,
 		CreatedAt:    time.Now(),
 		IndexedAt:    time.Now(),
 		CID:          &cid,

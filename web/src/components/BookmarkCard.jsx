@@ -11,19 +11,17 @@ import {
 } from "../api/client";
 import { HeartIcon, TrashIcon, ExternalLinkIcon, BookmarkIcon } from "./Icons";
 import { Folder } from "lucide-react";
-import AddToCollectionModal from "./AddToCollectionModal";
 import ShareMenu from "./ShareMenu";
 
-export default function BookmarkCard({ bookmark, annotation, onDelete }) {
+export default function BookmarkCard({ bookmark, onAddToCollection }) {
   const { user, login } = useAuth();
-  const raw = bookmark || annotation;
+  const raw = bookmark;
   const data =
     raw.type === "Bookmark" ? normalizeBookmark(raw) : normalizeAnnotation(raw);
 
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showAddToCollection, setShowAddToCollection] = useState(false);
 
   const isOwner = user?.did && data.author?.did === user.did;
 
@@ -84,25 +82,6 @@ export default function BookmarkCard({ bookmark, annotation, onDelete }) {
     }
   };
 
-  const handleShare = async () => {
-    const uriParts = data.uri.split("/");
-    const did = uriParts[2];
-    const rkey = uriParts[uriParts.length - 1];
-    const shareUrl = `${window.location.origin}/at/${did}/${rkey}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Bookmark", url: shareUrl });
-      } catch {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        alert("Link copied!");
-      } catch {
-        prompt("Copy:", shareUrl);
-      }
-    }
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -131,126 +110,120 @@ export default function BookmarkCard({ bookmark, annotation, onDelete }) {
 
   return (
     <article className="card bookmark-card">
-      {}
       <header className="annotation-header">
-        <Link to={marginProfileUrl || "#"} className="annotation-avatar-link">
-          <div className="annotation-avatar">
-            {authorAvatar ? (
-              <img src={authorAvatar} alt={authorDisplayName} />
-            ) : (
-              <span>
-                {(authorDisplayName || authorHandle || "??")
-                  ?.substring(0, 2)
-                  .toUpperCase()}
-              </span>
-            )}
-          </div>
-        </Link>
-        <div className="annotation-meta">
-          <div className="annotation-author-row">
-            <Link
-              to={marginProfileUrl || "#"}
-              className="annotation-author-link"
-            >
-              <span className="annotation-author">{authorDisplayName}</span>
-            </Link>
-            {authorHandle && (
-              <a
-                href={`https://bsky.app/profile/${authorHandle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="annotation-handle"
+        <div className="annotation-header-left">
+          <Link to={marginProfileUrl || "#"} className="annotation-avatar-link">
+            <div className="annotation-avatar">
+              {authorAvatar ? (
+                <img src={authorAvatar} alt={authorDisplayName} />
+              ) : (
+                <span>
+                  {(authorDisplayName || authorHandle || "??")
+                    ?.substring(0, 2)
+                    .toUpperCase()}
+                </span>
+              )}
+            </div>
+          </Link>
+          <div className="annotation-meta">
+            <div className="annotation-author-row">
+              <Link
+                to={marginProfileUrl || "#"}
+                className="annotation-author-link"
               >
-                @{authorHandle} <ExternalLinkIcon size={12} />
-              </a>
+                <span className="annotation-author">{authorDisplayName}</span>
+              </Link>
+              {authorHandle && (
+                <a
+                  href={`https://bsky.app/profile/${authorHandle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="annotation-handle"
+                >
+                  @{authorHandle}
+                </a>
+              )}
+            </div>
+            <div className="annotation-time">{formatDate(data.createdAt)}</div>
+          </div>
+        </div>
+
+        <div className="annotation-header-right">
+          <div style={{ display: "flex", gap: "4px" }}>
+            {isOwner && (
+              <button
+                className="annotation-action action-icon-only"
+                onClick={handleDelete}
+                disabled={deleting}
+                title="Delete"
+              >
+                <TrashIcon size={16} />
+              </button>
             )}
           </div>
-          <div className="annotation-time">{formatDate(data.createdAt)}</div>
-        </div>
-        <div className="action-buttons">
-          {isOwner && (
-            <button
-              className="annotation-delete"
-              onClick={handleDelete}
-              disabled={deleting}
-              title="Delete"
-            >
-              <TrashIcon size={16} />
-            </button>
-          )}
         </div>
       </header>
 
-      {}
-      <a
-        href={data.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bookmark-preview"
-      >
-        <div className="bookmark-preview-content">
-          <div className="bookmark-preview-site">
-            <BookmarkIcon size={14} />
-            <span>{domain}</span>
+      <div className="annotation-content">
+        <a
+          href={data.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bookmark-preview"
+        >
+          <div className="bookmark-preview-content">
+            <div className="bookmark-preview-site">
+              <BookmarkIcon size={14} />
+              <span>{domain}</span>
+            </div>
+            <h3 className="bookmark-preview-title">{data.title || data.url}</h3>
+            {data.description && (
+              <p className="bookmark-preview-desc">{data.description}</p>
+            )}
           </div>
-          <h3 className="bookmark-preview-title">{data.title || data.url}</h3>
-          {data.description && (
-            <p className="bookmark-preview-desc">{data.description}</p>
-          )}
-        </div>
-        <div className="bookmark-preview-arrow">
-          <ExternalLinkIcon size={18} />
-        </div>
-      </a>
+        </a>
 
-      {}
-      {data.tags?.length > 0 && (
-        <div className="annotation-tags">
-          {data.tags.map((tag, i) => (
-            <span key={i} className="annotation-tag">
-              #{tag}
-            </span>
-          ))}
-        </div>
-      )}
+        {data.tags?.length > 0 && (
+          <div className="annotation-tags">
+            {data.tags.map((tag, i) => (
+              <span key={i} className="annotation-tag">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {}
       <footer className="annotation-actions">
-        <button
-          className={`annotation-action ${isLiked ? "liked" : ""}`}
-          onClick={handleLike}
-        >
-          <HeartIcon filled={isLiked} size={16} />
-          {likeCount > 0 && <span>{likeCount}</span>}
-        </button>
-        <ShareMenu
-          uri={data.uri}
-          text={data.title || data.description}
-          handle={data.author?.handle}
-          type="Bookmark"
-        />
-        <button
-          className="annotation-action"
-          onClick={() => {
-            if (!user) {
-              login();
-              return;
-            }
-            setShowAddToCollection(true);
-          }}
-        >
-          <Folder size={16} />
-          <span>Collect</span>
-        </button>
+        <div className="annotation-actions-left">
+          <button
+            className={`annotation-action ${isLiked ? "liked" : ""}`}
+            onClick={handleLike}
+          >
+            <HeartIcon filled={isLiked} size={16} />
+            {likeCount > 0 && <span>{likeCount}</span>}
+          </button>
+          <ShareMenu
+            uri={data.uri}
+            text={data.title || data.description}
+            handle={data.author?.handle}
+            type="Bookmark"
+          />
+          <button
+            className="annotation-action"
+            onClick={() => {
+              if (!user) {
+                login();
+                return;
+              }
+              if (onAddToCollection) onAddToCollection();
+            }}
+          >
+            <Folder size={16} />
+            <span>Collect</span>
+          </button>
+        </div>
       </footer>
-
-      {showAddToCollection && (
-        <AddToCollectionModal
-          isOpen={showAddToCollection}
-          annotationUri={data.uri}
-          onClose={() => setShowAddToCollection(false)}
-        />
-      )}
     </article>
   );
 }

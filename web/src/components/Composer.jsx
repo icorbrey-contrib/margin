@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createAnnotation } from "../api/client";
+import { createAnnotation, createHighlight } from "../api/client";
 
 export default function Composer({
   url,
@@ -9,6 +9,7 @@ export default function Composer({
 }) {
   const [text, setText] = useState("");
   const [quoteText, setQuoteText] = useState("");
+  const [tags, setTags] = useState("");
   const [selector, setSelector] = useState(initialSelector);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,7 +20,7 @@ export default function Composer({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() && !highlightedText && !quoteText.trim()) return;
 
     try {
       setLoading(true);
@@ -33,11 +34,26 @@ export default function Composer({
         };
       }
 
-      await createAnnotation({
-        url,
-        text,
-        selector: finalSelector || undefined,
-      });
+      const tagList = tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      if (!text.trim()) {
+        await createHighlight({
+          url,
+          selector: finalSelector,
+          color: "yellow",
+          tags: tagList,
+        });
+      } else {
+        await createAnnotation({
+          url,
+          text,
+          selector: finalSelector || undefined,
+          tags: tagList,
+        });
+      }
 
       setText("");
       setQuoteText("");
@@ -123,9 +139,19 @@ export default function Composer({
         className="composer-input"
         rows={4}
         maxLength={3000}
-        required
         disabled={loading}
       />
+
+      <div className="composer-tags">
+        <input
+          type="text"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="Add tags (comma separated)..."
+          className="composer-tags-input"
+          disabled={loading}
+        />
+      </div>
 
       <div className="composer-footer">
         <span className="composer-count">{text.length}/3000</span>
@@ -143,7 +169,9 @@ export default function Composer({
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={loading || !text.trim()}
+            disabled={
+              loading || (!text.trim() && !highlightedText && !quoteText)
+            }
           >
             {loading ? "Posting..." : "Post"}
           </button>

@@ -104,6 +104,23 @@ func (db *DB) GetRecentAnnotations(limit, offset int) ([]Annotation, error) {
 	return scanAnnotations(rows)
 }
 
+func (db *DB) GetAnnotationsByTag(tag string, limit, offset int) ([]Annotation, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
 func (db *DB) DeleteAnnotation(uri string) error {
 	_, err := db.Exec(db.Rebind(`DELETE FROM annotations WHERE uri = ?`), uri)
 	return err
@@ -242,6 +259,31 @@ func (db *DB) GetRecentHighlights(limit, offset int) ([]Highlight, error) {
 	return highlights, nil
 }
 
+func (db *DB) GetHighlightsByTag(tag string, limit, offset int) ([]Highlight, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
 func (db *DB) GetRecentBookmarks(limit, offset int) ([]Bookmark, error) {
 	rows, err := db.Query(db.Rebind(`
 		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
@@ -249,6 +291,98 @@ func (db *DB) GetRecentBookmarks(limit, offset int) ([]Bookmark, error) {
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetBookmarksByTag(tag string, limit, offset int) ([]Bookmark, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetAnnotationsByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Annotation, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE author_did = ? AND tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetHighlightsByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Highlight, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE author_did = ? AND tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetBookmarksByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Bookmark, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE author_did = ? AND tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
 	if err != nil {
 		return nil, err
 	}

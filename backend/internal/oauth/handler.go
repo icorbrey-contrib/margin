@@ -244,6 +244,7 @@ func (h *Handler) HandleStart(w http.ResponseWriter, r *http.Request) {
 
 	parResp, state, dpopNonce, err := client.SendPAR(meta, req.Handle, scope, dpopKey, pkceChallenge)
 	if err != nil {
+		log.Printf("PAR request failed: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to initiate authentication"})
