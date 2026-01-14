@@ -243,7 +243,7 @@ func (c *Client) CreateClientAssertion(issuer string) (string, error) {
 		Issuer:   c.ClientID,
 		Subject:  c.ClientID,
 		Audience: jwt.Audience{issuer},
-		IssuedAt: jwt.NewNumericDate(now),
+		IssuedAt: jwt.NewNumericDate(now.Add(-5 * time.Minute)),
 		Expiry:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
 		ID:       base64.RawURLEncoding.EncodeToString(jti),
 	}
