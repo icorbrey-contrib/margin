@@ -97,7 +97,7 @@ const BLUESKY_FORKS = [
   { name: "Deer", domain: "deer.social", Icon: DeerIcon },
 ];
 
-export default function ShareMenu({ uri, text, customUrl }) {
+export default function ShareMenu({ uri, text, customUrl, handle, type }) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef(null);
@@ -105,9 +105,15 @@ export default function ShareMenu({ uri, text, customUrl }) {
   const getShareUrl = () => {
     if (customUrl) return customUrl;
     if (!uri) return "";
+
     const uriParts = uri.split("/");
-    const did = uriParts[2];
     const rkey = uriParts[uriParts.length - 1];
+
+    if (handle && type) {
+      return `${window.location.origin}/${handle}/${type.toLowerCase()}/${rkey}`;
+    }
+
+    const did = uriParts[2];
     return `${window.location.origin}/at/${did}/${rkey}`;
   };
 

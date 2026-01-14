@@ -34,6 +34,24 @@ function AppContent() {
           <Route path="/annotation/:uri" element={<AnnotationDetail />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/collections/:rkey" element={<CollectionDetail />} />
+          <Route
+            path="/:handle/collection/:rkey"
+            element={<CollectionDetail />}
+          />
+
+          <Route
+            path="/:handle/annotation/:rkey"
+            element={<AnnotationDetail />}
+          />
+          <Route
+            path="/:handle/highlight/:rkey"
+            element={<AnnotationDetail />}
+          />
+          <Route
+            path="/:handle/bookmark/:rkey"
+            element={<AnnotationDetail />}
+          />
+
           <Route path="/collection/*" element={<CollectionDetail />} />
           <Route path="/privacy" element={<Privacy />} />
         </Routes>

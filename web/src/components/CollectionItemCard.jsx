@@ -54,7 +54,7 @@ export default function CollectionItemCard({ item }) {
           </span>{" "}
           added to{" "}
           <Link
-            to={`/collection/${encodeURIComponent(collection.uri)}?author=${encodeURIComponent(author.did)}`}
+            to={`/${author.handle}/collection/${collection.uri.split("/").pop()}`}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -70,7 +70,9 @@ export default function CollectionItemCard({ item }) {
         </span>
         <div style={{ marginLeft: "auto" }}>
           <ShareMenu
-            customUrl={`${window.location.origin}/collection/${encodeURIComponent(collection.uri)}?author=${encodeURIComponent(author.did)}`}
+            uri={collection.uri}
+            handle={author.handle}
+            type="Collection"
             text={`Check out this collection by ${author.displayName}: ${collection.name}`}
           />
         </div>

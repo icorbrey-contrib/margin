@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 
 	"golang.org/x/image/font"
@@ -165,84 +164,165 @@ func isCrawler(userAgent string) bool {
 	return false
 }
 
+func (h *OGHandler) resolveHandle(handle string) (string, error) {
+	resp, err := http.Get(fmt.Sprintf("https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=%s", url.QueryEscape(handle)))
+	if err == nil && resp.StatusCode == http.StatusOK {
+		var result struct {
+			Did string `json:"did"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err == nil && result.Did != "" {
+			return result.Did, nil
+		}
+	}
+	defer resp.Body.Close()
+
+	return "", fmt.Errorf("failed to resolve handle")
+}
+
 func (h *OGHandler) HandleAnnotationPage(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
+	var did, rkey, collectionType string
 
-	var annotationMatch = regexp.MustCompile(`^/at/([^/]+)/([^/]+)$`)
-	matches := annotationMatch.FindStringSubmatch(path)
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) >= 2 {
+		firstPart, _ := url.QueryUnescape(parts[0])
 
-	if len(matches) != 3 {
+		if firstPart == "at" || firstPart == "annotation" {
+			if len(parts) >= 3 {
+				did, _ = url.QueryUnescape(parts[1])
+				rkey = parts[2]
+			}
+		} else {
+			if len(parts) >= 3 {
+				var err error
+				did, err = h.resolveHandle(firstPart)
+				if err != nil {
+					h.serveIndexHTML(w, r)
+					return
+				}
+
+				switch parts[1] {
+				case "highlight":
+					collectionType = "at.margin.highlight"
+				case "bookmark":
+					collectionType = "at.margin.bookmark"
+				case "annotation":
+					collectionType = "at.margin.annotation"
+				}
+				rkey = parts[2]
+			}
+		}
+	}
+
+	if did == "" || rkey == "" {
 		h.serveIndexHTML(w, r)
 		return
 	}
-
-	did, _ := url.QueryUnescape(matches[1])
-	rkey := matches[2]
 
 	if !isCrawler(r.UserAgent()) {
 		h.serveIndexHTML(w, r)
 		return
 	}
 
-	uri := fmt.Sprintf("at://%s/at.margin.annotation/%s", did, rkey)
-	annotation, err := h.db.GetAnnotationByURI(uri)
-	if err == nil && annotation != nil {
-		h.serveAnnotationOG(w, annotation)
-		return
-	}
+	if collectionType != "" {
+		uri := fmt.Sprintf("at://%s/%s/%s", did, collectionType, rkey)
+		if h.tryServeType(w, uri, collectionType) {
+			return
+		}
+	} else {
+		types := []string{
+			"at.margin.annotation",
+			"at.margin.bookmark",
+			"at.margin.highlight",
+		}
+		for _, t := range types {
+			uri := fmt.Sprintf("at://%s/%s/%s", did, t, rkey)
+			if h.tryServeType(w, uri, t) {
+				return
+			}
+		}
 
-	bookmarkURI := fmt.Sprintf("at://%s/at.margin.bookmark/%s", did, rkey)
-	bookmark, err := h.db.GetBookmarkByURI(bookmarkURI)
-	if err == nil && bookmark != nil {
-		h.serveBookmarkOG(w, bookmark)
-		return
-	}
-
-	highlightURI := fmt.Sprintf("at://%s/at.margin.highlight/%s", did, rkey)
-	highlight, err := h.db.GetHighlightByURI(highlightURI)
-	if err == nil && highlight != nil {
-		h.serveHighlightOG(w, highlight)
-		return
-	}
-
-	collectionURI := fmt.Sprintf("at://%s/at.margin.collection/%s", did, rkey)
-	collection, err := h.db.GetCollectionByURI(collectionURI)
-	if err == nil && collection != nil {
-		h.serveCollectionOG(w, collection)
-		return
+		colURI := fmt.Sprintf("at://%s/at.margin.collection/%s", did, rkey)
+		if h.tryServeType(w, colURI, "at.margin.collection") {
+			return
+		}
 	}
 
 	h.serveIndexHTML(w, r)
 }
 
+func (h *OGHandler) tryServeType(w http.ResponseWriter, uri, colType string) bool {
+	switch colType {
+	case "at.margin.annotation":
+		if item, err := h.db.GetAnnotationByURI(uri); err == nil && item != nil {
+			h.serveAnnotationOG(w, item)
+			return true
+		}
+	case "at.margin.highlight":
+		if item, err := h.db.GetHighlightByURI(uri); err == nil && item != nil {
+			h.serveHighlightOG(w, item)
+			return true
+		}
+	case "at.margin.bookmark":
+		if item, err := h.db.GetBookmarkByURI(uri); err == nil && item != nil {
+			h.serveBookmarkOG(w, item)
+			return true
+		}
+	case "at.margin.collection":
+		if item, err := h.db.GetCollectionByURI(uri); err == nil && item != nil {
+			h.serveCollectionOG(w, item)
+			return true
+		}
+	}
+	return false
+}
+
 func (h *OGHandler) HandleCollectionPage(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
-	prefix := "/collection/"
-	if !strings.HasPrefix(path, prefix) {
+	var did, rkey string
+
+	if strings.Contains(path, "/collection/") {
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		if len(parts) == 3 && parts[1] == "collection" {
+			handle, _ := url.QueryUnescape(parts[0])
+			rkey = parts[2]
+			var err error
+			did, err = h.resolveHandle(handle)
+			if err != nil {
+				h.serveIndexHTML(w, r)
+				return
+			}
+		} else if strings.HasPrefix(path, "/collection/") {
+			uriParam := strings.TrimPrefix(path, "/collection/")
+			if uriParam != "" {
+				uri, err := url.QueryUnescape(uriParam)
+				if err == nil {
+					parts := strings.Split(uri, "/")
+					if len(parts) >= 3 && strings.HasPrefix(uri, "at://") {
+						did = parts[2]
+						rkey = parts[len(parts)-1]
+					}
+				}
+			}
+		}
+	}
+
+	if did == "" && rkey == "" {
 		h.serveIndexHTML(w, r)
 		return
-	}
+	} else if did != "" && rkey != "" {
+		uri := fmt.Sprintf("at://%s/at.margin.collection/%s", did, rkey)
 
-	uriParam := strings.TrimPrefix(path, prefix)
-	if uriParam == "" {
-		h.serveIndexHTML(w, r)
-		return
-	}
+		if !isCrawler(r.UserAgent()) {
+			h.serveIndexHTML(w, r)
+			return
+		}
 
-	uri, err := url.QueryUnescape(uriParam)
-	if err != nil {
-		uri = uriParam
-	}
-
-	if !isCrawler(r.UserAgent()) {
-		h.serveIndexHTML(w, r)
-		return
-	}
-
-	collection, err := h.db.GetCollectionByURI(uri)
-	if err == nil && collection != nil {
-		h.serveCollectionOG(w, collection)
-		return
+		collection, err := h.db.GetCollectionByURI(uri)
+		if err == nil && collection != nil {
+			h.serveCollectionOG(w, collection)
+			return
+		}
 	}
 
 	h.serveIndexHTML(w, r)

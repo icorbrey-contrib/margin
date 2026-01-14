@@ -371,6 +371,15 @@ export async function searchActors(query) {
   return res.json();
 }
 
+export async function resolveHandle(handle) {
+  const res = await fetch(
+    `https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`,
+  );
+  if (!res.ok) throw new Error("Failed to resolve handle");
+  const data = await res.json();
+  return data.did;
+}
+
 export async function startLogin(handle, inviteCode) {
   return request(`${AUTH_BASE}/start`, {
     method: "POST",

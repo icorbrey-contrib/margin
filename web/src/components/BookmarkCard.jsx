@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import {
   normalizeAnnotation,
+  normalizeBookmark,
   likeAnnotation,
   unlikeAnnotation,
   getLikeCount,
@@ -15,7 +16,9 @@ import ShareMenu from "./ShareMenu";
 
 export default function BookmarkCard({ bookmark, annotation, onDelete }) {
   const { user, login } = useAuth();
-  const data = normalizeAnnotation(bookmark || annotation);
+  const raw = bookmark || annotation;
+  const data =
+    raw.type === "Bookmark" ? normalizeBookmark(raw) : normalizeAnnotation(raw);
 
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
@@ -220,7 +223,12 @@ export default function BookmarkCard({ bookmark, annotation, onDelete }) {
           <HeartIcon filled={isLiked} size={16} />
           {likeCount > 0 && <span>{likeCount}</span>}
         </button>
-        <ShareMenu uri={data.uri} text={data.title || data.description} />
+        <ShareMenu
+          uri={data.uri}
+          text={data.title || data.description}
+          handle={data.author?.handle}
+          type="Bookmark"
+        />
         <button
           className="annotation-action"
           onClick={() => {

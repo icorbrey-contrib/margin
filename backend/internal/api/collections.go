@@ -213,12 +213,36 @@ func (s *CollectionService) GetCollections(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	profiles := fetchProfilesForDIDs([]string{authorDID})
+	creator := profiles[authorDID]
+
+	apiCollections := make([]APICollection, len(collections))
+	for i, c := range collections {
+		icon := ""
+		if c.Icon != nil {
+			icon = *c.Icon
+		}
+		desc := ""
+		if c.Description != nil {
+			desc = *c.Description
+		}
+		apiCollections[i] = APICollection{
+			URI:         c.URI,
+			Name:        c.Name,
+			Description: desc,
+			Icon:        icon,
+			Creator:     creator,
+			CreatedAt:   c.CreatedAt,
+			IndexedAt:   c.IndexedAt,
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"@context":   "http://www.w3.org/ns/anno.jsonld",
 		"type":       "Collection",
-		"items":      collections,
-		"totalItems": len(collections),
+		"items":      apiCollections,
+		"totalItems": len(apiCollections),
 	})
 }
 

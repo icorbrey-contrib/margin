@@ -1,18 +1,22 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import AnnotationCard from "../components/AnnotationCard";
+import { useParams, Link, useLocation } from "react-router-dom";
+import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
+import BookmarkCard from "../components/BookmarkCard";
 import ReplyList from "../components/ReplyList";
 import {
   getAnnotation,
   getReplies,
   createReply,
   deleteReply,
+  resolveHandle,
+  normalizeAnnotation,
 } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { MessageSquare } from "lucide-react";
 
 export default function AnnotationDetail() {
-  const { uri, did, rkey } = useParams();
+  const { uri, did, rkey, handle, type } = useParams();
+  const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const [annotation, setAnnotation] = useState(null);
   const [replies, setReplies] = useState([]);
@@ -23,22 +27,64 @@ export default function AnnotationDetail() {
   const [posting, setPosting] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
 
-  const annotationUri = uri || `at://${did}/at.margin.annotation/${rkey}`;
+  const [targetUri, setTargetUri] = useState(uri);
+
+  useEffect(() => {
+    async function resolve() {
+      if (uri) {
+        setTargetUri(uri);
+        return;
+      }
+
+      if (handle && rkey) {
+        let collection = "at.margin.annotation";
+        if (type === "highlight") collection = "at.margin.highlight";
+        if (type === "bookmark") collection = "at.margin.bookmark";
+
+        try {
+          const resolvedDid = await resolveHandle(handle);
+          if (resolvedDid) {
+            setTargetUri(`at://${resolvedDid}/${collection}/${rkey}`);
+          }
+        } catch (e) {
+          console.error("Failed to resolve handle:", e);
+        }
+      } else if (did && rkey) {
+        setTargetUri(`at://${did}/at.margin.annotation/${rkey}`);
+      } else {
+        const pathParts = location.pathname.split("/");
+        const atIndex = pathParts.indexOf("at");
+        if (
+          atIndex !== -1 &&
+          pathParts[atIndex + 1] &&
+          pathParts[atIndex + 2]
+        ) {
+          setTargetUri(
+            `at://${pathParts[atIndex + 1]}/at.margin.annotation/${pathParts[atIndex + 2]}`,
+          );
+        }
+      }
+    }
+    resolve();
+  }, [uri, did, rkey, handle, type, location.pathname]);
 
   const refreshReplies = async () => {
-    const repliesData = await getReplies(annotationUri);
+    if (!targetUri) return;
+    const repliesData = await getReplies(targetUri);
     setReplies(repliesData.items || []);
   };
 
   useEffect(() => {
     async function fetchData() {
+      if (!targetUri) return;
+
       try {
         setLoading(true);
         const [annData, repliesData] = await Promise.all([
-          getAnnotation(annotationUri),
-          getReplies(annotationUri).catch(() => ({ items: [] })),
+          getAnnotation(targetUri),
+          getReplies(targetUri).catch(() => ({ items: [] })),
         ]);
-        setAnnotation(annData);
+        setAnnotation(normalizeAnnotation(annData));
         setReplies(repliesData.items || []);
       } catch (err) {
         setError(err.message);
@@ -47,7 +93,7 @@ export default function AnnotationDetail() {
       }
     }
     fetchData();
-  }, [annotationUri]);
+  }, [targetUri]);
 
   const handleReply = async (e) => {
     if (e) e.preventDefault();
@@ -57,7 +103,7 @@ export default function AnnotationDetail() {
       setPosting(true);
       const parentUri = replyingTo
         ? replyingTo.id || replyingTo.uri
-        : annotationUri;
+        : targetUri;
       const parentCid = replyingTo
         ? replyingTo.cid || ""
         : annotation?.cid || "";
@@ -65,7 +111,7 @@ export default function AnnotationDetail() {
       await createReply({
         parentUri,
         parentCid,
-        rootUri: annotationUri,
+        rootUri: targetUri,
         rootCid: annotation?.cid || "",
         text: replyText,
       });
@@ -130,65 +176,78 @@ export default function AnnotationDetail() {
         </Link>
       </div>
 
-      <AnnotationCard annotation={annotation} />
+      {annotation.type === "Highlight" ? (
+        <HighlightCard
+          highlight={annotation}
+          onDelete={() => (window.location.href = "/")}
+        />
+      ) : annotation.type === "Bookmark" ? (
+        <BookmarkCard
+          bookmark={annotation}
+          onDelete={() => (window.location.href = "/")}
+        />
+      ) : (
+        <AnnotationCard annotation={annotation} />
+      )}
 
-      {}
-      <div className="replies-section">
-        <h3 className="replies-title">
-          <MessageSquare size={18} />
-          Replies ({replies.length})
-        </h3>
+      {annotation.type !== "Bookmark" && annotation.type !== "Highlight" && (
+        <div className="replies-section">
+          <h3 className="replies-title">
+            <MessageSquare size={18} />
+            Replies ({replies.length})
+          </h3>
 
-        {isAuthenticated && (
-          <div className="reply-form card">
-            {replyingTo && (
-              <div className="replying-to-banner">
-                <span>
-                  Replying to @
-                  {(replyingTo.creator || replyingTo.author)?.handle ||
-                    "unknown"}
-                </span>
+          {isAuthenticated && (
+            <div className="reply-form card">
+              {replyingTo && (
+                <div className="replying-to-banner">
+                  <span>
+                    Replying to @
+                    {(replyingTo.creator || replyingTo.author)?.handle ||
+                      "unknown"}
+                  </span>
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="cancel-reply"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder={
+                  replyingTo
+                    ? `Reply to @${(replyingTo.creator || replyingTo.author)?.handle}...`
+                    : "Write a reply..."
+                }
+                className="reply-input"
+                rows={3}
+                disabled={posting}
+              />
+              <div className="reply-form-actions">
                 <button
-                  onClick={() => setReplyingTo(null)}
-                  className="cancel-reply"
+                  className="btn btn-primary"
+                  disabled={posting || !replyText.trim()}
+                  onClick={() => handleReply()}
                 >
-                  ×
+                  {posting ? "Posting..." : "Reply"}
                 </button>
               </div>
-            )}
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder={
-                replyingTo
-                  ? `Reply to @${(replyingTo.creator || replyingTo.author)?.handle}...`
-                  : "Write a reply..."
-              }
-              className="reply-input"
-              rows={3}
-              disabled={posting}
-            />
-            <div className="reply-form-actions">
-              <button
-                className="btn btn-primary"
-                disabled={posting || !replyText.trim()}
-                onClick={() => handleReply()}
-              >
-                {posting ? "Posting..." : "Reply"}
-              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        <ReplyList
-          replies={replies}
-          rootUri={annotationUri}
-          user={user}
-          onReply={(reply) => setReplyingTo(reply)}
-          onDelete={handleDeleteReply}
-          isInline={false}
-        />
-      </div>
+          <ReplyList
+            replies={replies}
+            rootUri={targetUri}
+            user={user}
+            onReply={(reply) => setReplyingTo(reply)}
+            onDelete={handleDeleteReply}
+            isInline={false}
+          />
+        </div>
+      )}
     </div>
   );
 }

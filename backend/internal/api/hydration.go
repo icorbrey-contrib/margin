@@ -99,9 +99,13 @@ type APIReply struct {
 }
 
 type APICollection struct {
-	URI  string `json:"uri"`
-	Name string `json:"name"`
-	Icon string `json:"icon,omitempty"`
+	URI         string    `json:"uri"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	Icon        string    `json:"icon,omitempty"`
+	Creator     Author    `json:"creator"`
+	CreatedAt   time.Time `json:"createdAt"`
+	IndexedAt   time.Time `json:"indexedAt"`
 }
 
 type APICollectionItem struct {
@@ -458,10 +462,18 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem) ([]APICo
 			if coll.Icon != nil {
 				icon = *coll.Icon
 			}
+			desc := ""
+			if coll.Description != nil {
+				desc = *coll.Description
+			}
 			apiItem.Collection = &APICollection{
-				URI:  coll.URI,
-				Name: coll.Name,
-				Icon: icon,
+				URI:         coll.URI,
+				Name:        coll.Name,
+				Description: desc,
+				Icon:        icon,
+				Creator:     profiles[coll.AuthorDID],
+				CreatedAt:   coll.CreatedAt,
+				IndexedAt:   coll.IndexedAt,
 			}
 		}
 

@@ -188,26 +188,59 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	annotation, err := h.db.GetAnnotationByURI(uri)
-	if err != nil {
-		http.Error(w, "Annotation not found", http.StatusNotFound)
-		return
+	serveResponse := func(data interface{}, context string) {
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"@context": context,
+		}
+		jsonData, _ := json.Marshal(data)
+		json.Unmarshal(jsonData, &response)
+		json.NewEncoder(w).Encode(response)
 	}
 
-	enriched, _ := hydrateAnnotations([]db.Annotation{*annotation})
-	if len(enriched) == 0 {
-		http.Error(w, "Annotation not found", http.StatusNotFound)
-		return
+	if annotation, err := h.db.GetAnnotationByURI(uri); err == nil {
+		if enriched, _ := hydrateAnnotations([]db.Annotation{*annotation}); len(enriched) > 0 {
+			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
+			return
+		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	response := map[string]interface{}{
-		"@context": "http://www.w3.org/ns/anno.jsonld",
+	if highlight, err := h.db.GetHighlightByURI(uri); err == nil {
+		if enriched, _ := hydrateHighlights([]db.Highlight{*highlight}); len(enriched) > 0 {
+			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
+			return
+		}
 	}
-	annJSON, _ := json.Marshal(enriched[0])
-	json.Unmarshal(annJSON, &response)
 
-	json.NewEncoder(w).Encode(response)
+	if strings.Contains(uri, "at.margin.annotation") {
+		highlightURI := strings.Replace(uri, "at.margin.annotation", "at.margin.highlight", 1)
+		if highlight, err := h.db.GetHighlightByURI(highlightURI); err == nil {
+			if enriched, _ := hydrateHighlights([]db.Highlight{*highlight}); len(enriched) > 0 {
+				serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
+				return
+			}
+		}
+	}
+
+	if bookmark, err := h.db.GetBookmarkByURI(uri); err == nil {
+		if enriched, _ := hydrateBookmarks([]db.Bookmark{*bookmark}); len(enriched) > 0 {
+			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
+			return
+		}
+	}
+
+	if strings.Contains(uri, "at.margin.annotation") {
+		bookmarkURI := strings.Replace(uri, "at.margin.annotation", "at.margin.bookmark", 1)
+		if bookmark, err := h.db.GetBookmarkByURI(bookmarkURI); err == nil {
+			if enriched, _ := hydrateBookmarks([]db.Bookmark{*bookmark}); len(enriched) > 0 {
+				serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
+				return
+			}
+		}
+	}
+
+	http.Error(w, "Annotation, Highlight, or Bookmark not found", http.StatusNotFound)
+
 }
 
 func (h *Handler) GetByTarget(w http.ResponseWriter, r *http.Request) {

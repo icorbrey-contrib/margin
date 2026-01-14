@@ -97,7 +97,12 @@ func main() {
 	r.Get("/og-image", ogHandler.HandleOGImage)
 	r.Get("/annotation/{did}/{rkey}", ogHandler.HandleAnnotationPage)
 	r.Get("/at/{did}/{rkey}", ogHandler.HandleAnnotationPage)
+	r.Get("/{handle}/annotation/{rkey}", ogHandler.HandleAnnotationPage)
+	r.Get("/{handle}/highlight/{rkey}", ogHandler.HandleAnnotationPage)
+	r.Get("/{handle}/bookmark/{rkey}", ogHandler.HandleAnnotationPage)
+
 	r.Get("/collection/{uri}", ogHandler.HandleCollectionPage)
+	r.Get("/{handle}/collection/{rkey}", ogHandler.HandleCollectionPage)
 
 	staticDir := getEnv("STATIC_DIR", "../web/dist")
 	serveStatic(r, staticDir)

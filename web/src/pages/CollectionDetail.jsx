@@ -6,6 +6,7 @@ import {
   getCollectionItems,
   removeItemFromCollection,
   deleteCollection,
+  resolveHandle,
 } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import CollectionModal from "../components/CollectionModal";
@@ -15,7 +16,7 @@ import BookmarkCard from "../components/BookmarkCard";
 import ShareMenu from "../components/ShareMenu";
 
 export default function CollectionDetail() {
-  const { rkey, "*": wildcardPath } = useParams();
+  const { rkey, handle, "*": wildcardPath } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -27,48 +28,63 @@ export default function CollectionDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const searchParams = new URLSearchParams(location.search);
-  const authorDid = searchParams.get("author") || user?.did;
+  const paramAuthorDid = searchParams.get("author");
 
-  const getCollectionUri = () => {
-    if (wildcardPath) {
-      return decodeURIComponent(wildcardPath);
-    }
-    if (rkey && authorDid) {
-      return `at://${authorDid}/at.margin.collection/${rkey}`;
-    }
-    return null;
-  };
-
-  const collectionUri = getCollectionUri();
-  const isOwner = user?.did && authorDid === user.did;
+  const isOwner =
+    user?.did &&
+    (collection?.creator?.did === user.did || paramAuthorDid === user.did);
 
   const fetchContext = async () => {
-    if (!collectionUri || !authorDid) {
-      setError("Invalid collection URL");
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
+
+      let targetUri = null;
+      let targetDid = paramAuthorDid || user?.did;
+
+      if (handle && rkey) {
+        try {
+          targetDid = await resolveHandle(handle);
+          targetUri = `at://${targetDid}/at.margin.collection/${rkey}`;
+        } catch (e) {
+          console.error("Failed to resolve handle", e);
+        }
+      } else if (wildcardPath) {
+        targetUri = decodeURIComponent(wildcardPath);
+      } else if (rkey && targetDid) {
+        targetUri = `at://${targetDid}/at.margin.collection/${rkey}`;
+      }
+
+      if (!targetUri) {
+        if (!user && !handle && !paramAuthorDid) {
+          setError("Please log in to view your collections");
+          return;
+        }
+        setError("Invalid collection URL");
+        return;
+      }
+
+      if (!targetDid && targetUri.startsWith("at://")) {
+        const parts = targetUri.split("/");
+        if (parts.length > 2) targetDid = parts[2];
+      }
+
+      if (!targetDid) {
+        setError("Could not determine collection owner");
+        return;
+      }
+
       const [cols, itemsData] = await Promise.all([
-        getCollections(authorDid),
-        getCollectionItems(collectionUri),
+        getCollections(targetDid),
+        getCollectionItems(targetUri),
       ]);
 
       const found =
-        cols.items?.find((c) => c.uri === collectionUri) ||
+        cols.items?.find((c) => c.uri === targetUri) ||
         cols.items?.find(
-          (c) =>
-            collectionUri && c.uri.endsWith(collectionUri.split("/").pop()),
+          (c) => targetUri && c.uri.endsWith(targetUri.split("/").pop()),
         );
+
       if (!found) {
-        console.error(
-          "Collection not found. Looking for:",
-          collectionUri,
-          "Available:",
-          cols.items?.map((c) => c.uri),
-        );
         setError("Collection not found");
         return;
       }
@@ -83,13 +99,8 @@ export default function CollectionDetail() {
   };
 
   useEffect(() => {
-    if (collectionUri && authorDid) {
-      fetchContext();
-    } else if (!user && !searchParams.get("author")) {
-      setLoading(false);
-      setError("Please log in to view your collections");
-    }
-  }, [rkey, wildcardPath, authorDid, user]);
+    fetchContext();
+  }, [rkey, wildcardPath, handle, paramAuthorDid, user?.did]);
 
   const handleEditSuccess = () => {
     fetchContext();
@@ -171,7 +182,9 @@ export default function CollectionDetail() {
         </div>
         <div className="collection-detail-actions">
           <ShareMenu
-            customUrl={`${window.location.origin}/collection/${encodeURIComponent(collection.uri)}?author=${encodeURIComponent(authorDid)}`}
+            uri={collection.uri}
+            handle={collection.creator?.handle}
+            type="Collection"
             text={`Check out this collection: ${collection.name}`}
           />
           {isOwner && (

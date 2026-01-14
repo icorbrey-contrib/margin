@@ -6,9 +6,11 @@ export default function CollectionRow({ collection, onEdit }) {
   return (
     <div className="collection-row">
       <Link
-        to={`/collection/${encodeURIComponent(collection.uri)}?author=${encodeURIComponent(
-          collection.authorDid || collection.author?.did,
-        )}`}
+        to={
+          collection.creator?.handle
+            ? `/${collection.creator.handle}/collection/${collection.uri.split("/").pop()}`
+            : `/collection/${encodeURIComponent(collection.uri)}`
+        }
         className="collection-row-content"
       >
         <div className="collection-row-icon">

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import {
   normalizeAnnotation,
   normalizeHighlight,
+  normalizeBookmark,
   deleteAnnotation,
   likeAnnotation,
   unlikeAnnotation,
@@ -473,7 +474,12 @@ export default function AnnotationCard({ annotation, onDelete }) {
           <MessageIcon size={16} />
           <span>{replyCount > 0 ? `${replyCount}` : "Reply"}</span>
         </button>
-        <ShareMenu uri={data.uri} text={data.text} />
+        <ShareMenu
+          uri={data.uri}
+          text={data.title || data.url}
+          handle={data.author?.handle}
+          type="Annotation"
+        />
         <button
           className="annotation-action"
           onClick={() => {
@@ -736,7 +742,12 @@ export function HighlightCard({ highlight, onDelete }) {
         >
           <HighlightIcon size={14} /> Highlight
         </span>
-        <ShareMenu uri={data.uri} text={highlightedText} />
+        <ShareMenu
+          uri={data.uri}
+          text={data.title || data.description}
+          handle={data.author?.handle}
+          type="Highlight"
+        />
         <button
           className="annotation-action"
           onClick={() => {
