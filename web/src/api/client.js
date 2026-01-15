@@ -314,6 +314,9 @@ export function normalizeAnnotation(item) {
       tags: item.tags || [],
       createdAt: item.createdAt || item.created,
       cid: item.cid || item.CID,
+      likeCount: item.likeCount || 0,
+      replyCount: item.replyCount || 0,
+      viewerHasLiked: item.viewerHasLiked || false,
     };
   }
 
@@ -328,6 +331,9 @@ export function normalizeAnnotation(item) {
       tags: item.tags || [],
       createdAt: item.createdAt || item.created,
       cid: item.cid || item.CID,
+      likeCount: item.likeCount || 0,
+      replyCount: item.replyCount || 0,
+      viewerHasLiked: item.viewerHasLiked || false,
     };
   }
 
@@ -343,6 +349,9 @@ export function normalizeAnnotation(item) {
       tags: item.tags || [],
       createdAt: item.createdAt || item.created,
       cid: item.cid || item.CID,
+      likeCount: item.likeCount || 0,
+      replyCount: item.replyCount || 0,
+      viewerHasLiked: item.viewerHasLiked || false,
     };
   }
 
@@ -358,6 +367,9 @@ export function normalizeAnnotation(item) {
     tags: item.tags || [],
     createdAt: item.createdAt || item.created,
     cid: item.cid || item.CID,
+    likeCount: item.likeCount || 0,
+    replyCount: item.replyCount || 0,
+    viewerHasLiked: item.viewerHasLiked || false,
   };
 }
 
@@ -371,6 +383,9 @@ export function normalizeHighlight(highlight) {
     color: highlight.color,
     tags: highlight.tags || [],
     createdAt: highlight.createdAt || highlight.created,
+    likeCount: highlight.likeCount || 0,
+    replyCount: highlight.replyCount || 0,
+    viewerHasLiked: highlight.viewerHasLiked || false,
   };
 }
 
@@ -383,6 +398,9 @@ export function normalizeBookmark(bookmark) {
     description: bookmark.description,
     tags: bookmark.tags || [],
     createdAt: bookmark.createdAt || bookmark.created,
+    likeCount: bookmark.likeCount || 0,
+    replyCount: bookmark.replyCount || 0,
+    viewerHasLiked: bookmark.viewerHasLiked || false,
   };
 }
 

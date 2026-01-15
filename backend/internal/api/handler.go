@@ -102,7 +102,7 @@ func (h *Handler) GetAnnotations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, _ := hydrateAnnotations(annotations)
+	enriched, _ := hydrateAnnotations(h.db, annotations, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -136,6 +136,11 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 			bookmarks, _ = h.db.GetBookmarksByTag(tag, limit, 0)
 			collectionItems = []db.CollectionItem{}
 		}
+	} else if creator != "" {
+		annotations, _ = h.db.GetAnnotationsByAuthor(creator, limit, 0)
+		highlights, _ = h.db.GetHighlightsByAuthor(creator, limit, 0)
+		bookmarks, _ = h.db.GetBookmarksByAuthor(creator, limit, 0)
+		collectionItems = []db.CollectionItem{}
 	} else {
 		annotations, _ = h.db.GetRecentAnnotations(limit, 0)
 		highlights, _ = h.db.GetRecentHighlights(limit, 0)
@@ -146,11 +151,12 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	authAnnos, _ := hydrateAnnotations(annotations)
-	authHighs, _ := hydrateHighlights(highlights)
-	authBooks, _ := hydrateBookmarks(bookmarks)
+	viewerDID := h.getViewerDID(r)
+	authAnnos, _ := hydrateAnnotations(h.db, annotations, viewerDID)
+	authHighs, _ := hydrateHighlights(h.db, highlights, viewerDID)
+	authBooks, _ := hydrateBookmarks(h.db, bookmarks, viewerDID)
 
-	authCollectionItems, _ := hydrateCollectionItems(h.db, collectionItems)
+	authCollectionItems, _ := hydrateCollectionItems(h.db, collectionItems, viewerDID)
 
 	var feed []interface{}
 	for _, a := range authAnnos {
@@ -222,14 +228,14 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if annotation, err := h.db.GetAnnotationByURI(uri); err == nil {
-		if enriched, _ := hydrateAnnotations([]db.Annotation{*annotation}); len(enriched) > 0 {
+		if enriched, _ := hydrateAnnotations(h.db, []db.Annotation{*annotation}, h.getViewerDID(r)); len(enriched) > 0 {
 			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 			return
 		}
 	}
 
 	if highlight, err := h.db.GetHighlightByURI(uri); err == nil {
-		if enriched, _ := hydrateHighlights([]db.Highlight{*highlight}); len(enriched) > 0 {
+		if enriched, _ := hydrateHighlights(h.db, []db.Highlight{*highlight}, h.getViewerDID(r)); len(enriched) > 0 {
 			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 			return
 		}
@@ -238,7 +244,7 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(uri, "at.margin.annotation") {
 		highlightURI := strings.Replace(uri, "at.margin.annotation", "at.margin.highlight", 1)
 		if highlight, err := h.db.GetHighlightByURI(highlightURI); err == nil {
-			if enriched, _ := hydrateHighlights([]db.Highlight{*highlight}); len(enriched) > 0 {
+			if enriched, _ := hydrateHighlights(h.db, []db.Highlight{*highlight}, h.getViewerDID(r)); len(enriched) > 0 {
 				serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 				return
 			}
@@ -246,7 +252,7 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bookmark, err := h.db.GetBookmarkByURI(uri); err == nil {
-		if enriched, _ := hydrateBookmarks([]db.Bookmark{*bookmark}); len(enriched) > 0 {
+		if enriched, _ := hydrateBookmarks(h.db, []db.Bookmark{*bookmark}, h.getViewerDID(r)); len(enriched) > 0 {
 			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 			return
 		}
@@ -255,7 +261,7 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(uri, "at.margin.annotation") {
 		bookmarkURI := strings.Replace(uri, "at.margin.annotation", "at.margin.bookmark", 1)
 		if bookmark, err := h.db.GetBookmarkByURI(bookmarkURI); err == nil {
-			if enriched, _ := hydrateBookmarks([]db.Bookmark{*bookmark}); len(enriched) > 0 {
+			if enriched, _ := hydrateBookmarks(h.db, []db.Bookmark{*bookmark}, h.getViewerDID(r)); len(enriched) > 0 {
 				serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 				return
 			}
@@ -284,8 +290,8 @@ func (h *Handler) GetByTarget(w http.ResponseWriter, r *http.Request) {
 	annotations, _ := h.db.GetAnnotationsByTargetHash(urlHash, limit, offset)
 	highlights, _ := h.db.GetHighlightsByTargetHash(urlHash, limit, offset)
 
-	enrichedAnnotations, _ := hydrateAnnotations(annotations)
-	enrichedHighlights, _ := hydrateHighlights(highlights)
+	enrichedAnnotations, _ := hydrateAnnotations(h.db, annotations, h.getViewerDID(r))
+	enrichedHighlights, _ := hydrateHighlights(h.db, highlights, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -319,7 +325,7 @@ func (h *Handler) GetHighlights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, _ := hydrateHighlights(highlights)
+	enriched, _ := hydrateHighlights(h.db, highlights, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -346,7 +352,7 @@ func (h *Handler) GetBookmarks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, _ := hydrateBookmarks(bookmarks)
+	enriched, _ := hydrateBookmarks(h.db, bookmarks, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -371,7 +377,7 @@ func (h *Handler) GetUserAnnotations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, _ := hydrateAnnotations(annotations)
+	enriched, _ := hydrateAnnotations(h.db, annotations, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -397,7 +403,7 @@ func (h *Handler) GetUserHighlights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, _ := hydrateHighlights(highlights)
+	enriched, _ := hydrateHighlights(h.db, highlights, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -423,7 +429,7 @@ func (h *Handler) GetUserBookmarks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, _ := hydrateBookmarks(bookmarks)
+	enriched, _ := hydrateBookmarks(h.db, bookmarks, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -621,4 +627,15 @@ func (h *Handler) MarkNotificationsRead(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+func (h *Handler) getViewerDID(r *http.Request) string {
+	cookie, err := r.Cookie("margin_session")
+	if err != nil {
+		return ""
+	}
+	did, _, _, _, _, err := h.db.GetSession(cookie.Value)
+	if err != nil {
+		return ""
+	}
+	return did
 }

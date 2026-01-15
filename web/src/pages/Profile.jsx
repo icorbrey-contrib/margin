@@ -130,23 +130,7 @@ export default function Profile() {
           </div>
         );
       }
-      return bookmarks.map((b) => <BookmarkCard key={b.id} annotation={b} />);
-    }
-    if (activeTab === "bookmarks") {
-      if (bookmarks.length === 0) {
-        return (
-          <div className="empty-state">
-            <div className="empty-state-icon">
-              <BookmarkIcon size={32} />
-            </div>
-            <h3 className="empty-state-title">No bookmarks</h3>
-            <p className="empty-state-text">
-              This user hasn't bookmarked any pages.
-            </p>
-          </div>
-        );
-      }
-      return bookmarks.map((b) => <BookmarkCard key={b.id} annotation={b} />);
+      return bookmarks.map((b) => <BookmarkCard key={b.uri} bookmark={b} />);
     }
 
     if (activeTab === "collections") {

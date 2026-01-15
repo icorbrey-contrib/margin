@@ -67,8 +67,8 @@ export default function AnnotationCard({
   const { user, login } = useAuth();
   const data = normalizeAnnotation(annotation);
 
-  const [likeCount, setLikeCount] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(data.likeCount || 0);
+  const [isLiked, setIsLiked] = useState(data.viewerHasLiked || false);
   const [deleting, setDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(data.text || "");
@@ -80,7 +80,7 @@ export default function AnnotationCard({
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   const [replies, setReplies] = useState([]);
-  const [replyCount, setReplyCount] = useState(0);
+  const [replyCount, setReplyCount] = useState(data.replyCount || 0);
   const [showReplies, setShowReplies] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
@@ -90,45 +90,7 @@ export default function AnnotationCard({
 
   const [hasEditHistory, setHasEditHistory] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    async function fetchData() {
-      try {
-        const repliesRes = await getReplies(data.uri);
-        if (mounted && repliesRes.items) {
-          setReplies(repliesRes.items);
-          setReplyCount(repliesRes.items.length);
-        }
-
-        const likeRes = await getLikeCount(data.uri);
-        if (mounted) {
-          if (likeRes.count !== undefined) {
-            setLikeCount(likeRes.count);
-          }
-          if (likeRes.liked !== undefined) {
-            setIsLiked(likeRes.liked);
-          }
-        }
-
-        if (!data.color && !data.description) {
-          try {
-            const history = await getEditHistory(data.uri);
-            if (mounted && history && history.length > 0) {
-              setHasEditHistory(true);
-            }
-          } catch {}
-        }
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
-      }
-    }
-    if (data.uri) {
-      fetchData();
-    }
-    return () => {
-      mounted = false;
-    };
-  }, [data.uri]);
+  useEffect(() => {}, []);
 
   const fetchHistory = async () => {
     if (showHistory) {
@@ -421,7 +383,7 @@ export default function AnnotationCard({
             rel="noopener noreferrer"
             className="annotation-highlight"
             style={{
-              borderLeftColor: isEditing ? editColor : data.color || "#f59e0b",
+              borderLeftColor: data.color || "#f59e0b",
             }}
           >
             <mark>"{highlightedText}"</mark>
@@ -497,7 +459,17 @@ export default function AnnotationCard({
           </button>
           <button
             className={`annotation-action ${showReplies ? "active" : ""}`}
-            onClick={() => setShowReplies(!showReplies)}
+            onClick={async () => {
+              if (!showReplies && replies.length === 0) {
+                try {
+                  const res = await getReplies(data.uri);
+                  if (res.items) setReplies(res.items);
+                } catch (err) {
+                  console.error("Failed to load replies:", err);
+                }
+              }
+              setShowReplies(!showReplies);
+            }}
           >
             <MessageIcon size={16} />
             <span>{replyCount > 0 ? `${replyCount}` : "Reply"}</span>

@@ -12,10 +12,23 @@ import AddToCollectionModal from "../components/AddToCollectionModal";
 export default function Feed() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tagFilter = searchParams.get("tag");
+  const filter = searchParams.get("filter") || "all";
+
   const [annotations, setAnnotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("all");
+
+  const updateFilter = (newFilter) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("filter", newFilter);
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
   const [collectionModalState, setCollectionModalState] = useState({
     isOpen: false,
     uri: null,
@@ -28,8 +41,15 @@ export default function Feed() {
       try {
         setLoading(true);
         let creatorDid = "";
-        if (filter === "my-tags" && user?.did) {
-          creatorDid = user.did;
+
+        if (filter === "my-tags") {
+          if (user?.did) {
+            creatorDid = user.did;
+          } else {
+            setAnnotations([]);
+            setLoading(false);
+            return;
+          }
         }
 
         const data = await getAnnotationFeed(
@@ -83,7 +103,13 @@ export default function Feed() {
               Filtering by tag: <strong>#{tagFilter}</strong>
             </span>
             <button
-              onClick={() => setSearchParams({})}
+              onClick={() =>
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.delete("tag");
+                  return next;
+                })
+              }
               className="btn btn-sm"
               style={{ padding: "2px 8px", fontSize: "0.8rem" }}
             >
@@ -97,33 +123,33 @@ export default function Feed() {
       <div className="feed-filters">
         <button
           className={`filter-tab ${filter === "all" ? "active" : ""}`}
-          onClick={() => setFilter("all")}
+          onClick={() => updateFilter("all")}
         >
           All
         </button>
         {user && (
           <button
             className={`filter-tab ${filter === "my-tags" ? "active" : ""}`}
-            onClick={() => setFilter("my-tags")}
+            onClick={() => updateFilter("my-tags")}
           >
             My Feed
           </button>
         )}
         <button
           className={`filter-tab ${filter === "commenting" ? "active" : ""}`}
-          onClick={() => setFilter("commenting")}
+          onClick={() => updateFilter("commenting")}
         >
           Annotations
         </button>
         <button
           className={`filter-tab ${filter === "highlighting" ? "active" : ""}`}
-          onClick={() => setFilter("highlighting")}
+          onClick={() => updateFilter("highlighting")}
         >
           Highlights
         </button>
         <button
           className={`filter-tab ${filter === "bookmarking" ? "active" : ""}`}
-          onClick={() => setFilter("bookmarking")}
+          onClick={() => updateFilter("bookmarking")}
         >
           Bookmarks
         </button>

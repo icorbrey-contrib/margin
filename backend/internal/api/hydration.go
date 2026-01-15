@@ -50,40 +50,49 @@ type APIGenerator struct {
 }
 
 type APIAnnotation struct {
-	ID         string        `json:"id"`
-	CID        string        `json:"cid"`
-	Type       string        `json:"type"`
-	Motivation string        `json:"motivation,omitempty"`
-	Author     Author        `json:"creator"`
-	Body       *APIBody      `json:"body,omitempty"`
-	Target     APITarget     `json:"target"`
-	Tags       []string      `json:"tags,omitempty"`
-	Generator  *APIGenerator `json:"generator,omitempty"`
-	CreatedAt  time.Time     `json:"created"`
-	IndexedAt  time.Time     `json:"indexed"`
+	ID             string        `json:"id"`
+	CID            string        `json:"cid"`
+	Type           string        `json:"type"`
+	Motivation     string        `json:"motivation,omitempty"`
+	Author         Author        `json:"creator"`
+	Body           *APIBody      `json:"body,omitempty"`
+	Target         APITarget     `json:"target"`
+	Tags           []string      `json:"tags,omitempty"`
+	Generator      *APIGenerator `json:"generator,omitempty"`
+	CreatedAt      time.Time     `json:"created"`
+	IndexedAt      time.Time     `json:"indexed"`
+	LikeCount      int           `json:"likeCount"`
+	ReplyCount     int           `json:"replyCount"`
+	ViewerHasLiked bool          `json:"viewerHasLiked"`
 }
 
 type APIHighlight struct {
-	ID        string    `json:"id"`
-	Type      string    `json:"type"`
-	Author    Author    `json:"creator"`
-	Target    APITarget `json:"target"`
-	Color     string    `json:"color,omitempty"`
-	Tags      []string  `json:"tags,omitempty"`
-	CreatedAt time.Time `json:"created"`
-	CID       string    `json:"cid,omitempty"`
+	ID             string    `json:"id"`
+	Type           string    `json:"type"`
+	Author         Author    `json:"creator"`
+	Target         APITarget `json:"target"`
+	Color          string    `json:"color,omitempty"`
+	Tags           []string  `json:"tags,omitempty"`
+	CreatedAt      time.Time `json:"created"`
+	CID            string    `json:"cid,omitempty"`
+	LikeCount      int       `json:"likeCount"`
+	ReplyCount     int       `json:"replyCount"`
+	ViewerHasLiked bool      `json:"viewerHasLiked"`
 }
 
 type APIBookmark struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	Author      Author    `json:"creator"`
-	Source      string    `json:"source"`
-	Title       string    `json:"title,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Tags        []string  `json:"tags,omitempty"`
-	CreatedAt   time.Time `json:"created"`
-	CID         string    `json:"cid,omitempty"`
+	ID             string    `json:"id"`
+	Type           string    `json:"type"`
+	Author         Author    `json:"creator"`
+	Source         string    `json:"source"`
+	Title          string    `json:"title,omitempty"`
+	Description    string    `json:"description,omitempty"`
+	Tags           []string  `json:"tags,omitempty"`
+	CreatedAt      time.Time `json:"created"`
+	CID            string    `json:"cid,omitempty"`
+	LikeCount      int       `json:"likeCount"`
+	ReplyCount     int       `json:"replyCount"`
+	ViewerHasLiked bool      `json:"viewerHasLiked"`
 }
 
 type APIReply struct {
@@ -132,7 +141,7 @@ type APINotification struct {
 	ReadAt     *time.Time  `json:"readAt,omitempty"`
 }
 
-func hydrateAnnotations(annotations []db.Annotation) ([]APIAnnotation, error) {
+func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID string) ([]APIAnnotation, error) {
 	if len(annotations) == 0 {
 		return []APIAnnotation{}, nil
 	}
@@ -197,12 +206,22 @@ func hydrateAnnotations(annotations []db.Annotation) ([]APIAnnotation, error) {
 			CreatedAt: a.CreatedAt,
 			IndexedAt: a.IndexedAt,
 		}
+
+		if database != nil {
+			result[i].LikeCount, _ = database.GetLikeCount(a.URI)
+			result[i].ReplyCount, _ = database.GetReplyCount(a.URI)
+			if viewerDID != "" {
+				if _, err := database.GetLikeByUserAndSubject(viewerDID, a.URI); err == nil {
+					result[i].ViewerHasLiked = true
+				}
+			}
+		}
 	}
 
 	return result, nil
 }
 
-func hydrateHighlights(highlights []db.Highlight) ([]APIHighlight, error) {
+func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID string) ([]APIHighlight, error) {
 	if len(highlights) == 0 {
 		return []APIHighlight{}, nil
 	}
@@ -251,12 +270,22 @@ func hydrateHighlights(highlights []db.Highlight) ([]APIHighlight, error) {
 			CreatedAt: h.CreatedAt,
 			CID:       cid,
 		}
+
+		if database != nil {
+			result[i].LikeCount, _ = database.GetLikeCount(h.URI)
+			result[i].ReplyCount, _ = database.GetReplyCount(h.URI)
+			if viewerDID != "" {
+				if _, err := database.GetLikeByUserAndSubject(viewerDID, h.URI); err == nil {
+					result[i].ViewerHasLiked = true
+				}
+			}
+		}
 	}
 
 	return result, nil
 }
 
-func hydrateBookmarks(bookmarks []db.Bookmark) ([]APIBookmark, error) {
+func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string) ([]APIBookmark, error) {
 	if len(bookmarks) == 0 {
 		return []APIBookmark{}, nil
 	}
@@ -295,6 +324,15 @@ func hydrateBookmarks(bookmarks []db.Bookmark) ([]APIBookmark, error) {
 			Tags:        tags,
 			CreatedAt:   b.CreatedAt,
 			CID:         cid,
+		}
+		if database != nil {
+			result[i].LikeCount, _ = database.GetLikeCount(b.URI)
+			result[i].ReplyCount, _ = database.GetReplyCount(b.URI)
+			if viewerDID != "" {
+				if _, err := database.GetLikeByUserAndSubject(viewerDID, b.URI); err == nil {
+					result[i].ViewerHasLiked = true
+				}
+			}
 		}
 	}
 
@@ -439,7 +477,7 @@ func fetchProfiles(dids []string) (map[string]Author, error) {
 	return result, nil
 }
 
-func hydrateCollectionItems(database *db.DB, items []db.CollectionItem) ([]APICollectionItem, error) {
+func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDID string) ([]APICollectionItem, error) {
 	if len(items) == 0 {
 		return []APICollectionItem{}, nil
 	}
@@ -479,28 +517,27 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem) ([]APICo
 
 		if strings.Contains(item.AnnotationURI, "at.margin.annotation") {
 			if a, err := database.GetAnnotationByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateAnnotations([]db.Annotation{*a})
+				hydrated, _ := hydrateAnnotations(database, []db.Annotation{*a}, viewerDID)
 				if len(hydrated) > 0 {
 					apiItem.Annotation = &hydrated[0]
 				}
 			}
 		} else if strings.Contains(item.AnnotationURI, "at.margin.highlight") {
 			if h, err := database.GetHighlightByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateHighlights([]db.Highlight{*h})
+				hydrated, _ := hydrateHighlights(database, []db.Highlight{*h}, viewerDID)
 				if len(hydrated) > 0 {
 					apiItem.Highlight = &hydrated[0]
 				}
 			}
 		} else if strings.Contains(item.AnnotationURI, "at.margin.bookmark") {
 			if b, err := database.GetBookmarkByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateBookmarks([]db.Bookmark{*b})
+				hydrated, _ := hydrateBookmarks(database, []db.Bookmark{*b}, viewerDID)
 				if len(hydrated) > 0 {
 					apiItem.Bookmark = &hydrated[0]
 				} else {
 					log.Printf("Failed to hydrate bookmark %s: empty hydration result\n", item.AnnotationURI)
 				}
 			} else {
-				log.Printf("GetBookmarkByURI failed for %s: %v\n", item.AnnotationURI, err)
 			}
 		} else {
 			log.Printf("Unknown item type for URI: %s\n", item.AnnotationURI)

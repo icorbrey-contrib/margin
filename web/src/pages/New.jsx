@@ -84,7 +84,11 @@ export default function New() {
 
       <div className="card">
         <Composer
-          url={url || initialUrl}
+          url={
+            (url || initialUrl) && !/^(?:f|ht)tps?:\/\//.test(url || initialUrl)
+              ? `https://${url || initialUrl}`
+              : url || initialUrl
+          }
           selector={initialSelector}
           onSuccess={handleSuccess}
           onCancel={() => navigate(-1)}

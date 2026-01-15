@@ -278,6 +278,12 @@ func (s *CollectionService) GetCollectionItems(w http.ResponseWriter, r *http.Re
 
 	enrichedItems := make([]EnrichedCollectionItem, 0, len(items))
 
+	session, err := s.refresher.GetSessionWithAutoRefresh(r)
+	viewerDID := ""
+	if err == nil {
+		viewerDID = session.DID
+	}
+
 	for _, item := range items {
 		enriched := EnrichedCollectionItem{
 			URI:           item.URI,
@@ -290,7 +296,7 @@ func (s *CollectionService) GetCollectionItems(w http.ResponseWriter, r *http.Re
 		if strings.Contains(item.AnnotationURI, "at.margin.annotation") {
 			enriched.Type = "annotation"
 			if a, err := s.db.GetAnnotationByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateAnnotations([]db.Annotation{*a})
+				hydrated, _ := hydrateAnnotations(s.db, []db.Annotation{*a}, viewerDID)
 				if len(hydrated) > 0 {
 					enriched.Annotation = &hydrated[0]
 				}
@@ -298,7 +304,7 @@ func (s *CollectionService) GetCollectionItems(w http.ResponseWriter, r *http.Re
 		} else if strings.Contains(item.AnnotationURI, "at.margin.highlight") {
 			enriched.Type = "highlight"
 			if h, err := s.db.GetHighlightByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateHighlights([]db.Highlight{*h})
+				hydrated, _ := hydrateHighlights(s.db, []db.Highlight{*h}, viewerDID)
 				if len(hydrated) > 0 {
 					enriched.Highlight = &hydrated[0]
 				}
@@ -306,7 +312,7 @@ func (s *CollectionService) GetCollectionItems(w http.ResponseWriter, r *http.Re
 		} else if strings.Contains(item.AnnotationURI, "at.margin.bookmark") {
 			enriched.Type = "bookmark"
 			if b, err := s.db.GetBookmarkByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateBookmarks([]db.Bookmark{*b})
+				hydrated, _ := hydrateBookmarks(s.db, []db.Bookmark{*b}, viewerDID)
 				if len(hydrated) > 0 {
 					enriched.Bookmark = &hydrated[0]
 				}

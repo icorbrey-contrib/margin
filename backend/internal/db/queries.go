@@ -634,6 +634,12 @@ func (db *DB) GetLikeCount(subjectURI string) (int, error) {
 	return count, err
 }
 
+func (db *DB) GetReplyCount(rootURI string) (int, error) {
+	var count int
+	err := db.QueryRow(db.Rebind(`SELECT COUNT(*) FROM replies WHERE root_uri = ?`), rootURI).Scan(&count)
+	return count, err
+}
+
 func (db *DB) GetLikeByUserAndSubject(userDID, subjectURI string) (*Like, error) {
 	var like Like
 	err := db.QueryRow(db.Rebind(`

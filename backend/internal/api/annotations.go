@@ -72,6 +72,9 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 	}
 
 	record := xrpc.NewAnnotationRecordWithMotivation(req.URL, urlHash, req.Text, req.Selector, req.Title, motivation)
+	if len(req.Tags) > 0 {
+		record.Tags = req.Tags
+	}
 
 	var result *xrpc.CreateRecordOutput
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
@@ -98,6 +101,13 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 		selectorJSONPtr = &selectorStr
 	}
 
+	var tagsJSONPtr *string
+	if len(req.Tags) > 0 {
+		tagsBytes, _ := json.Marshal(req.Tags)
+		tagsStr := string(tagsBytes)
+		tagsJSONPtr = &tagsStr
+	}
+
 	cid := result.CID
 	did := session.DID
 	annotation := &db.Annotation{
@@ -110,6 +120,7 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 		TargetHash:   urlHash,
 		TargetTitle:  targetTitlePtr,
 		SelectorJSON: selectorJSONPtr,
+		TagsJSON:     tagsJSONPtr,
 		CreatedAt:    time.Now(),
 		IndexedAt:    time.Now(),
 	}
@@ -208,31 +219,10 @@ func (s *AnnotationService) UpdateAnnotation(w http.ResponseWriter, r *http.Requ
 	}
 	rkey := parts[2]
 
-	var selector interface{} = nil
-	if annotation.SelectorJSON != nil && *annotation.SelectorJSON != "" {
-		json.Unmarshal([]byte(*annotation.SelectorJSON), &selector)
-	}
-
 	tagsJSON := ""
 	if len(req.Tags) > 0 {
 		tagsBytes, _ := json.Marshal(req.Tags)
 		tagsJSON = string(tagsBytes)
-	}
-
-	record := map[string]interface{}{
-		"$type":     xrpc.CollectionAnnotation,
-		"text":      req.Text,
-		"url":       annotation.TargetSource,
-		"createdAt": annotation.CreatedAt.Format(time.RFC3339),
-	}
-	if selector != nil {
-		record["selector"] = selector
-	}
-	if len(req.Tags) > 0 {
-		record["tags"] = req.Tags
-	}
-	if annotation.TargetTitle != nil {
-		record["title"] = *annotation.TargetTitle
 	}
 
 	if annotation.BodyValue != nil {
@@ -242,6 +232,23 @@ func (s *AnnotationService) UpdateAnnotation(w http.ResponseWriter, r *http.Requ
 
 	var result *xrpc.PutRecordOutput
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+		existing, getErr := client.GetRecord(r.Context(), did, xrpc.CollectionAnnotation, rkey)
+		if getErr != nil {
+			return fmt.Errorf("failed to fetch existing record: %w", getErr)
+		}
+
+		var record map[string]interface{}
+		if err := json.Unmarshal(existing.Value, &record); err != nil {
+			return fmt.Errorf("failed to parse existing record: %w", err)
+		}
+
+		record["text"] = req.Text
+		if req.Tags != nil {
+			record["tags"] = req.Tags
+		} else {
+			delete(record, "tags")
+		}
+
 		var updateErr error
 		result, updateErr = client.PutRecord(r.Context(), did, xrpc.CollectionAnnotation, rkey, record)
 		if updateErr != nil {
