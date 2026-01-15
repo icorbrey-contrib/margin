@@ -383,7 +383,7 @@ export default function AnnotationCard({
             rel="noopener noreferrer"
             className="annotation-highlight"
             style={{
-              borderLeftColor: data.color || "#f59e0b",
+              borderLeftColor: data.color || "var(--accent)",
             }}
           >
             <mark>"{highlightedText}"</mark>

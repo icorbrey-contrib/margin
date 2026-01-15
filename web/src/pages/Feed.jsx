@@ -12,22 +12,18 @@ import AddToCollectionModal from "../components/AddToCollectionModal";
 export default function Feed() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tagFilter = searchParams.get("tag");
-  const filter = searchParams.get("filter") || "all";
+
+  const [filter, setFilter] = useState(() => {
+    return localStorage.getItem("feedFilter") || "all";
+  });
 
   const [annotations, setAnnotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const updateFilter = (newFilter) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set("filter", newFilter);
-        return next;
-      },
-      { replace: true },
-    );
-  };
+  useEffect(() => {
+    localStorage.setItem("feedFilter", filter);
+  }, [filter]);
 
   const [collectionModalState, setCollectionModalState] = useState({
     isOpen: false,
@@ -123,33 +119,33 @@ export default function Feed() {
       <div className="feed-filters">
         <button
           className={`filter-tab ${filter === "all" ? "active" : ""}`}
-          onClick={() => updateFilter("all")}
+          onClick={() => setFilter("all")}
         >
           All
         </button>
         {user && (
           <button
             className={`filter-tab ${filter === "my-tags" ? "active" : ""}`}
-            onClick={() => updateFilter("my-tags")}
+            onClick={() => setFilter("my-tags")}
           >
             My Feed
           </button>
         )}
         <button
           className={`filter-tab ${filter === "commenting" ? "active" : ""}`}
-          onClick={() => updateFilter("commenting")}
+          onClick={() => setFilter("commenting")}
         >
           Annotations
         </button>
         <button
           className={`filter-tab ${filter === "highlighting" ? "active" : ""}`}
-          onClick={() => updateFilter("highlighting")}
+          onClick={() => setFilter("highlighting")}
         >
           Highlights
         </button>
         <button
           className={`filter-tab ${filter === "bookmarking" ? "active" : ""}`}
-          onClick={() => updateFilter("bookmarking")}
+          onClick={() => setFilter("bookmarking")}
         >
           Bookmarks
         </button>
