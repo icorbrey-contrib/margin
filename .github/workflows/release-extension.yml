@@ -77,6 +77,16 @@ jobs:
           rm amo-metadata.json
           cd ..
 
+      - name: Prepare signed Firefox XPI
+        run: |
+          if ls web-ext-artifacts/*.xpi 1> /dev/null 2>&1; then
+            SIGNED_XPI=$(ls web-ext-artifacts/*.xpi | head -1)
+            echo "Found signed XPI: $SIGNED_XPI"
+            cp "$SIGNED_XPI" margin-extension-firefox.xpi
+          else
+            echo "No signed XPI found, using unsigned build"
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
