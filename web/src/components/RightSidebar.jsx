@@ -125,7 +125,7 @@ export default function RightSidebar() {
             <ExternalLink size={12} />
           </a>
           <a
-            href="https://tangled.net"
+            href="https://tangled.org/margin.at/margin"
             target="_blank"
             rel="noopener noreferrer"
             className="right-link"
