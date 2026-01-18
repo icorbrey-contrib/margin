@@ -2,7 +2,7 @@
   let sidebarHost = null;
   let sidebarShadow = null;
   let popoverEl = null;
-  let selectionPopupEl = null;
+
 
   let activeItems = [];
   let currentSelection = null;
@@ -470,128 +470,6 @@
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("click", handleDocumentClick, true);
-    document.addEventListener("mouseup", handleTextSelection);
-  }
-
-  function handleTextSelection(e) {
-    if (e.target.closest && e.target.closest("#margin-overlay-host")) return;
-
-    const selection = window.getSelection();
-    const selectedText = selection?.toString().trim();
-    if (!selectedText || selectedText.length < 3) {
-      hideSelectionPopup();
-      return;
-    }
-
-    const anchorNode = selection.anchorNode;
-    if (anchorNode) {
-      const parent = anchorNode.parentElement;
-      if (
-        parent &&
-        (parent.tagName === "INPUT" ||
-          parent.tagName === "TEXTAREA" ||
-          parent.isContentEditable)
-      ) {
-        return;
-      }
-    }
-
-    currentSelection = {
-      text: selectedText,
-      selector: { type: "TextQuoteSelector", exact: selectedText },
-    };
-
-    showSelectionPopup(e.clientX, e.clientY);
-  }
-
-  function showSelectionPopup(x, y) {
-    hideSelectionPopup();
-    if (!sidebarShadow) return;
-
-    const container = sidebarShadow.getElementById("margin-overlay-container");
-    if (!container) return;
-
-    selectionPopupEl = document.createElement("div");
-    selectionPopupEl.className = "margin-selection-popup";
-
-    const popupWidth = 180;
-    const viewportWidth = window.innerWidth;
-    let left = x + 5;
-    if (left + popupWidth > viewportWidth) {
-      left = viewportWidth - popupWidth - 10;
-    }
-
-    selectionPopupEl.style.left = `${left}px`;
-    selectionPopupEl.style.top = `${y + 10}px`;
-
-    selectionPopupEl.innerHTML = `
-      <button class="selection-btn btn-annotate">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-        </svg>
-        Annotate
-      </button>
-      <button class="selection-btn btn-highlight">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 11l3 3L22 4"/>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </svg>
-        Highlight
-      </button>
-    `;
-
-    selectionPopupEl
-      .querySelector(".btn-annotate")
-      .addEventListener("click", (e) => {
-        e.stopPropagation();
-        hideSelectionPopup();
-        showInlineComposeModal();
-      });
-
-    selectionPopupEl
-      .querySelector(".btn-highlight")
-      .addEventListener("click", async (e) => {
-        e.stopPropagation();
-        hideSelectionPopup();
-
-        chrome.runtime.sendMessage(
-          {
-            type: "CREATE_HIGHLIGHT",
-            data: {
-              url: window.location.href,
-              title: document.title,
-              selector: currentSelection.selector,
-              color: "#fcd34d",
-            },
-          },
-          (res) => {
-            if (res && res.success) {
-              fetchAnnotations();
-            }
-          },
-        );
-      });
-
-    container.appendChild(selectionPopupEl);
-
-    setTimeout(() => {
-      document.addEventListener("mousedown", closeSelectionPopupOutside, {
-        once: true,
-      });
-    }, 100);
-  }
-
-  function hideSelectionPopup() {
-    if (selectionPopupEl) {
-      selectionPopupEl.remove();
-      selectionPopupEl = null;
-    }
-  }
-
-  function closeSelectionPopupOutside(e) {
-    if (selectionPopupEl && !selectionPopupEl.contains(e.target)) {
-      hideSelectionPopup();
-    }
   }
 
   function showInlineComposeModal() {
@@ -762,7 +640,7 @@
         const firstRect = firstRange.getClientRects()[0];
         const totalWidth =
           Math.min(uniqueAuthors.length, maxShow + (overflow > 0 ? 1 : 0)) *
-            18 +
+          18 +
           8;
         const leftPos = firstRect.left - totalWidth;
         const topPos = firstRect.top + firstRect.height / 2 - 12;
