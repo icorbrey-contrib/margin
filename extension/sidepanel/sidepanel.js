@@ -37,13 +37,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     collectionList: document.getElementById("collection-list"),
     collectionLoading: document.getElementById("collection-loading"),
     collectionsEmpty: document.getElementById("collections-empty"),
+    overlayToggle: document.getElementById("overlay-toggle"),
   };
 
   let currentTab = null;
   let apiUrl = "";
   let currentUserDid = null;
   let pendingSelector = null;
-  let activeAnnotationUriForCollection = null;
 
   const storage = await chrome.storage.local.get(["apiUrl"]);
   if (storage.apiUrl) {
@@ -51,6 +51,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   els.apiUrlInput.value = apiUrl;
+
+  const overlayStorage = await chrome.storage.local.get(["showOverlay"]);
+  if (els.overlayToggle) {
+    els.overlayToggle.checked = overlayStorage.showOverlay !== false;
+  }
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes.apiUrl) {
@@ -253,18 +258,34 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   els.closeCollectionSelector?.addEventListener("click", () => {
     views.collectionSelector.style.display = "none";
-    activeAnnotationUriForCollection = null;
   });
 
   els.saveSettings?.addEventListener("click", async () => {
     const newUrl = els.apiUrlInput.value.replace(/\/$/, "");
+    const showOverlay = els.overlayToggle?.checked ?? true;
+
+    await chrome.storage.local.set({ apiUrl: newUrl, showOverlay });
     if (newUrl) {
-      await chrome.storage.local.set({ apiUrl: newUrl });
       apiUrl = newUrl;
-      await sendMessage({ type: "UPDATE_SETTINGS" });
-      views.settings.style.display = "none";
-      checkSession();
     }
+    await sendMessage({ type: "UPDATE_SETTINGS" });
+
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.id) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: "UPDATE_OVERLAY_VISIBILITY",
+            show: showOverlay,
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    views.settings.style.display = "none";
+    checkSession();
   });
 
   els.signOutBtn?.addEventListener("click", async () => {
@@ -367,7 +388,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.error("No currentUserDid, returning early");
       return;
     }
-    activeAnnotationUriForCollection = annotationUri;
     views.collectionSelector.style.display = "flex";
     els.collectionList.innerHTML = "";
     els.collectionLoading.style.display = "block";
@@ -561,10 +581,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         header.appendChild(badge);
       }
 
-      if (
-        item.author?.did === currentUserDid ||
-        item.creator?.did === currentUserDid
-      ) {
+      if (currentUserDid) {
         const actions = document.createElement("div");
         actions.className = "annotation-item-actions";
 
@@ -635,7 +652,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       let hostname = item.source;
       try {
         hostname = new URL(item.source).hostname;
-      } catch {}
+      } catch {
+        /* ignore */
+      }
 
       const row = document.createElement("div");
       row.style.display = "flex";
@@ -658,10 +677,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       row.appendChild(content);
 
-      if (
-        item.author?.did === currentUserDid ||
-        item.creator?.did === currentUserDid
-      ) {
+      if (currentUserDid) {
         const folderBtn = document.createElement("button");
         folderBtn.className = "btn-icon";
         folderBtn.innerHTML =
@@ -701,7 +717,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       let hostname = url;
       try {
         hostname = new URL(url).hostname;
-      } catch {}
+      } catch {
+        /* ignore */
+      }
 
       const header = document.createElement("div");
       header.className = "annotation-item-header";
@@ -721,10 +739,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       header.appendChild(meta);
 
-      if (
-        item.author?.did === currentUserDid ||
-        item.creator?.did === currentUserDid
-      ) {
+      if (currentUserDid) {
         const actions = document.createElement("div");
         actions.className = "annotation-item-actions";
 

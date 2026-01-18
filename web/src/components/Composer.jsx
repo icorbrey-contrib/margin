@@ -91,7 +91,7 @@ export default function Composer({
             ×
           </button>
           <blockquote>
-            <mark className="quote-exact">"{highlightedText}"</mark>
+            <mark className="quote-exact">&quot;{highlightedText}&quot;</mark>
           </blockquote>
         </div>
       )}

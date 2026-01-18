@@ -12,7 +12,6 @@ import {
   Camera,
   Code,
   Globe,
-  Lock,
   Flag,
   Tag,
   Box,
@@ -21,7 +20,6 @@ import {
   Image,
   Video,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Clock,
@@ -31,13 +29,10 @@ import {
   Users,
   Home,
   Briefcase,
-  ShoppingBag,
   Gift,
   Award,
   Target,
   TrendingUp,
-  BarChart,
-  PieChart,
   Activity,
   Cpu,
   Database,
@@ -46,8 +41,6 @@ import {
   Moon,
   Flame,
   Leaf,
-  Droplet,
-  Snowflake,
 } from "lucide-react";
 import { createCollection, updateCollection } from "../api/client";
 

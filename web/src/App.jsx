@@ -18,9 +18,12 @@ import Privacy from "./pages/Privacy";
 
 import Terms from "./pages/Terms";
 
+import ScrollToTop from "./components/ScrollToTop";
+
 function AppContent() {
   return (
     <div className="layout">
+      <ScrollToTop />
       <Sidebar />
       <div className="main-layout">
         <main className="main-content-wrapper">

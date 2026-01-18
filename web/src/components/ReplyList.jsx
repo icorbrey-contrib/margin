@@ -1,4 +1,3 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { MessageSquare, Trash2, Reply } from "lucide-react";
 

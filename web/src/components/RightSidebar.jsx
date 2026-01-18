@@ -1,20 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Download, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { SiFirefox, SiGooglechrome, SiGithub, SiBluesky } from "react-icons/si";
 import { FaEdge } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import { getTrendingTags } from "../api/client";
-import tangledIcon from "../assets/tangled.svg";
 
 const isFirefox =
   typeof navigator !== "undefined" && /Firefox/i.test(navigator.userAgent);
 const isEdge =
   typeof navigator !== "undefined" && /Edg/i.test(navigator.userAgent);
-const isChrome =
-  typeof navigator !== "undefined" &&
-  /Chrome/i.test(navigator.userAgent) &&
-  !isEdge;
 
 function getExtensionInfo() {
   if (isFirefox) {

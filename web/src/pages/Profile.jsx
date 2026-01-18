@@ -89,7 +89,7 @@ export default function Profile() {
             </div>
             <h3 className="empty-state-title">No annotations</h3>
             <p className="empty-state-text">
-              This user hasn't posted any annotations.
+              This user hasn&apos;t posted any annotations.
             </p>
           </div>
         );
@@ -108,7 +108,7 @@ export default function Profile() {
             </div>
             <h3 className="empty-state-title">No highlights</h3>
             <p className="empty-state-text">
-              This user hasn't saved any highlights.
+              This user hasn&apos;t saved any highlights.
             </p>
           </div>
         );
@@ -125,7 +125,7 @@ export default function Profile() {
             </div>
             <h3 className="empty-state-title">No bookmarks</h3>
             <p className="empty-state-text">
-              This user hasn't bookmarked any pages.
+              This user hasn&apos;t bookmarked any pages.
             </p>
           </div>
         );
@@ -142,7 +142,7 @@ export default function Profile() {
             </div>
             <h3 className="empty-state-title">No collections</h3>
             <p className="empty-state-text">
-              This user hasn't created any collections.
+              This user hasn&apos;t created any collections.
             </p>
           </div>
         );

@@ -5,28 +5,27 @@ import { Link } from "react-router-dom";
 import {
   normalizeAnnotation,
   normalizeHighlight,
-  normalizeBookmark,
-  deleteAnnotation,
   likeAnnotation,
   unlikeAnnotation,
   getReplies,
   createReply,
   deleteReply,
-  getLikeCount,
   updateAnnotation,
   updateHighlight,
-  updateBookmark,
   getEditHistory,
+  deleteAnnotation,
 } from "../api/client";
 import {
-  HeartIcon,
-  MessageIcon,
-  TrashIcon,
-  ExternalLinkIcon,
-  HighlightIcon,
-  BookmarkIcon,
-} from "./Icons";
-import { Folder, Edit2, Save, X, Clock } from "lucide-react";
+  MessageSquare,
+  Heart,
+  Trash2,
+  Folder,
+  Edit2,
+  Save,
+  X,
+  Clock,
+} from "lucide-react";
+import { HighlightIcon, TrashIcon } from "./Icons";
 import ShareMenu from "./ShareMenu";
 
 function buildTextFragmentUrl(baseUrl, selector) {
@@ -90,7 +89,17 @@ export default function AnnotationCard({
 
   const [hasEditHistory, setHasEditHistory] = useState(false);
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    if (data.uri && !data.color && !data.description) {
+      getEditHistory(data.uri)
+        .then((history) => {
+          if (history && history.length > 0) {
+            setHasEditHistory(true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [data.uri, data.color, data.description]);
 
   const fetchHistory = async () => {
     if (showHistory) {
@@ -216,30 +225,6 @@ export default function AnnotationCard({
     }
   };
 
-  const handleShare = async () => {
-    const uriParts = data.uri.split("/");
-    const did = uriParts[2];
-    const rkey = uriParts[uriParts.length - 1];
-    const shareUrl = `${window.location.origin}/at/${did}/${rkey}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Margin Annotation",
-          text: data.text?.substring(0, 100),
-          url: shareUrl,
-        });
-      } catch (err) {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        alert("Link copied!");
-      } catch {
-        prompt("Copy this link:", shareUrl);
-      }
-    }
-  };
-
   const handleDelete = async () => {
     if (!confirm("Delete this annotation? This cannot be undone.")) return;
     try {
@@ -324,7 +309,7 @@ export default function AnnotationCard({
                   disabled={deleting}
                   title="Delete"
                 >
-                  <TrashIcon size={16} />
+                  <Trash2 size={16} />
                 </button>
               </>
             )}
@@ -386,7 +371,7 @@ export default function AnnotationCard({
               borderLeftColor: data.color || "var(--accent)",
             }}
           >
-            <mark>"{highlightedText}"</mark>
+            <mark>&quot;{highlightedText}&quot;</mark>
           </a>
         )}
 
@@ -454,7 +439,7 @@ export default function AnnotationCard({
             className={`annotation-action ${isLiked ? "liked" : ""}`}
             onClick={handleLike}
           >
-            <HeartIcon filled={isLiked} size={16} />
+            <Heart filled={isLiked} size={16} />
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
           <button
@@ -471,7 +456,7 @@ export default function AnnotationCard({
               setShowReplies(!showReplies);
             }}
           >
-            <MessageIcon size={16} />
+            <MessageSquare size={16} />
             <span>{replyCount > 0 ? `${replyCount}` : "Reply"}</span>
           </button>
           <ShareMenu
@@ -561,8 +546,8 @@ export default function AnnotationCard({
               onChange={(e) => setReplyText(e.target.value)}
               onFocus={(e) => {
                 if (!user) {
-                  e.target.blur();
-                  login();
+                  e.preventDefault();
+                  alert("Please sign in to like annotations");
                 }
               }}
               rows={2}
@@ -589,7 +574,12 @@ export default function AnnotationCard({
   );
 }
 
-export function HighlightCard({ highlight, onDelete, onAddToCollection }) {
+export function HighlightCard({
+  highlight,
+  onDelete,
+  onAddToCollection,
+  onUpdate,
+}) {
   const { user, login } = useAuth();
   const data = normalizeHighlight(highlight);
   const highlightedText =
@@ -609,10 +599,8 @@ export function HighlightCard({ highlight, onDelete, onAddToCollection }) {
 
       await updateHighlight(data.uri, editColor, tagList);
       setIsEditing(false);
-
-      if (highlight.color) highlight.color = editColor;
-      if (highlight.tags) highlight.tags = tagList;
-      else highlight.value = { ...highlight.value, tags: tagList };
+      if (typeof onUpdate === "function")
+        onUpdate({ ...highlight, color: editColor, tags: tagList });
     } catch (err) {
       alert("Failed to update: " + err.message);
     }
@@ -720,7 +708,7 @@ export function HighlightCard({ highlight, onDelete, onAddToCollection }) {
               borderLeftColor: isEditing ? editColor : data.color || "#f59e0b",
             }}
           >
-            <mark>"{highlightedText}"</mark>
+            <mark>&quot;{highlightedText}&quot;</mark>
           </a>
         )}
 

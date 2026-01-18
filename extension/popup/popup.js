@@ -39,19 +39,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     collectionList: document.getElementById("collection-list"),
     collectionLoading: document.getElementById("collection-loading"),
     collectionsEmpty: document.getElementById("collections-empty"),
+    overlayToggle: document.getElementById("overlay-toggle"),
   };
 
   let currentTab = null;
   let apiUrl = "https://margin.at";
   let currentUserDid = null;
   let pendingSelector = null;
-  let activeAnnotationUriForCollection = null;
+  // let _activeAnnotationUriForCollection = null;
 
-  const storage = await browserAPI.storage.local.get(["apiUrl"]);
+  const storage = await browserAPI.storage.local.get(["apiUrl", "showOverlay"]);
   if (storage.apiUrl) {
     apiUrl = storage.apiUrl;
   }
   els.apiUrlInput.value = apiUrl;
+
+  if (els.overlayToggle) {
+    els.overlayToggle.checked = storage.showOverlay !== false;
+  }
 
   try {
     const [tab] = await browserAPI.tabs.query({
@@ -74,7 +79,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           pendingData = sessionData.pendingAnnotation;
           await browserAPI.storage.session.remove(["pendingAnnotation"]);
         }
-      } catch (e) {}
+      } catch {
+        /* ignore */
+      }
     }
 
     if (!pendingData) {
@@ -209,18 +216,34 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   els.saveSettings?.addEventListener("click", async () => {
     const newUrl = els.apiUrlInput.value.replace(/\/$/, "");
+    const showOverlay = els.overlayToggle?.checked ?? true;
+
+    await browserAPI.storage.local.set({ apiUrl: newUrl, showOverlay });
     if (newUrl) {
-      await browserAPI.storage.local.set({ apiUrl: newUrl });
       apiUrl = newUrl;
-      await sendMessage({ type: "UPDATE_SETTINGS" });
-      views.settings.style.display = "none";
-      checkSession();
     }
+    await sendMessage({ type: "UPDATE_SETTINGS" });
+
+    const tabs = await browserAPI.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.id) {
+        try {
+          await browserAPI.tabs.sendMessage(tab.id, {
+            type: "UPDATE_OVERLAY_VISIBILITY",
+            show: showOverlay,
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    views.settings.style.display = "none";
+    checkSession();
   });
 
   els.closeCollectionSelector?.addEventListener("click", () => {
     views.collectionSelector.style.display = "none";
-    activeAnnotationUriForCollection = null;
   });
 
   async function openCollectionSelector(annotationUri) {
@@ -228,7 +251,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.error("No currentUserDid, returning early");
       return;
     }
-    activeAnnotationUriForCollection = annotationUri;
     views.collectionSelector.style.display = "flex";
     els.collectionList.innerHTML = "";
     els.collectionLoading.style.display = "block";
@@ -507,10 +529,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const actions = document.createElement("div");
       actions.className = "annotation-item-actions";
 
-      if (
-        item.author?.did === currentUserDid ||
-        item.creator?.did === currentUserDid
-      ) {
+      if (currentUserDid) {
         const folderBtn = document.createElement("button");
         folderBtn.className = "btn-icon";
         folderBtn.innerHTML =
@@ -580,10 +599,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       row.appendChild(content);
 
-      if (
-        item.author?.did === currentUserDid ||
-        item.creator?.did === currentUserDid
-      ) {
+      if (currentUserDid) {
         const folderBtn = document.createElement("button");
         folderBtn.className = "btn-icon";
         folderBtn.innerHTML =

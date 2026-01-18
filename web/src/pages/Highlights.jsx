@@ -77,7 +77,7 @@ export default function Highlights() {
       <div className="page-header">
         <h1 className="page-title">My Highlights</h1>
         <p className="page-description">
-          Text you've highlighted across the web
+          Text you&apos;ve highlighted across the web
         </p>
       </div>
 

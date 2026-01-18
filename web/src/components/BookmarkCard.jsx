@@ -9,11 +9,15 @@ import {
   getLikeCount,
   deleteBookmark,
 } from "../api/client";
-import { HeartIcon, TrashIcon, ExternalLinkIcon, BookmarkIcon } from "./Icons";
+import { HeartIcon, TrashIcon, BookmarkIcon } from "./Icons";
 import { Folder } from "lucide-react";
 import ShareMenu from "./ShareMenu";
 
-export default function BookmarkCard({ bookmark, onAddToCollection }) {
+export default function BookmarkCard({
+  bookmark,
+  onAddToCollection,
+  onDelete,
+}) {
   const { user, login } = useAuth();
   const raw = bookmark;
   const data =
@@ -34,8 +38,8 @@ export default function BookmarkCard({ bookmark, onAddToCollection }) {
           if (likeRes.count !== undefined) setLikeCount(likeRes.count);
           if (likeRes.liked !== undefined) setIsLiked(likeRes.liked);
         }
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
+      } catch {
+        /* ignore */
       }
     }
     if (data.uri) fetchData();
@@ -60,21 +64,25 @@ export default function BookmarkCard({ bookmark, onAddToCollection }) {
         const cid = data.cid || "";
         if (data.uri && cid) await likeAnnotation(data.uri, cid);
       }
-    } catch (err) {
+    } catch {
       setIsLiked(!isLiked);
       setLikeCount((prev) => (isLiked ? prev + 1 : prev - 1));
     }
   };
 
   const handleDelete = async () => {
+    if (onDelete) {
+      onDelete(data.uri);
+      return;
+    }
+
     if (!confirm("Delete this bookmark?")) return;
     try {
       setDeleting(true);
       const parts = data.uri.split("/");
       const rkey = parts[parts.length - 1];
       await deleteBookmark(rkey);
-      if (onDelete) onDelete(data.uri);
-      else window.location.reload();
+      window.location.reload();
     } catch (err) {
       alert("Failed to delete: " + err.message);
     } finally {
@@ -100,7 +108,9 @@ export default function BookmarkCard({ bookmark, onAddToCollection }) {
   let domain = "";
   try {
     if (data.url) domain = new URL(data.url).hostname.replace("www.", "");
-  } catch {}
+  } catch {
+    /* ignore */
+  }
 
   const authorDisplayName = data.author?.displayName || data.author?.handle;
   const authorHandle = data.author?.handle;
@@ -109,7 +119,7 @@ export default function BookmarkCard({ bookmark, onAddToCollection }) {
   const marginProfileUrl = authorDid ? `/profile/${authorDid}` : null;
 
   return (
-    <article className="card bookmark-card">
+    <article className="card annotation-card bookmark-card">
       <header className="annotation-header">
         <div className="annotation-header-left">
           <Link to={marginProfileUrl || "#"} className="annotation-avatar-link">
@@ -150,7 +160,7 @@ export default function BookmarkCard({ bookmark, onAddToCollection }) {
 
         <div className="annotation-header-right">
           <div style={{ display: "flex", gap: "4px" }}>
-            {isOwner && (
+            {(isOwner || onDelete) && (
               <button
                 className="annotation-action action-icon-only"
                 onClick={handleDelete}

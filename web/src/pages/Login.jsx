@@ -23,29 +23,24 @@ export default function Login() {
   const isSelectionRef = useRef(false);
 
   useEffect(() => {
-    if (handle.length < 3) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    if (isSelectionRef.current) {
-      isSelectionRef.current = false;
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        const data = await searchActors(handle);
-        setSuggestions(data.actors || []);
-        setShowSuggestions(true);
-        setSelectedIndex(-1);
-      } catch (e) {
-        console.error("Search failed:", e);
+    if (handle.length >= 3) {
+      if (isSelectionRef.current) {
+        isSelectionRef.current = false;
+        return;
       }
-    }, 300);
 
-    return () => clearTimeout(timer);
+      const timer = setTimeout(async () => {
+        try {
+          const data = await searchActors(handle);
+          setSuggestions(data.actors || []);
+          setShowSuggestions(true);
+          setSelectedIndex(-1);
+        } catch (e) {
+          console.error("Search failed:", e);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
   }, [handle]);
 
   useEffect(() => {
@@ -178,7 +173,14 @@ export default function Login() {
             className="login-input"
             placeholder="yourname.bsky.social"
             value={handle}
-            onChange={(e) => setHandle(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setHandle(val);
+              if (val.length < 3) {
+                setSuggestions([]);
+                setShowSuggestions(false);
+              }
+            }}
             onKeyDown={handleKeyDown}
             onFocus={() =>
               handle.length >= 3 &&

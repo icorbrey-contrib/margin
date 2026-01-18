@@ -2,12 +2,10 @@
   let sidebarHost = null;
   let sidebarShadow = null;
   let popoverEl = null;
+  let selectionPopupEl = null;
 
   let activeItems = [];
-
-  let hoveredItems = [];
-  let tooltipEl = null;
-  let hideTimer = null;
+  let currentSelection = null;
 
   const OVERLAY_STYLES = `
     :host { all: initial; }
@@ -18,62 +16,6 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
-    }
-    .margin-badge {
-      position: absolute;
-      background: #6366f1;
-      color: white;
-      padding: 4px 10px;
-      border-radius: 99px;
-      font-size: 11px;
-      font-weight: 600;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      cursor: pointer;
-      pointer-events: auto;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transform: translateY(-120%);
-      white-space: nowrap;
-      transition: transform 0.15s, background-color 0.15s;
-      z-index: 2147483647;
-    }
-    .margin-badge:hover {
-      transform: translateY(-125%) scale(1.05);
-      background: #4f46e5;
-      z-index: 2147483647;
-    }
-    .margin-badge-avatar {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 9px;
-      object-fit: cover;
-    }
-    .margin-badge-stack {
-      display: flex;
-      align-items: center;
-    }
-    .margin-badge-stack .margin-badge-avatar {
-      margin-left: -6px;
-      border: 1px solid #6366f1;
-    }
-    .margin-badge-stack .margin-badge-avatar:first-child {
-      margin-left: 0;
-    }
-    .margin-badge-stem {
-      position: absolute;
-      left: 14px;
-      bottom: -6px;
-      width: 2px;
-      height: 6px;
-      background: #6366f1;
-      border-radius: 2px;
     }
 
     .margin-popover {
@@ -149,6 +91,183 @@
       padding: 4px 8px; color: #a1a1aa; font-size: 11px; cursor: pointer;
     }
     .btn-action:hover { background: #27272a; color: #e4e4e7; }
+    
+    .margin-selection-popup {
+      position: fixed;
+      display: flex;
+      gap: 4px;
+      padding: 6px;
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+      z-index: 2147483647;
+      pointer-events: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      animation: popover-in 0.15s forwards;
+    }
+    .selection-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #e4e4e7;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .selection-btn:hover {
+      background: #27272a;
+    }
+    .selection-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .inline-compose-modal {
+      position: fixed;
+      width: 340px;
+      max-width: calc(100vw - 40px);
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      padding: 16px;
+      box-sizing: border-box;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      z-index: 2147483647;
+      pointer-events: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #e4e4e7;
+      animation: popover-in 0.15s forwards;
+      overflow: hidden;
+    }
+    .inline-compose-modal * {
+      box-sizing: border-box;
+    }
+    .inline-compose-quote {
+      padding: 8px 12px;
+      background: #18181b;
+      border-left: 3px solid #6366f1;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #a1a1aa;
+      font-style: italic;
+      margin-bottom: 12px;
+      max-height: 60px;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .inline-compose-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    }
+    .inline-compose-textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+    .inline-compose-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .btn-cancel {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid #27272a;
+      border-radius: 6px;
+      color: #a1a1aa;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-cancel:hover {
+      background: #27272a;
+      color: #e4e4e7;
+    }
+    .btn-submit {
+      padding: 8px 16px;
+      background: #6366f1;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-submit:hover {
+      background: #4f46e5;
+    }
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .reply-section {
+      border-top: 1px solid #27272a;
+      padding: 12px 16px;
+      background: #0f0f12;
+      border-radius: 0 0 12px 12px;
+    }
+    .reply-textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: 8px 10px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 6px;
+      color: #e4e4e7;
+      font-family: inherit;
+      font-size: 12px;
+      resize: none;
+      margin-bottom: 8px;
+    }
+    .reply-textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+    .reply-submit {
+      padding: 6px 12px;
+      background: #6366f1;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      float: right;
+    }
+    .reply-submit:disabled {
+      opacity: 0.5;
+    }
+    .reply-item {
+      padding: 8px 0;
+      border-top: 1px solid #27272a;
+    }
+    .reply-item:first-child {
+      border-top: none;
+    }
+    .reply-author {
+      font-size: 11px;
+      font-weight: 600;
+      color: #a1a1aa;
+      margin-bottom: 4px;
+    }
+    .reply-text {
+      font-size: 12px;
+      color: #e4e4e7;
+      line-height: 1.4;
+    }
   `;
 
   class DOMTextMatcher {
@@ -203,8 +322,23 @@
       let matchIndex = this.corpus.indexOf(searchText);
 
       if (matchIndex === -1) {
-        const cleaned = searchText.replace(/\s+/g, " ");
-        return null;
+        const normalizedSearch = searchText.replace(/\s+/g, " ").trim();
+        matchIndex = this.corpus.indexOf(normalizedSearch);
+
+        if (matchIndex === -1) {
+          const fuzzyMatch = this.fuzzyFindInCorpus(searchText);
+          if (fuzzyMatch) {
+            const start = this.mapIndexToPoint(fuzzyMatch.start);
+            const end = this.mapIndexToPoint(fuzzyMatch.end);
+            if (start && end) {
+              const range = document.createRange();
+              range.setStart(start.node, start.offset);
+              range.setEnd(end.node, end.offset);
+              return range;
+            }
+          }
+          return null;
+        }
       }
 
       const start = this.mapIndexToPoint(matchIndex);
@@ -216,6 +350,57 @@
         range.setEnd(end.node, end.offset);
         return range;
       }
+      return null;
+    }
+
+    fuzzyFindInCorpus(searchText) {
+      const searchWords = searchText
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w.length > 0);
+      if (searchWords.length === 0) return null;
+
+      const corpusLower = this.corpus.toLowerCase();
+
+      const firstWord = searchWords[0].toLowerCase();
+      let searchStart = 0;
+
+      while (searchStart < corpusLower.length) {
+        const wordStart = corpusLower.indexOf(firstWord, searchStart);
+        if (wordStart === -1) break;
+
+        let corpusPos = wordStart;
+        let matched = true;
+        let lastMatchEnd = wordStart;
+
+        for (const word of searchWords) {
+          const wordLower = word.toLowerCase();
+          while (
+            corpusPos < corpusLower.length &&
+            /\s/.test(this.corpus[corpusPos])
+          ) {
+            corpusPos++;
+          }
+          const corpusSlice = corpusLower.slice(
+            corpusPos,
+            corpusPos + wordLower.length,
+          );
+          if (corpusSlice !== wordLower) {
+            matched = false;
+            break;
+          }
+
+          corpusPos += wordLower.length;
+          lastMatchEnd = corpusPos;
+        }
+
+        if (matched) {
+          return { start: wordStart, end: lastMatchEnd };
+        }
+
+        searchStart = wordStart + 1;
+      }
+
       return null;
     }
 
@@ -265,207 +450,406 @@
     container.id = "margin-overlay-container";
     sidebarShadow.appendChild(container);
 
-    createTooltip(container);
-
     const observer = new ResizeObserver(() => {
       sidebarHost.style.height = `${getScrollHeight()}px`;
     });
     if (document.body) observer.observe(document.body);
     if (document.documentElement) observer.observe(document.documentElement);
 
-    fetchAnnotations();
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local.get(["showOverlay"], (result) => {
+        if (result.showOverlay === false) {
+          sidebarHost.style.display = "none";
+        } else {
+          fetchAnnotations();
+        }
+      });
+    } else {
+      fetchAnnotations();
+    }
 
     document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("click", handleDocumentClick);
+    document.addEventListener("click", handleDocumentClick, true);
+    document.addEventListener("mouseup", handleTextSelection);
   }
 
-  function createTooltip(container) {
-    tooltipEl = document.createElement("div");
-    tooltipEl.className = "margin-badge";
-    tooltipEl.style.opacity = "0";
-    tooltipEl.style.transition = "opacity 0.1s, transform 0.1s";
-    tooltipEl.style.pointerEvents = "auto";
+  function handleTextSelection(e) {
+    if (e.target.closest && e.target.closest("#margin-overlay-host")) return;
 
-    tooltipEl.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (hoveredItems.length > 0) {
-        const firstItem = hoveredItems[0];
-        const rect = activeItems
-          .find((x) => x.item === firstItem)
-          ?.range.getBoundingClientRect();
-        if (rect) {
-          const top = rect.top + window.scrollY;
-          const left = rect.left + window.scrollX;
-          showPopover(hoveredItems, top, left);
-        }
+    const selection = window.getSelection();
+    const selectedText = selection?.toString().trim();
+    if (!selectedText || selectedText.length < 3) {
+      hideSelectionPopup();
+      return;
+    }
+
+    const anchorNode = selection.anchorNode;
+    if (anchorNode) {
+      const parent = anchorNode.parentElement;
+      if (
+        parent &&
+        (parent.tagName === "INPUT" ||
+          parent.tagName === "TEXTAREA" ||
+          parent.isContentEditable)
+      ) {
+        return;
       }
-    });
-    container.appendChild(tooltipEl);
+    }
+
+    currentSelection = {
+      text: selectedText,
+      selector: { type: "TextQuoteSelector", exact: selectedText },
+    };
+
+    showSelectionPopup(e.clientX, e.clientY);
   }
+
+  function showSelectionPopup(x, y) {
+    hideSelectionPopup();
+    if (!sidebarShadow) return;
+
+    const container = sidebarShadow.getElementById("margin-overlay-container");
+    if (!container) return;
+
+    selectionPopupEl = document.createElement("div");
+    selectionPopupEl.className = "margin-selection-popup";
+
+    const popupWidth = 180;
+    const viewportWidth = window.innerWidth;
+    let left = x + 5;
+    if (left + popupWidth > viewportWidth) {
+      left = viewportWidth - popupWidth - 10;
+    }
+
+    selectionPopupEl.style.left = `${left}px`;
+    selectionPopupEl.style.top = `${y + 10}px`;
+
+    selectionPopupEl.innerHTML = `
+      <button class="selection-btn btn-annotate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+        Annotate
+      </button>
+      <button class="selection-btn btn-highlight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        Highlight
+      </button>
+    `;
+
+    selectionPopupEl
+      .querySelector(".btn-annotate")
+      .addEventListener("click", (e) => {
+        e.stopPropagation();
+        hideSelectionPopup();
+        showInlineComposeModal();
+      });
+
+    selectionPopupEl
+      .querySelector(".btn-highlight")
+      .addEventListener("click", async (e) => {
+        e.stopPropagation();
+        hideSelectionPopup();
+
+        chrome.runtime.sendMessage(
+          {
+            type: "CREATE_HIGHLIGHT",
+            data: {
+              url: window.location.href,
+              title: document.title,
+              selector: currentSelection.selector,
+              color: "#fcd34d",
+            },
+          },
+          (res) => {
+            if (res && res.success) {
+              fetchAnnotations();
+            }
+          },
+        );
+      });
+
+    container.appendChild(selectionPopupEl);
+
+    setTimeout(() => {
+      document.addEventListener("mousedown", closeSelectionPopupOutside, {
+        once: true,
+      });
+    }, 100);
+  }
+
+  function hideSelectionPopup() {
+    if (selectionPopupEl) {
+      selectionPopupEl.remove();
+      selectionPopupEl = null;
+    }
+  }
+
+  function closeSelectionPopupOutside(e) {
+    if (selectionPopupEl && !selectionPopupEl.contains(e.target)) {
+      hideSelectionPopup();
+    }
+  }
+
+  function showInlineComposeModal() {
+    if (!sidebarShadow || !currentSelection) return;
+
+    const container = sidebarShadow.getElementById("margin-overlay-container");
+    if (!container) return;
+
+    const existingModal = container.querySelector(".inline-compose-modal");
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement("div");
+    modal.className = "inline-compose-modal";
+
+    modal.style.left = `${Math.max(20, (window.innerWidth - 340) / 2)}px`;
+    modal.style.top = `${Math.min(200, window.innerHeight / 4)}px`;
+
+    const truncatedQuote =
+      currentSelection.text.length > 100
+        ? currentSelection.text.substring(0, 100) + "..."
+        : currentSelection.text;
+
+    modal.innerHTML = `
+      <div class="inline-compose-quote">"${truncatedQuote}"</div>
+      <textarea class="inline-compose-textarea" placeholder="Add your annotation..." autofocus></textarea>
+      <div class="inline-compose-actions">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-submit">Post Annotation</button>
+      </div>
+    `;
+
+    const textarea = modal.querySelector("textarea");
+    const submitBtn = modal.querySelector(".btn-submit");
+    const cancelBtn = modal.querySelector(".btn-cancel");
+
+    cancelBtn.addEventListener("click", () => {
+      modal.remove();
+    });
+
+    submitBtn.addEventListener("click", async () => {
+      const text = textarea.value.trim();
+      if (!text) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Posting...";
+
+      chrome.runtime.sendMessage(
+        {
+          type: "CREATE_ANNOTATION",
+          data: {
+            url: currentSelection.url || window.location.href,
+            title: currentSelection.title || document.title,
+            text: text,
+            selector: currentSelection.selector,
+          },
+        },
+        (res) => {
+          if (res && res.success) {
+            modal.remove();
+            fetchAnnotations();
+          } else {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Post Annotation";
+            alert(
+              "Failed to create annotation: " + (res?.error || "Unknown error"),
+            );
+          }
+        },
+      );
+    });
+
+    container.appendChild(modal);
+    textarea.focus();
+
+    const handleEscape = (e) => {
+      if (e.key === "Escape") {
+        modal.remove();
+        document.removeEventListener("keydown", handleEscape);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+  }
+
+  let hoverIndicator = null;
 
   function handleMouseMove(e) {
     const x = e.clientX;
     const y = e.clientY;
-
     let foundItems = [];
-
+    let firstRange = null;
     for (const { range, item } of activeItems) {
       const rects = range.getClientRects();
       for (const rect of rects) {
-        const padding = 5;
         if (
-          x >= rect.left - padding &&
-          x <= rect.right + padding &&
-          y >= rect.top - padding &&
-          y <= rect.bottom + padding
+          x >= rect.left &&
+          x <= rect.right &&
+          y >= rect.top &&
+          y <= rect.bottom
         ) {
-          if (!foundItems.includes(item)) {
-            foundItems.push(item);
+          if (!firstRange) firstRange = range;
+          if (!foundItems.some((f) => f.item === item)) {
+            foundItems.push({ range, item, rect });
           }
           break;
         }
       }
     }
 
-    let isOverTooltip = false;
-    if (tooltipEl && tooltipEl.style.opacity === "1") {
-      const rect = tooltipEl.getBoundingClientRect();
+    if (foundItems.length > 0) {
+      document.body.style.cursor = "pointer";
+
+      if (!hoverIndicator && sidebarShadow) {
+        const container = sidebarShadow.getElementById(
+          "margin-overlay-container",
+        );
+        if (container) {
+          hoverIndicator = document.createElement("div");
+          hoverIndicator.className = "margin-hover-indicator";
+          hoverIndicator.style.cssText = `
+            position: fixed;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+            z-index: 2147483647;
+            opacity: 0;
+            transition: opacity 0.15s, transform 0.15s;
+            transform: scale(0.8);
+          `;
+          container.appendChild(hoverIndicator);
+        }
+      }
+
+      if (hoverIndicator) {
+        const authorsMap = new Map();
+        foundItems.forEach(({ item }) => {
+          const author = item.author || item.creator || {};
+          const id = author.did || author.handle || "unknown";
+          if (!authorsMap.has(id)) {
+            authorsMap.set(id, author);
+          }
+        });
+        const uniqueAuthors = Array.from(authorsMap.values());
+
+        const maxShow = 3;
+        const displayAuthors = uniqueAuthors.slice(0, maxShow);
+        const overflow = uniqueAuthors.length - maxShow;
+
+        let html = displayAuthors
+          .map((author, i) => {
+            const avatar = author.avatar;
+            const handle = author.handle || "U";
+            const marginLeft = i === 0 ? "0" : "-8px";
+
+            if (avatar) {
+              return `<img src="${avatar}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid #09090b; margin-left: ${marginLeft};">`;
+            } else {
+              return `<div style="width: 24px; height: 24px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: -apple-system, sans-serif; border: 2px solid #09090b; margin-left: ${marginLeft};">${handle[0]?.toUpperCase() || "U"}</div>`;
+            }
+          })
+          .join("");
+
+        if (overflow > 0) {
+          html += `<div style="width: 24px; height: 24px; border-radius: 50%; background: #27272a; color: #a1a1aa; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; font-family: -apple-system, sans-serif; border: 2px solid #09090b; margin-left: -8px;">+${overflow}</div>`;
+        }
+
+        hoverIndicator.innerHTML = html;
+
+        const firstRect = firstRange.getClientRects()[0];
+        const totalWidth =
+          Math.min(uniqueAuthors.length, maxShow + (overflow > 0 ? 1 : 0)) *
+            18 +
+          8;
+        const leftPos = firstRect.left - totalWidth;
+        const topPos = firstRect.top + firstRect.height / 2 - 12;
+
+        hoverIndicator.style.left = `${leftPos}px`;
+        hoverIndicator.style.top = `${topPos}px`;
+        hoverIndicator.style.opacity = "1";
+        hoverIndicator.style.transform = "scale(1)";
+      }
+    } else {
+      document.body.style.cursor = "";
+      if (hoverIndicator) {
+        hoverIndicator.style.opacity = "0";
+        hoverIndicator.style.transform = "scale(0.8)";
+      }
+    }
+  }
+
+  function handleDocumentClick(e) {
+    const x = e.clientX;
+    const y = e.clientY;
+    if (popoverEl && sidebarShadow) {
+      const rect = popoverEl.getBoundingClientRect();
       if (
         x >= rect.left &&
         x <= rect.right &&
         y >= rect.top &&
         y <= rect.bottom
       ) {
-        isOverTooltip = true;
+        return;
       }
     }
 
-    if (foundItems.length > 0 || isOverTooltip) {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-      if (foundItems.length > 0) {
-        const currentIds = hoveredItems
-          .map((i) => i.id || i.cid)
-          .sort()
-          .join(",");
-        const newIds = foundItems
-          .map((i) => i.id || i.cid)
-          .sort()
-          .join(",");
-
-        if (currentIds !== newIds) {
-          hoveredItems = foundItems;
-          updateTooltip();
+    let clickedItems = [];
+    for (const { range, item } of activeItems) {
+      const rects = range.getClientRects();
+      for (const rect of rects) {
+        if (
+          x >= rect.left &&
+          x <= rect.right &&
+          y >= rect.top &&
+          y <= rect.bottom
+        ) {
+          if (!clickedItems.includes(item)) {
+            clickedItems.push(item);
+          }
+          break;
         }
       }
-    } else {
-      if (!hideTimer && hoveredItems.length > 0) {
-        hideTimer = setTimeout(() => {
-          hoveredItems = [];
-          updateTooltip();
-          hideTimer = null;
-        }, 300);
-      }
-    }
-  }
-
-  function updateTooltip() {
-    if (!tooltipEl) return;
-
-    if (hoveredItems.length === 0) {
-      tooltipEl.style.opacity = "0";
-      tooltipEl.style.transform = "translateY(-105%) scale(0.9)";
-      tooltipEl.style.pointerEvents = "none";
-      return;
     }
 
-    tooltipEl.style.pointerEvents = "auto";
-
-    const authorsMap = new Map();
-    hoveredItems.forEach((item) => {
-      const author = item.author || item.creator || {};
-      const id = author.did || author.handle;
-      if (id && !authorsMap.has(id)) {
-        authorsMap.set(id, author);
-      }
-    });
-
-    const uniqueAuthors = Array.from(authorsMap.values());
-    let contentHtml = "";
-
-    if (uniqueAuthors.length === 1) {
-      const author = uniqueAuthors[0] || {};
-      const handle = author.handle || "User";
-      const avatar = author.avatar;
-      const count = hoveredItems.length;
-
-      let avatarHtml = `<div class="margin-badge-avatar">${handle[0]?.toUpperCase() || "U"}</div>`;
-      if (avatar) {
-        avatarHtml = `<img src="${avatar}" class="margin-badge-avatar">`;
-      }
-
-      contentHtml = `${avatarHtml}<span>${handle}${count > 1 ? ` (${count})` : ""}</span>`;
-    } else {
-      let stackHtml = `<div class="margin-badge-stack">`;
-      const displayAuthors = uniqueAuthors.slice(0, 3);
-      displayAuthors.forEach((author) => {
-        const handle = author.handle || "U";
-        const avatar = author.avatar;
-        if (avatar) {
-          stackHtml += `<img src="${avatar}" class="margin-badge-avatar">`;
-        } else {
-          stackHtml += `<div class="margin-badge-avatar">${handle[0]?.toUpperCase() || "U"}</div>`;
-        }
-      });
-      stackHtml += `</div>`;
-
-      contentHtml = `${stackHtml}<span>${uniqueAuthors.length} people</span>`;
-    }
-
-    tooltipEl.innerHTML = `
-          ${contentHtml}
-          <div class="margin-badge-stem"></div>
-      `;
-
-    const firstItem = hoveredItems[0];
-    const match = activeItems.find((x) => x.item === firstItem);
-    if (match) {
-      const rects = match.range.getClientRects();
-      if (rects && rects.length > 0) {
-        const rect = rects[0];
-        const top = rect.top + window.scrollY;
-        const left = rect.left + window.scrollX;
-
-        tooltipEl.style.top = `${top - 36}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.style.opacity = "1";
-        tooltipEl.style.transform = "translateY(0) scale(1)";
-      }
-    }
-  }
-
-  function handleDocumentClick(e) {
-    if (hoveredItems.length > 0) {
+    if (clickedItems.length > 0) {
       e.preventDefault();
       e.stopPropagation();
 
-      const item = hoveredItems[0];
-      const match = activeItems.find((x) => x.item === item);
+      if (popoverEl) {
+        const currentIds = popoverEl.dataset.itemIds;
+        const newIds = clickedItems
+          .map((i) => i.uri || i.id)
+          .sort()
+          .join(",");
+
+        if (currentIds === newIds) {
+          popoverEl.remove();
+          popoverEl = null;
+          return;
+        }
+      }
+
+      const firstItem = clickedItems[0];
+      const match = activeItems.find((x) => x.item === firstItem);
       if (match) {
         const rects = match.range.getClientRects();
         if (rects.length > 0) {
           const rect = rects[0];
           const top = rect.top + window.scrollY;
           const left = rect.left + window.scrollX;
-          showPopover(hoveredItems, top, left);
+          showPopover(clickedItems, top, left);
         }
+      }
+    } else {
+      if (popoverEl) {
+        popoverEl.remove();
+        popoverEl = null;
       }
     }
   }
-
-  function refreshPositions() {}
 
   function renderBadges(annotations) {
     if (!sidebarShadow) return;
@@ -484,13 +868,13 @@
       if (range) {
         activeItems.push({ range, item });
 
-        const color = item.color || "#c084fc";
+        const color = item.color || "#6366f1";
         if (!rangesByColor[color]) rangesByColor[color] = [];
         rangesByColor[color].push(range);
       }
     });
 
-    if (CSS.highlights) {
+    if (typeof CSS !== "undefined" && CSS.highlights) {
       CSS.highlights.clear();
       for (const [color, ranges] of Object.entries(rangesByColor)) {
         const highlight = new Highlight(...ranges);
@@ -508,8 +892,10 @@
     const style = document.createElement("style");
     style.textContent = `
         ::highlight(${name}) {
-            background-color: ${color}66;
-            color: inherit;
+            text-decoration: underline;
+            text-decoration-color: ${color};
+            text-decoration-thickness: 2px;
+            text-underline-offset: 2px;
             cursor: pointer;
         }
       `;
@@ -523,6 +909,12 @@
     popoverEl = document.createElement("div");
     popoverEl.className = "margin-popover";
 
+    const ids = items
+      .map((i) => i.uri || i.id)
+      .sort()
+      .join(",");
+    popoverEl.dataset.itemIds = ids;
+
     const popWidth = 320;
     const screenWidth = window.innerWidth;
     let finalLeft = left;
@@ -531,8 +923,20 @@
     popoverEl.style.top = `${top + 20}px`;
     popoverEl.style.left = `${finalLeft}px`;
 
-    const title =
-      items.length > 1 ? `${items.length} Annotations` : "Annotation";
+    const hasHighlights = items.some((item) => item.type === "Highlight");
+    const hasAnnotations = items.some((item) => item.type !== "Highlight");
+    let title;
+    if (items.length > 1) {
+      if (hasHighlights && hasAnnotations) {
+        title = `${items.length} Items`;
+      } else if (hasHighlights) {
+        title = `${items.length} Highlights`;
+      } else {
+        title = `${items.length} Annotations`;
+      }
+    } else {
+      title = items[0]?.type === "Highlight" ? "Highlight" : "Annotation";
+    }
 
     let contentHtml = items
       .map((item) => {
@@ -591,14 +995,16 @@
         </div>
       `;
 
-    popoverEl.querySelector(".popover-close").addEventListener("click", () => {
+    popoverEl.querySelector(".popover-close").addEventListener("click", (e) => {
+      e.stopPropagation();
       popoverEl.remove();
       popoverEl = null;
     });
 
     const replyBtns = popoverEl.querySelectorAll(".btn-reply");
     replyBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
         const id = btn.getAttribute("data-id");
         if (id) {
           chrome.runtime.sendMessage({
@@ -636,7 +1042,7 @@
     }, 0);
   }
 
-  function closePopoverOutside(e) {
+  function closePopoverOutside() {
     if (popoverEl) {
       popoverEl.remove();
       popoverEl = null;
@@ -644,7 +1050,7 @@
     }
   }
 
-  function fetchAnnotations() {
+  function fetchAnnotations(retryCount = 0) {
     if (typeof chrome !== "undefined" && chrome.runtime) {
       chrome.runtime.sendMessage(
         {
@@ -652,8 +1058,13 @@
           data: { url: window.location.href },
         },
         (res) => {
-          if (res && res.success) {
+          if (res && res.success && res.data && res.data.length > 0) {
             renderBadges(res.data);
+          } else if (retryCount < 3) {
+            setTimeout(
+              () => fetchAnnotations(retryCount + 1),
+              1000 * (retryCount + 1),
+            );
           }
         },
       );
@@ -669,6 +1080,33 @@
       }
       const exact = sel.toString().trim();
       sendResponse({ selector: { type: "TextQuoteSelector", exact } });
+      return true;
+    }
+
+    if (request.type === "SHOW_INLINE_ANNOTATE") {
+      currentSelection = {
+        text: request.data.selector?.exact || "",
+        selector: request.data.selector,
+        url: request.data.url,
+        title: request.data.title,
+      };
+      showInlineComposeModal();
+      sendResponse({ success: true });
+      return true;
+    }
+
+    if (request.type === "UPDATE_OVERLAY_VISIBILITY") {
+      if (sidebarHost) {
+        sidebarHost.style.display = request.show ? "block" : "none";
+      }
+      if (request.show) {
+        fetchAnnotations();
+      } else {
+        if (typeof CSS !== "undefined" && CSS.highlights) {
+          CSS.highlights.clear();
+        }
+      }
+      sendResponse({ success: true });
       return true;
     }
 
@@ -698,4 +1136,16 @@
   } else {
     initOverlay();
   }
+
+  window.addEventListener("load", () => {
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local.get(["showOverlay"], (result) => {
+        if (result.showOverlay !== false) {
+          setTimeout(() => fetchAnnotations(), 500);
+        }
+      });
+    } else {
+      setTimeout(() => fetchAnnotations(), 500);
+    }
+  });
 })();

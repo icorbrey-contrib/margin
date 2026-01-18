@@ -17,8 +17,8 @@ export default function Terms() {
           <h2>Overview</h2>
           <p>
             Margin is an open-source project. By using our service, you agree to
-            these terms ("Terms"). If you do not agree to these Terms, please do
-            not use the Service.
+            these terms (&quot;Terms&quot;). If you do not agree to these Terms,
+            please do not use the Service.
           </p>
         </section>
 
@@ -26,8 +26,8 @@ export default function Terms() {
           <h2>Open Source</h2>
           <p>
             Margin is open source software. The code is available publicly and
-            is provided "as is", without warranty of any kind, express or
-            implied.
+            is provided &quot;as is&quot;, without warranty of any kind, express
+            or implied.
           </p>
         </section>
 
@@ -62,9 +62,9 @@ export default function Terms() {
         <section>
           <h2>Disclaimer</h2>
           <p>
-            THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE". WE DISCLAIM ALL
-            CONDITIONS, REPRESENTATIONS AND WARRANTIES NOT EXPRESSLY SET OUT IN
-            THESE TERMS.
+            THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS
+            AVAILABLE&quot;. WE DISCLAIM ALL CONDITIONS, REPRESENTATIONS AND
+            WARRANTIES NOT EXPRESSLY SET OUT IN THESE TERMS.
           </p>
         </section>
 

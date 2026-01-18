@@ -171,7 +171,9 @@ export default function ShareMenu({ uri, text, customUrl, handle, type }) {
           text: text?.substring(0, 100),
           url: shareUrl,
         });
-      } catch {}
+      } catch {
+        /* ignore */
+      }
     }
     setIsOpen(false);
   };

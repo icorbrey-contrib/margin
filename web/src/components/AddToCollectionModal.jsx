@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, Plus, Check, Folder } from "lucide-react";
 import {
   getCollections,
@@ -30,9 +30,9 @@ export default function AddToCollectionModal({
       loadCollections();
       setError(null);
     }
-  }, [isOpen, user, annotationUri]);
+  }, [isOpen, user, annotationUri, loadCollections]);
 
-  const loadCollections = async () => {
+  const loadCollections = useCallback(async () => {
     try {
       setLoading(true);
       const [data, existingURIs] = await Promise.all([
@@ -49,7 +49,7 @@ export default function AddToCollectionModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.did, annotationUri]);
 
   const handleAdd = async (collectionUri) => {
     if (addedTo.has(collectionUri)) return;

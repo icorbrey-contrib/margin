@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -22,7 +22,7 @@ export default function Bookmarks() {
   const [submitting, setSubmitting] = useState(false);
   const [fetchingTitle, setFetchingTitle] = useState(false);
 
-  const loadBookmarks = async () => {
+  const loadBookmarks = useCallback(async () => {
     if (!user?.did) return;
 
     try {
@@ -35,13 +35,13 @@ export default function Bookmarks() {
     } finally {
       setLoadingBookmarks(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
       loadBookmarks();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, loadBookmarks]);
 
   const handleDelete = async (uri) => {
     if (!confirm("Delete this bookmark?")) return;
@@ -133,7 +133,7 @@ export default function Bookmarks() {
       >
         <div>
           <h1 className="page-title">My Bookmarks</h1>
-          <p className="page-description">Pages you've saved for later</p>
+          <p className="page-description">Pages you&apos;ve saved for later</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -274,8 +274,8 @@ export default function Bookmarks() {
           </div>
           <h3 className="empty-state-title">No bookmarks yet</h3>
           <p className="empty-state-text">
-            Click "Add Bookmark" above to save a page, or use the browser
-            extension.
+            Click &quot;Add Bookmark&quot; above to save a page, or use the
+            browser extension.
           </p>
         </div>
       ) : (

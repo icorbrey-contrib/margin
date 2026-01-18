@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Folder, Plus, Edit2, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Folder, Plus } from "lucide-react";
 import { getCollections } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import CollectionModal from "../components/CollectionModal";
@@ -14,7 +13,7 @@ export default function Collections() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState(null);
 
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getCollections(user.did);
@@ -25,13 +24,13 @@ export default function Collections() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) {
       fetchCollections();
     }
-  }, [user]);
+  }, [user, fetchCollections]);
 
   const handleCreateSuccess = () => {
     fetchCollections();

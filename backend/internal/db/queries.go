@@ -825,6 +825,9 @@ func HashURL(rawURL string) string {
 	}
 
 	normalized := strings.ToLower(parsed.Host) + parsed.Path
+	if parsed.RawQuery != "" {
+		normalized += "?" + parsed.RawQuery
+	}
 	normalized = strings.TrimSuffix(normalized, "/")
 
 	return hashString(normalized)

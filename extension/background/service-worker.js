@@ -6,10 +6,6 @@ const hasSidePanel =
 const hasSidebarAction =
   typeof browser !== "undefined" &&
   typeof browser.sidebarAction !== "undefined";
-const hasSessionStorage =
-  typeof chrome !== "undefined" &&
-  chrome.storage &&
-  typeof chrome.storage.session !== "undefined";
 const hasNotifications =
   typeof chrome !== "undefined" && typeof chrome.notifications !== "undefined";
 
@@ -71,17 +67,6 @@ async function openAnnotationUI(tabId) {
   return false;
 }
 
-async function storePendingAnnotation(data) {
-  if (hasSessionStorage) {
-    await chrome.storage.session.set({ pendingAnnotation: data });
-  } else {
-    await chrome.storage.local.set({
-      pendingAnnotation: data,
-      pendingAnnotationExpiry: Date.now() + 60000,
-    });
-  }
-}
-
 chrome.runtime.onInstalled.addListener(async () => {
   const stored = await chrome.storage.local.get(["apiUrl"]);
   if (!stored.apiUrl) {
@@ -118,11 +103,13 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (hasSidebarAction) {
     try {
       await browser.sidebarAction.close();
-    } catch (e) {}
+    } catch {
+      /* ignore */
+    }
   }
 });
 
-chrome.action.onClicked.addListener(async (tab) => {
+chrome.action.onClicked.addListener(async () => {
   const stored = await chrome.storage.local.get(["apiUrl"]);
   const webUrl = stored.apiUrl || WEB_BASE;
   chrome.tabs.create({ url: webUrl });
@@ -130,19 +117,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "margin-open-sidebar") {
-    if (hasSidePanel && chrome.sidePanel && chrome.sidePanel.open) {
-      try {
-        await chrome.sidePanel.open({ windowId: tab.windowId });
-      } catch (err) {
-        console.error("Failed to open side panel:", err);
-      }
-    } else if (hasSidebarAction) {
-      try {
-        await browser.sidebarAction.open();
-      } catch (err) {
-        console.error("Failed to open Firefox sidebar:", err);
-      }
-    }
+    await openAnnotationUI(tab.id);
     return;
   }
 
@@ -189,16 +164,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         selectionText: info.selectionText,
       });
       selector = response?.selector;
-    } catch (err) {}
-
-    if (selector && (hasSidePanel || hasSidebarAction)) {
-      await storePendingAnnotation({
-        url: tab.url,
-        title: tab.title,
-        selector: selector,
-      });
-      const opened = await openAnnotationUI(tab.id);
-      if (opened) return;
+    } catch {
+      /* ignore */
     }
 
     if (!selector && info.selectionText) {
@@ -206,6 +173,22 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         type: "TextQuoteSelector",
         exact: info.selectionText,
       };
+    }
+
+    if (selector) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: "SHOW_INLINE_ANNOTATE",
+          data: {
+            url: tab.url,
+            title: tab.title,
+            selector: selector,
+          },
+        });
+        return;
+      } catch {
+        /* ignore */
+      }
     }
 
     if (WEB_BASE) {
@@ -227,7 +210,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         selectionText: info.selectionText,
       });
       if (response && response.success) return;
-    } catch (err) {}
+    } catch {
+      /* ignore */
+    }
 
     if (info.selectionText) {
       selector = {
@@ -657,6 +642,69 @@ async function handleMessage(request, sender, sendResponse) {
           throw new Error(
             `Failed to add to collection: ${res.status} ${errText}`,
           );
+        }
+
+        const data = await res.json();
+        sendResponse({ success: true, data });
+        break;
+      }
+
+      case "GET_REPLIES": {
+        if (!API_BASE) {
+          sendResponse({ success: false, error: "API URL not configured" });
+          return;
+        }
+
+        const uri = request.data.uri;
+        const res = await fetch(
+          `${API_BASE}/api/replies?uri=${encodeURIComponent(uri)}`,
+        );
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch replies: ${res.status}`);
+        }
+
+        const data = await res.json();
+        sendResponse({ success: true, data: data.items || [] });
+        break;
+      }
+
+      case "CREATE_REPLY": {
+        if (!API_BASE) {
+          sendResponse({ success: false, error: "API URL not configured" });
+          return;
+        }
+
+        const cookie = await chrome.cookies.get({
+          url: API_BASE,
+          name: "margin_session",
+        });
+
+        if (!cookie) {
+          sendResponse({ success: false, error: "Not authenticated" });
+          return;
+        }
+
+        const { parentUri, parentCid, rootUri, rootCid, text } = request.data;
+        const res = await fetch(`${API_BASE}/api/annotations/reply`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Session-Token": cookie.value,
+          },
+          body: JSON.stringify({
+            parentUri,
+            parentCid,
+            rootUri,
+            rootCid,
+            text,
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Failed to create reply: ${res.status} ${errText}`);
         }
 
         const data = await res.json();

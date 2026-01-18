@@ -156,7 +156,8 @@ export default function Notifications() {
           <BellIcon size={48} />
           <h3>No notifications yet</h3>
           <p>
-            When someone likes or replies to your content, you'll see it here
+            When someone likes or replies to your content, you&apos;ll see it
+            here
           </p>
         </div>
       )}

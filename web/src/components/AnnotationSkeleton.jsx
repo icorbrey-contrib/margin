@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function AnnotationSkeleton() {
   return (
     <div className="skeleton-card">

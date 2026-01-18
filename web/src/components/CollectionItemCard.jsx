@@ -1,4 +1,3 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "./AnnotationCard";
 import BookmarkCard from "./BookmarkCard";

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeft, Edit2, Trash2, Plus } from "lucide-react";
 import {
@@ -34,7 +34,7 @@ export default function CollectionDetail() {
     user?.did &&
     (collection?.creator?.did === user.did || paramAuthorDid === user.did);
 
-  const fetchContext = async () => {
+  const fetchContext = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -96,11 +96,11 @@ export default function CollectionDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [paramAuthorDid, user, handle, rkey, wildcardPath]);
 
   useEffect(() => {
     fetchContext();
-  }, [rkey, wildcardPath, handle, paramAuthorDid, user?.did]);
+  }, [fetchContext]);
 
   const handleEditSuccess = () => {
     fetchContext();

@@ -16,10 +16,10 @@ export default function Privacy() {
         <section>
           <h2>Overview</h2>
           <p>
-            Margin ("we", "our", or "us") is a web annotation tool that lets you
-            highlight, annotate, and bookmark any webpage. Your data is stored
-            on the decentralized AT Protocol network, giving you ownership and
-            control over your content.
+            Margin (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is a web
+            annotation tool that lets you highlight, annotate, and bookmark any
+            webpage. Your data is stored on the decentralized AT Protocol
+            network, giving you ownership and control over your content.
           </p>
         </section>
 
@@ -111,7 +111,7 @@ export default function Privacy() {
               <strong>Cookies:</strong> To maintain your logged-in session
             </li>
             <li>
-              <strong>Tabs:</strong> To know which page you're viewing
+              <strong>Tabs:</strong> To know which page you&apos;re viewing
             </li>
           </ul>
         </section>
@@ -121,11 +121,11 @@ export default function Privacy() {
           <p>You can:</p>
           <ul>
             <li>
-              Delete any annotation, highlight, or bookmark you've created
+              Delete any annotation, highlight, or bookmark you&apos;ve created
             </li>
             <li>Delete your collections</li>
             <li>Export your data from your PDS</li>
-            <li>Revoke the extension's access at any time</li>
+            <li>Revoke the extension&apos;s access at any time</li>
           </ul>
         </section>
 

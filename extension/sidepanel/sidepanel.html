@@ -250,6 +250,26 @@
           <button id="close-settings" class="btn-icon">×</button>
         </div>
         <div class="setting-item">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div>
+              <label>Show page overlays</label>
+              <p class="setting-help" style="margin-top: 2px">
+                Display highlights, badges, and tooltips on pages
+              </p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="overlay-toggle" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="setting-item">
           <label for="api-url">API URL</label>
           <input
             type="url"
