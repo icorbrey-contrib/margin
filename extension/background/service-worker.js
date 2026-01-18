@@ -39,16 +39,17 @@ function showNotification(title, message) {
   }
 }
 
-async function openAnnotationUI(tabId) {
+async function openAnnotationUI(tabId, windowId) {
   if (hasSidePanel) {
     try {
-      const tab = await chrome.tabs.get(tabId);
-      await chrome.sidePanel.setOptions({
-        tabId: tabId,
-        path: "sidepanel/sidepanel.html",
-        enabled: true,
-      });
-      await chrome.sidePanel.open({ windowId: tab.windowId });
+      let targetWindowId = windowId;
+
+      if (!targetWindowId) {
+        const tab = await chrome.tabs.get(tabId);
+        targetWindowId = tab.windowId;
+      }
+
+      await chrome.sidePanel.open({ windowId: targetWindowId });
       return true;
     } catch (err) {
       console.error("Could not open Chrome side panel:", err);
@@ -117,7 +118,7 @@ chrome.action.onClicked.addListener(async () => {
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "margin-open-sidebar") {
-    await openAnnotationUI(tab.id);
+    await openAnnotationUI(tab.id, tab.windowId);
     return;
   }
 
