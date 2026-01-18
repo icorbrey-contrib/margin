@@ -10,10 +10,7 @@
       "key": "tid",
       "record": {
         "type": "object",
-        "required": [
-          "target",
-          "createdAt"
-        ],
+        "required": ["target", "createdAt"],
         "properties": {
           "motivation": {
             "type": "string",
@@ -87,9 +84,7 @@
     "target": {
       "type": "object",
       "description": "W3C SpecificResource - the target with optional selector",
-      "required": [
-        "source"
-      ],
+      "required": ["source"],
       "properties": {
         "source": {
           "type": "string",
@@ -127,9 +122,7 @@
     "textQuoteSelector": {
       "type": "object",
       "description": "W3C TextQuoteSelector - select text by quoting it with context",
-      "required": [
-        "exact"
-      ],
+      "required": ["exact"],
       "properties": {
         "type": {
           "type": "string",
@@ -158,10 +151,7 @@
     "textPositionSelector": {
       "type": "object",
       "description": "W3C TextPositionSelector - select by character offsets",
-      "required": [
-        "start",
-        "end"
-      ],
+      "required": ["start", "end"],
       "properties": {
         "type": {
           "type": "string",
@@ -182,9 +172,7 @@
     "cssSelector": {
       "type": "object",
       "description": "W3C CssSelector - select DOM elements by CSS selector",
-      "required": [
-        "value"
-      ],
+      "required": ["value"],
       "properties": {
         "type": {
           "type": "string",
@@ -200,9 +188,7 @@
     "xpathSelector": {
       "type": "object",
       "description": "W3C XPathSelector - select by XPath expression",
-      "required": [
-        "value"
-      ],
+      "required": ["value"],
       "properties": {
         "type": {
           "type": "string",
@@ -218,9 +204,7 @@
     "fragmentSelector": {
       "type": "object",
       "description": "W3C FragmentSelector - select by URI fragment",
-      "required": [
-        "value"
-      ],
+      "required": ["value"],
       "properties": {
         "type": {
           "type": "string",
@@ -241,10 +225,7 @@
     "rangeSelector": {
       "type": "object",
       "description": "W3C RangeSelector - select range between two selectors",
-      "required": [
-        "startSelector",
-        "endSelector"
-      ],
+      "required": ["startSelector", "endSelector"],
       "properties": {
         "type": {
           "type": "string",

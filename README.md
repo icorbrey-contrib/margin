@@ -1,6 +1,6 @@
 # Margin
 
-*Write in the margins of the web*
+_Write in the margins of the web_
 
 A web comments layer built on [AT Protocol](https://atproto.com) that lets you annotate any URL on the internet.
 

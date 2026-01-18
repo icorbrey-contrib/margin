@@ -334,9 +334,14 @@ async function handleMessage(request, sender, sendResponse) {
       }
 
       case "GET_ANNOTATIONS": {
+        const stored = await chrome.storage.local.get(["apiUrl"]);
+        const currentApiUrl = stored.apiUrl
+          ? stored.apiUrl.replace(/\/$/, "")
+          : API_BASE;
+
         const pageUrl = request.data.url;
         const res = await fetch(
-          `${API_BASE}/api/targets?source=${encodeURIComponent(pageUrl)}`,
+          `${currentApiUrl}/api/targets?source=${encodeURIComponent(pageUrl)}`,
         );
         const data = await res.json();
 
@@ -422,7 +427,6 @@ async function handleMessage(request, sender, sendResponse) {
           return;
         }
         const { url, selector } = request.data;
-
         let composeUrl = `${WEB_BASE}/new?url=${encodeURIComponent(url)}`;
         if (selector) {
           composeUrl += `&selector=${encodeURIComponent(JSON.stringify(selector))}`;
@@ -430,6 +434,25 @@ async function handleMessage(request, sender, sendResponse) {
         chrome.tabs.create({ url: composeUrl });
         break;
       }
+
+      case "OPEN_APP_URL": {
+        if (!WEB_BASE) {
+          chrome.runtime.openOptionsPage();
+          return;
+        }
+        const path = request.data.path;
+        const safePath = path.startsWith("/") ? path : `/${path}`;
+        chrome.tabs.create({ url: `${WEB_BASE}${safePath}` });
+        break;
+      }
+
+      case "OPEN_SIDE_PANEL":
+        if (sender.tab && sender.tab.windowId) {
+          chrome.sidePanel
+            .open({ windowId: sender.tab.windowId })
+            .catch((err) => console.error("Failed to open side panel", err));
+        }
+        break;
 
       case "CREATE_BOOKMARK": {
         if (!API_BASE) {

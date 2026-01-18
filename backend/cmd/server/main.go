@@ -101,6 +101,8 @@ func main() {
 	r.Get("/{handle}/highlight/{rkey}", ogHandler.HandleAnnotationPage)
 	r.Get("/{handle}/bookmark/{rkey}", ogHandler.HandleAnnotationPage)
 
+	r.Get("/api/tags/trending", handler.HandleGetTrendingTags)
+
 	r.Get("/collection/{uri}", ogHandler.HandleCollectionPage)
 	r.Get("/{handle}/collection/{rkey}", ogHandler.HandleCollectionPage)
 

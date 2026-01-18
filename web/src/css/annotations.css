@@ -1,0 +1,473 @@
+.annotation-detail-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  min-height: 100vh;
+}
+
+.annotation-detail-header {
+  margin-bottom: 24px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.back-link:hover {
+  color: var(--text-primary);
+}
+
+.replies-section {
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.replies-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.annotation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+
+.annotation-card:last-child {
+  border-bottom: none;
+}
+
+.annotation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.annotation-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.annotation-avatar {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+}
+
+.annotation-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.annotation-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.3;
+}
+
+.annotation-avatar-link {
+  text-decoration: none;
+  border-radius: 50%;
+}
+
+.annotation-author-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.annotation-author {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.annotation-handle {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+}
+
+.annotation-handle:hover {
+  color: var(--text-secondary);
+}
+
+.annotation-time {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.annotation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 46px;
+}
+
+.annotation-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotation-source:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.annotation-source-title {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.annotation-highlight {
+  display: block;
+  position: relative;
+  padding-left: 12px;
+  margin: 4px 0;
+  text-decoration: none;
+  border-left: 2px solid var(--border);
+  transition: all 0.15s ease;
+}
+
+.annotation-highlight:hover {
+  border-left-color: var(--text-secondary);
+}
+
+.annotation-highlight mark {
+  background: transparent;
+  color: var(--text-primary);
+  font-style: italic;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  font-family: var(--font-serif, var(--font-sans));
+  display: inline;
+}
+
+.annotation-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.annotation-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.annotation-tag {
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  opacity: 0.9;
+  transition: opacity 0.15s;
+}
+
+.annotation-tag:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.annotation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-left: 46px;
+}
+
+.annotation-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.annotation-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 6px;
+  margin-left: -6px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+  background: transparent;
+  cursor: pointer;
+  border: none;
+}
+
+.annotation-action:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.annotation-action.liked {
+  color: #ef4444;
+}
+
+.annotation-action.liked svg {
+  fill: #ef4444;
+}
+
+.annotation-action.active {
+  color: var(--accent);
+}
+
+.action-icon-only {
+  padding: 6px;
+}
+
+.annotation-header-right {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.annotation-card:hover .annotation-header-right {
+  opacity: 1;
+}
+
+.inline-replies {
+  margin-top: 12px;
+  padding-left: 46px;
+}
+
+@media (max-width: 600px) {
+  .annotation-content,
+  .annotation-actions,
+  .inline-replies {
+    padding-left: 0;
+  }
+
+  .annotation-header-right {
+    opacity: 1;
+  }
+}
+
+.replies-list-threaded {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.reply-card-threaded {
+  position: relative;
+  padding-left: 0;
+  transition: background 0.15s;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.reply-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reply-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reply-avatar span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.reply-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-author {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reply-handle {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reply-time {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.reply-dot {
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+}
+
+.reply-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  margin: 0;
+  padding-left: 38px;
+}
+
+.reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.reply-card-threaded:hover .reply-actions {
+  opacity: 1;
+}
+
+.reply-action-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reply-action-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.reply-action-delete:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.reply-form {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  background: var(--bg-secondary);
+  margin-bottom: 24px;
+}
+
+.replying-to-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.cancel-reply {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.cancel-reply:hover {
+  color: var(--text-primary);
+}
+
+.reply-input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.15s;
+  display: block;
+  box-sizing: border-box;
+}
+
+.reply-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.reply-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}

@@ -1,0 +1,106 @@
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-secondary) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-card {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.skeleton-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.skeleton-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-name {
+  width: 120px;
+  height: 14px;
+}
+
+.skeleton-handle {
+  width: 80px;
+  height: 12px;
+}
+
+.skeleton-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 48px;
+}
+
+.skeleton-source {
+  width: 180px;
+  height: 24px;
+  border-radius: var(--radius-full);
+}
+
+.skeleton-highlight {
+  width: 100%;
+  height: 60px;
+  border-left: 2px solid var(--border);
+}
+
+.skeleton-text-1 {
+  width: 90%;
+  height: 14px;
+}
+
+.skeleton-text-2 {
+  width: 60%;
+  height: 14px;
+}
+
+.skeleton-actions {
+  display: flex;
+  gap: 24px;
+  padding-left: 48px;
+  margin-top: 4px;
+}
+
+.skeleton-action {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 600px) {
+  .skeleton-content,
+  .skeleton-actions {
+    padding-left: 0;
+  }
+}

@@ -358,7 +358,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await sendMessage({ type: "CHECK_SESSION" });
 
       if (res.success && res.data?.authenticated) {
-        if (els.userHandle) els.userHandle.textContent = "@" + res.data.handle;
+        if (els.userHandle) {
+          const handle = res.data.handle || res.data.email || "User";
+          els.userHandle.textContent = "@" + handle;
+        }
         els.userInfo.style.display = "flex";
         currentUserDid = res.data.did;
         showView("main");

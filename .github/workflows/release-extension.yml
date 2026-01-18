@@ -3,7 +3,7 @@ name: Release Extension
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   release:
@@ -19,7 +19,7 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           echo "Updating manifests to version $VERSION"
-          
+
           cd extension
           for manifest in manifest.json manifest.chrome.json manifest.firefox.json; do
             if [ -f "$manifest" ]; then
@@ -36,7 +36,7 @@ jobs:
           cp manifest.chrome.json manifest.json
           zip -r ../margin-extension-chrome.zip . -x "*.DS_Store" -x "*.git*" -x "manifest.*.json"
           cd ..
-          
+
       - name: Build Extension (Firefox)
         run: |
           cd extension

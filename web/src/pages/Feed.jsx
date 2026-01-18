@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import BookmarkCard from "../components/BookmarkCard";
 import CollectionItemCard from "../components/CollectionItemCard";
+import AnnotationSkeleton from "../components/AnnotationSkeleton";
 import { getAnnotationFeed, deleteHighlight } from "../api/client";
 import { AlertIcon, InboxIcon } from "../components/Icons";
 import { useAuth } from "../context/AuthContext";
@@ -151,107 +152,101 @@ export default function Feed() {
         </button>
       </div>
 
-      {loading && (
+      {loading ? (
         <div className="feed">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "40%" }}
-              />
-              <div className="skeleton skeleton-text" />
-              <div className="skeleton skeleton-text" />
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "60%" }}
-              />
-            </div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <AnnotationSkeleton key={i} />
           ))}
         </div>
-      )}
+      ) : (
+        <>
+          {error && (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <AlertIcon size={32} />
+              </div>
+              <h3 className="empty-state-title">Something went wrong</h3>
+              <p className="empty-state-text">{error}</p>
+            </div>
+          )}
 
-      {error && (
-        <div className="empty-state">
-          <div className="empty-state-icon">
-            <AlertIcon size={32} />
-          </div>
-          <h3 className="empty-state-title">Something went wrong</h3>
-          <p className="empty-state-text">{error}</p>
-        </div>
-      )}
+          {!error && filteredAnnotations.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <InboxIcon size={32} />
+              </div>
+              <h3 className="empty-state-title">No items yet</h3>
+              <p className="empty-state-text">
+                {filter === "all"
+                  ? "Be the first to annotate something!"
+                  : `No ${filter} items found.`}
+              </p>
+            </div>
+          )}
 
-      {!loading && !error && filteredAnnotations.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">
-            <InboxIcon size={32} />
-          </div>
-          <h3 className="empty-state-title">No items yet</h3>
-          <p className="empty-state-text">
-            {filter === "all"
-              ? "Be the first to annotate something!"
-              : `No ${filter} items found.`}
-          </p>
-        </div>
-      )}
-
-      {!loading && !error && filteredAnnotations.length > 0 && (
-        <div className="feed">
-          {filteredAnnotations.map((item) => {
-            if (item.type === "CollectionItem") {
-              return <CollectionItemCard key={item.id} item={item} />;
-            }
-            if (
-              item.type === "Highlight" ||
-              item.motivation === "highlighting"
-            ) {
-              return (
-                <HighlightCard
-                  key={item.id}
-                  highlight={item}
-                  onDelete={async (uri) => {
-                    const rkey = uri.split("/").pop();
-                    await deleteHighlight(rkey);
-                    setAnnotations((prev) =>
-                      prev.filter((a) => a.id !== item.id),
-                    );
-                  }}
-                  onAddToCollection={() =>
-                    setCollectionModalState({
-                      isOpen: true,
-                      uri: item.uri || item.id,
-                    })
-                  }
-                />
-              );
-            }
-            if (item.type === "Bookmark" || item.motivation === "bookmarking") {
-              return (
-                <BookmarkCard
-                  key={item.id}
-                  bookmark={item}
-                  onAddToCollection={() =>
-                    setCollectionModalState({
-                      isOpen: true,
-                      uri: item.uri || item.id,
-                    })
-                  }
-                />
-              );
-            }
-            return (
-              <AnnotationCard
-                key={item.id}
-                annotation={item}
-                onAddToCollection={() =>
-                  setCollectionModalState({
-                    isOpen: true,
-                    uri: item.uri || item.id,
-                  })
+          {!error && filteredAnnotations.length > 0 && (
+            <div className="feed">
+              {filteredAnnotations.map((item) => {
+                if (item.type === "CollectionItem") {
+                  return <CollectionItemCard key={item.id} item={item} />;
                 }
-              />
-            );
-          })}
-        </div>
+                if (
+                  item.type === "Highlight" ||
+                  item.motivation === "highlighting"
+                ) {
+                  return (
+                    <HighlightCard
+                      key={item.id}
+                      highlight={item}
+                      onDelete={async (uri) => {
+                        const rkey = uri.split("/").pop();
+                        await deleteHighlight(rkey);
+                        setAnnotations((prev) =>
+                          prev.filter((a) => a.id !== item.id),
+                        );
+                      }}
+                      onAddToCollection={() =>
+                        setCollectionModalState({
+                          isOpen: true,
+                          uri: item.uri || item.id,
+                        })
+                      }
+                    />
+                  );
+                }
+                if (
+                  item.type === "Bookmark" ||
+                  item.motivation === "bookmarking"
+                ) {
+                  return (
+                    <BookmarkCard
+                      key={item.id}
+                      bookmark={item}
+                      onAddToCollection={() =>
+                        setCollectionModalState({
+                          isOpen: true,
+                          uri: item.uri || item.id,
+                        })
+                      }
+                    />
+                  );
+                }
+                return (
+                  <AnnotationCard
+                    key={item.id}
+                    annotation={item}
+                    onAddToCollection={() =>
+                      setCollectionModalState({
+                        isOpen: true,
+                        uri: item.uri || item.id,
+                      })
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {collectionModalState.isOpen && (

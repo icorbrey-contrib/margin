@@ -427,3 +427,6 @@ export async function startLogin(handle, inviteCode) {
     body: JSON.stringify({ handle, invite_code: inviteCode }),
   });
 }
+export async function getTrendingTags(limit = 10) {
+  return request(`${API_BASE}/tags/trending?limit=${limit}`);
+}
