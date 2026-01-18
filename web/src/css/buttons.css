@@ -8,6 +8,7 @@
   font-weight: 500;
   border-radius: var(--radius-md);
   transition: all 0.15s ease;
+  white-space: pre;
 }
 
 .btn-primary {
