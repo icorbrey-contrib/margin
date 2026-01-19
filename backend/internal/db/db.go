@@ -320,7 +320,7 @@ func (db *DB) Migrate() error {
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS cursors (
 		id TEXT PRIMARY KEY,
-		last_cursor INTEGER NOT NULL,
+		last_cursor BIGINT NOT NULL,
 		updated_at ` + dateType + ` NOT NULL
 	)`)
 
@@ -373,6 +373,10 @@ func (db *DB) runMigrations() {
 	db.Exec(`UPDATE annotations SET body_value = text WHERE body_value IS NULL AND text IS NOT NULL`)
 	db.Exec(`UPDATE annotations SET target_title = title WHERE target_title IS NULL AND title IS NOT NULL`)
 	db.Exec(`UPDATE annotations SET motivation = 'commenting' WHERE motivation IS NULL`)
+
+	if db.driver == "postgres" {
+		db.Exec(`ALTER TABLE cursors ALTER COLUMN last_cursor TYPE BIGINT`)
+	}
 }
 
 func (db *DB) Close() error {
