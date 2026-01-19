@@ -157,8 +157,12 @@ func (h *APIKeyHandler) QuickBookmark(w http.ResponseWriter, r *http.Request) {
 	urlHash := db.HashURL(req.URL)
 	record := xrpc.NewBookmarkRecord(req.URL, urlHash, req.Title, req.Description)
 
-	client := h.refresher.CreateClientFromSession(session)
-	result, err := client.CreateRecord(r.Context(), session.DID, xrpc.CollectionBookmark, record)
+	var result *xrpc.CreateRecordOutput
+	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+		var createErr error
+		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionBookmark, record)
+		return createErr
+	})
 	if err != nil {
 		http.Error(w, "Failed to create bookmark: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -228,8 +232,12 @@ func (h *APIKeyHandler) QuickAnnotation(w http.ResponseWriter, r *http.Request) 
 	urlHash := db.HashURL(req.URL)
 	record := xrpc.NewAnnotationRecord(req.URL, urlHash, req.Text, nil, "")
 
-	client := h.refresher.CreateClientFromSession(session)
-	result, err := client.CreateRecord(r.Context(), session.DID, xrpc.CollectionAnnotation, record)
+	var result *xrpc.CreateRecordOutput
+	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+		var createErr error
+		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionAnnotation, record)
+		return createErr
+	})
 	if err != nil {
 		http.Error(w, "Failed to create annotation: "+err.Error(), http.StatusInternalServerError)
 		return
