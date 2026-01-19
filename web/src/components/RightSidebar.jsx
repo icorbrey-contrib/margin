@@ -124,9 +124,6 @@ export default function RightSidebar() {
             <Link to="/url" className="right-link">
               Browse by URL
             </Link>
-            <Link to="/highlights" className="right-link">
-              Public Highlights
-            </Link>
           </nav>
         </div>
       )}

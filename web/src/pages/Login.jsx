@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { searchActors, startLogin } from "../api/client";
-import { HelpCircle } from "lucide-react";
+import { AtSign } from "lucide-react";
 import logo from "../assets/logo.svg";
 
 export default function Login() {
@@ -12,13 +12,40 @@ export default function Login() {
   const [showInviteInput, setShowInviteInput] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef(null);
   const inviteRef = useRef(null);
   const suggestionsRef = useRef(null);
+
+  const [providerIndex, setProviderIndex] = useState(0);
+  const [morphClass, setMorphClass] = useState("morph-in");
+  const providers = [
+    "AT Protocol",
+    "Bluesky",
+    "Blacksky",
+    "Tangled",
+    "selfhosted.social",
+    "Northsky",
+    "witchcraft.systems",
+    "topphie.social",
+    "altq.net",
+  ];
+
+  useEffect(() => {
+    const cycleText = () => {
+      setMorphClass("morph-out");
+
+      setTimeout(() => {
+        setProviderIndex((prev) => (prev + 1) % providers.length);
+        setMorphClass("morph-in");
+      }, 400);
+    };
+
+    const interval = setInterval(cycleText, 3000);
+    return () => clearInterval(interval);
+  }, [providers.length]);
 
   const isSelectionRef = useRef(false);
 
@@ -57,6 +84,35 @@ export default function Login() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (isAuthenticated) {
+    return (
+      <div className="login-page">
+        <div className="login-avatar-large">
+          {user?.avatar ? (
+            <img src={user.avatar} alt={user.displayName || user.handle} />
+          ) : (
+            <span>
+              {(user?.displayName || user?.handle || "??")
+                .substring(0, 2)
+                .toUpperCase()}
+            </span>
+          )}
+        </div>
+        <h1 className="login-welcome">
+          Welcome back, {user?.displayName || user?.handle}
+        </h1>
+        <div className="login-actions">
+          <Link to={`/profile/${user?.did}`} className="btn btn-primary">
+            View Profile
+          </Link>
+          <button onClick={logout} className="btn btn-ghost">
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleKeyDown = (e) => {
     if (!showSuggestions || suggestions.length === 0) return;
@@ -113,57 +169,23 @@ export default function Login() {
     }
   };
 
-  if (isAuthenticated) {
-    return (
-      <div className="login-page">
-        <div className="login-avatar-large">
-          {user?.avatar ? (
-            <img src={user.avatar} alt={user.displayName || user.handle} />
-          ) : (
-            <span>
-              {(user?.displayName || user?.handle || "??")
-                .substring(0, 2)
-                .toUpperCase()}
-            </span>
-          )}
-        </div>
-        <h1 className="login-welcome">
-          Welcome back, {user?.displayName || user?.handle}
-        </h1>
-        <div className="login-actions">
-          <Link to={`/profile/${user?.did}`} className="btn btn-primary">
-            View Profile
-          </Link>
-          <button onClick={logout} className="btn btn-ghost">
-            Sign out
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="login-page">
-      <img src={logo} alt="Margin Logo" className="login-logo-img" />
+      <div className="login-header-group">
+        <img src={logo} alt="Margin Logo" className="login-logo-img" />
+        <span className="login-x">X</span>
+        <div className="login-atproto-icon">
+          <AtSign size={64} strokeWidth={2.4} />
+        </div>
+      </div>
 
       <h1 className="login-heading">
-        Use the AT Protocol to login to Margin
-        <button
-          className="login-help-btn"
-          onClick={() => setShowHelp(!showHelp)}
-          type="button"
-        >
-          <HelpCircle size={20} />
-        </button>
+        Sign in with your{" "}
+        <span className={`morph-container ${morphClass}`}>
+          {providers[providerIndex]}
+        </span>{" "}
+        handle
       </h1>
-
-      {showHelp && (
-        <p className="login-help-text">
-          The AT Protocol is an open, decentralized network for social apps.
-          Your handle looks like <code>name.bsky.social</code> or your own
-          domain.
-        </p>
-      )}
 
       <form onSubmit={handleSubmit} className="login-form">
         <div className="login-input-wrapper">
@@ -263,6 +285,12 @@ export default function Login() {
               ? "Submit Code"
               : "Continue"}
         </button>
+
+        <p className="login-legal">
+          By signing in, you agree to our{" "}
+          <Link to="/terms">Terms of Service</Link> and{" "}
+          <Link to="/privacy">Privacy Policy</Link>.
+        </p>
       </form>
     </div>
   );
