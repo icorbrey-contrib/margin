@@ -328,6 +328,7 @@ func (h *APIKeyHandler) getSessionByDID(did string) (*SessionData, error) {
 	}
 
 	return &SessionData{
+		ID:           sessionID,
 		DID:          sessDID,
 		Handle:       handle,
 		AccessToken:  accessToken,

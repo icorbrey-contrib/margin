@@ -52,6 +52,7 @@ func (tr *TokenRefresher) getOAuthClient(r *http.Request) *oauth.Client {
 }
 
 type SessionData struct {
+	ID           string
 	DID          string
 	Handle       string
 	AccessToken  string
@@ -94,6 +95,7 @@ func (tr *TokenRefresher) GetSessionWithAutoRefresh(r *http.Request) (*SessionDa
 	}
 
 	return &SessionData{
+		ID:           sessionID,
 		DID:          did,
 		Handle:       handle,
 		AccessToken:  accessToken,
@@ -104,9 +106,8 @@ func (tr *TokenRefresher) GetSessionWithAutoRefresh(r *http.Request) (*SessionDa
 }
 
 func (tr *TokenRefresher) RefreshSessionToken(r *http.Request, session *SessionData) (*SessionData, error) {
-	cookie, err := r.Cookie("margin_session")
-	if err != nil {
-		return nil, fmt.Errorf("not authenticated")
+	if session.ID == "" {
+		return nil, fmt.Errorf("invalid session ID")
 	}
 
 	oauthClient := tr.getOAuthClient(r)
@@ -138,7 +139,7 @@ func (tr *TokenRefresher) RefreshSessionToken(r *http.Request, session *SessionD
 
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
 	if err := tr.db.SaveSession(
-		cookie.Value,
+		session.ID,
 		session.DID,
 		session.Handle,
 		tokenResp.AccessToken,
@@ -152,6 +153,7 @@ func (tr *TokenRefresher) RefreshSessionToken(r *http.Request, session *SessionD
 	log.Printf("Successfully refreshed token for user %s", session.Handle)
 
 	return &SessionData{
+		ID:           session.ID,
 		DID:          session.DID,
 		Handle:       session.Handle,
 		AccessToken:  tokenResp.AccessToken,
