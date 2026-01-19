@@ -187,8 +187,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           },
         });
         return;
-      } catch {
-        /* ignore */
+      } catch (e) {
+        console.debug("Inline annotate failed, falling back to new tab:", e);
       }
     }
 
