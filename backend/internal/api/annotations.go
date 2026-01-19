@@ -480,7 +480,10 @@ func (s *AnnotationService) DeleteReply(w http.ResponseWriter, r *http.Request) 
 
 func resolveDIDToPDS(did string) (string, error) {
 	if strings.HasPrefix(did, "did:plc:") {
-		resp, err := http.Get("https://plc.directory/" + did)
+		client := &http.Client{
+			Timeout: 10 * time.Second,
+		}
+		resp, err := client.Get("https://plc.directory/" + did)
 		if err != nil {
 			return "", err
 		}

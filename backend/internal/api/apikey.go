@@ -311,7 +311,13 @@ func (h *APIKeyHandler) getSessionByDID(did string) (*SessionData, error) {
 		return nil, fmt.Errorf("invalid session DPoP key: %w", err)
 	}
 
-	pds, _ := resolveDIDToPDS(sessDID)
+	pds, err := resolveDIDToPDS(sessDID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve PDS: %w", err)
+	}
+	if pds == "" {
+		return nil, fmt.Errorf("PDS not found for DID: %s", sessDID)
+	}
 
 	return &SessionData{
 		DID:          sessDID,
