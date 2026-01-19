@@ -19,10 +19,16 @@ type Handler struct {
 	db                *db.DB
 	annotationService *AnnotationService
 	refresher         *TokenRefresher
+	apiKeys           *APIKeyHandler
 }
 
 func NewHandler(database *db.DB, annotationService *AnnotationService, refresher *TokenRefresher) *Handler {
-	return &Handler{db: database, annotationService: annotationService, refresher: refresher}
+	return &Handler{
+		db:                database,
+		annotationService: annotationService,
+		refresher:         refresher,
+		apiKeys:           NewAPIKeyHandler(database, refresher),
+	}
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
@@ -64,6 +70,14 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/notifications", h.GetNotifications)
 		r.Get("/notifications/count", h.GetUnreadNotificationCount)
 		r.Post("/notifications/read", h.MarkNotificationsRead)
+		r.Get("/avatar/{did}", h.HandleAvatarProxy)
+
+		r.Post("/keys", h.apiKeys.CreateKey)
+		r.Get("/keys", h.apiKeys.ListKeys)
+		r.Delete("/keys/{id}", h.apiKeys.DeleteKey)
+
+		r.Post("/quick/bookmark", h.apiKeys.QuickBookmark)
+		r.Post("/quick/annotation", h.apiKeys.QuickAnnotation)
 	})
 }
 

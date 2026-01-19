@@ -171,12 +171,28 @@
   line-height: 1.3;
 }
 
+@media (max-width: 600px) {
+  .collection-detail-header {
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .collection-detail-actions {
+    position: static;
+    margin-top: -8px;
+    justify-content: flex-end;
+  }
+}
+
 .collection-detail-desc {
   color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1.5;
   margin-bottom: 12px;
   max-width: 600px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .collection-detail-stats {

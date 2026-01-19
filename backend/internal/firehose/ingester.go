@@ -3,13 +3,16 @@ package firehose
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
-	"strings"
 	"time"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/gorilla/websocket"
+	"github.com/ipfs/go-cid"
 
 	"margin.at/internal/db"
 )
@@ -56,13 +59,34 @@ func (i *Ingester) run(ctx context.Context) {
 			return
 		default:
 			if err := i.subscribe(ctx); err != nil {
+				log.Printf("Firehose error: %v, reconnecting in 5s...", err)
 				if ctx.Err() != nil {
 					return
 				}
-				time.Sleep(30 * time.Second)
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}
+}
+
+type FrameHeader struct {
+	Op int    `cbor:"op"`
+	T  string `cbor:"t"`
+}
+type Commit struct {
+	Repo   string   `cbor:"repo"`
+	Rev    string   `cbor:"rev"`
+	Seq    int64    `cbor:"seq"`
+	Prev   *cid.Cid `cbor:"prev"`
+	Time   string   `cbor:"time"`
+	Blocks []byte   `cbor:"blocks"`
+	Ops    []RepoOp `cbor:"ops"`
+}
+
+type RepoOp struct {
+	Action string   `cbor:"action"`
+	Path   string   `cbor:"path"`
+	Cid    *cid.Cid `cbor:"cid"`
 }
 
 func (i *Ingester) subscribe(ctx context.Context) error {
@@ -73,23 +97,16 @@ func (i *Ingester) subscribe(ctx context.Context) error {
 		url = fmt.Sprintf("%s?cursor=%d", RelayURL, cursor)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", strings.Replace(url, "wss://", "https://", 1), nil)
+	log.Printf("Connecting to firehose: %s", url)
+
+	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("websocket dial failed: %w", err)
 	}
+	defer conn.Close()
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+	log.Printf("Connected to firehose")
 
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("firehose returned %d: %s", resp.StatusCode, string(body))
-	}
-
-	decoder := json.NewDecoder(resp.Body)
 	for {
 		select {
 		case <-ctx.Done():
@@ -97,15 +114,213 @@ func (i *Ingester) subscribe(ctx context.Context) error {
 		default:
 		}
 
-		var event FirehoseEvent
-		if err := decoder.Decode(&event); err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return err
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			return fmt.Errorf("websocket read failed: %w", err)
 		}
 
-		i.handleEvent(&event)
+		i.handleMessage(message)
+	}
+}
+
+func (i *Ingester) handleMessage(data []byte) {
+	reader := bytes.NewReader(data)
+
+	var header FrameHeader
+	decoder := cbor.NewDecoder(reader)
+	if err := decoder.Decode(&header); err != nil {
+		return
+	}
+
+	if header.Op != 1 {
+		return
+	}
+
+	if header.T != "#commit" {
+		return
+	}
+
+	var commit Commit
+	if err := decoder.Decode(&commit); err != nil {
+		return
+	}
+
+	for _, op := range commit.Ops {
+		collection, rkey := parseOpPath(op.Path)
+		if !isMarginCollection(collection) {
+			continue
+		}
+
+		uri := fmt.Sprintf("at://%s/%s/%s", commit.Repo, collection, rkey)
+
+		switch op.Action {
+		case "create", "update":
+			if op.Cid != nil && len(commit.Blocks) > 0 {
+				record := extractRecord(commit.Blocks, *op.Cid)
+				if record != nil {
+					i.handleRecord(commit.Repo, collection, rkey, record, commit.Seq)
+				}
+			}
+		case "delete":
+			i.handleDelete(collection, uri)
+		}
+	}
+
+	if commit.Seq > 0 {
+		if err := i.db.SetCursor("firehose_cursor", commit.Seq); err != nil {
+			log.Printf("Failed to save cursor: %v", err)
+		}
+	}
+}
+
+func parseOpPath(path string) (collection, rkey string) {
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' {
+			return path[:i], path[i+1:]
+		}
+	}
+	return path, ""
+}
+
+func isMarginCollection(collection string) bool {
+	switch collection {
+	case CollectionAnnotation, CollectionHighlight, CollectionBookmark,
+		CollectionReply, CollectionLike, CollectionCollection, CollectionCollectionItem:
+		return true
+	}
+	return false
+}
+
+func extractRecord(blocks []byte, targetCid cid.Cid) map[string]interface{} {
+	reader := bytes.NewReader(blocks)
+
+	headerLen, err := binary.ReadUvarint(reader)
+	if err != nil {
+		return nil
+	}
+	reader.Seek(int64(headerLen), io.SeekCurrent)
+
+	for reader.Len() > 0 {
+		blockLen, err := binary.ReadUvarint(reader)
+		if err != nil {
+			break
+		}
+
+		blockData := make([]byte, blockLen)
+		if _, err := io.ReadFull(reader, blockData); err != nil {
+			break
+		}
+
+		blockCid, cidLen, err := parseCidFromBlock(blockData)
+		if err != nil {
+			continue
+		}
+
+		if blockCid.Equals(targetCid) {
+			var record map[string]interface{}
+			if err := cbor.Unmarshal(blockData[cidLen:], &record); err != nil {
+				return nil
+			}
+			return record
+		}
+	}
+
+	return nil
+}
+
+func parseCidFromBlock(data []byte) (cid.Cid, int, error) {
+	if len(data) < 2 {
+		return cid.Cid{}, 0, fmt.Errorf("data too short")
+	}
+	version, n1 := binary.Uvarint(data)
+	if n1 <= 0 {
+		return cid.Cid{}, 0, fmt.Errorf("invalid version varint")
+	}
+
+	if version == 1 {
+		codec, n2 := binary.Uvarint(data[n1:])
+		if n2 <= 0 {
+			return cid.Cid{}, 0, fmt.Errorf("invalid codec varint")
+		}
+
+		mhStart := n1 + n2
+		hashType, n3 := binary.Uvarint(data[mhStart:])
+		if n3 <= 0 {
+			return cid.Cid{}, 0, fmt.Errorf("invalid hash type varint")
+		}
+
+		hashLen, n4 := binary.Uvarint(data[mhStart+n3:])
+		if n4 <= 0 {
+			return cid.Cid{}, 0, fmt.Errorf("invalid hash length varint")
+		}
+
+		totalCidLen := mhStart + n3 + n4 + int(hashLen)
+
+		c, err := cid.Cast(data[:totalCidLen])
+		if err != nil {
+			return cid.Cid{}, 0, err
+		}
+
+		_ = codec
+		_ = hashType
+
+		return c, totalCidLen, nil
+	}
+
+	return cid.Cid{}, 0, fmt.Errorf("unsupported CID version")
+}
+
+func (i *Ingester) handleDelete(collection, uri string) {
+	switch collection {
+	case CollectionAnnotation:
+		i.db.DeleteAnnotation(uri)
+	case CollectionHighlight:
+		i.db.DeleteHighlight(uri)
+	case CollectionBookmark:
+		i.db.DeleteBookmark(uri)
+	case CollectionReply:
+		i.db.DeleteReply(uri)
+	case CollectionLike:
+		i.db.DeleteLike(uri)
+	case CollectionCollection:
+		i.db.DeleteCollection(uri)
+	case CollectionCollectionItem:
+		i.db.RemoveFromCollection(uri)
+	}
+}
+
+func (i *Ingester) handleRecord(repo, collection, rkey string, record map[string]interface{}, seq int64) {
+	_ = fmt.Sprintf("at://%s/%s/%s", repo, collection, rkey)
+
+	recordJSON, err := json.Marshal(record)
+	if err != nil {
+		return
+	}
+
+	event := &FirehoseEvent{
+		Repo:       repo,
+		Collection: collection,
+		Rkey:       rkey,
+		Record:     recordJSON,
+		Operation:  "create",
+		Cursor:     seq,
+	}
+
+	switch collection {
+	case CollectionAnnotation:
+		i.handleAnnotation(event)
+	case CollectionHighlight:
+		i.handleHighlight(event)
+	case CollectionBookmark:
+		i.handleBookmark(event)
+	case CollectionReply:
+		i.handleReply(event)
+	case CollectionLike:
+		i.handleLike(event)
+	case CollectionCollection:
+		i.handleCollection(event)
+	case CollectionCollectionItem:
+		i.handleCollectionItem(event)
 	}
 }
 
@@ -118,70 +333,7 @@ type FirehoseEvent struct {
 	Cursor     int64           `json:"cursor"`
 }
 
-func (i *Ingester) handleEvent(event *FirehoseEvent) {
-	uri := fmt.Sprintf("at://%s/%s/%s", event.Repo, event.Collection, event.Rkey)
-
-	switch event.Collection {
-	case CollectionAnnotation:
-		switch event.Operation {
-		case "create", "update":
-			i.handleAnnotation(event)
-		case "delete":
-			i.db.DeleteAnnotation(uri)
-		}
-	case CollectionHighlight:
-		switch event.Operation {
-		case "create", "update":
-			i.handleHighlight(event)
-		case "delete":
-			i.db.DeleteHighlight(uri)
-		}
-	case CollectionBookmark:
-		switch event.Operation {
-		case "create", "update":
-			i.handleBookmark(event)
-		case "delete":
-			i.db.DeleteBookmark(uri)
-		}
-	case CollectionReply:
-		switch event.Operation {
-		case "create", "update":
-			i.handleReply(event)
-		case "delete":
-			i.db.DeleteReply(uri)
-		}
-	case CollectionLike:
-		switch event.Operation {
-		case "create":
-			i.handleLike(event)
-		case "delete":
-			i.db.DeleteLike(uri)
-		}
-	case CollectionCollection:
-		switch event.Operation {
-		case "create", "update":
-			i.handleCollection(event)
-		case "delete":
-			i.db.DeleteCollection(uri)
-		}
-	case CollectionCollectionItem:
-		switch event.Operation {
-		case "create", "update":
-			i.handleCollectionItem(event)
-		case "delete":
-			i.db.RemoveFromCollection(uri)
-		}
-	}
-
-	if event.Cursor > 0 {
-		if err := i.db.SetCursor("firehose_cursor", event.Cursor); err != nil {
-			log.Printf("Failed to save cursor: %v", err)
-		}
-	}
-}
-
 func (i *Ingester) handleAnnotation(event *FirehoseEvent) {
-
 	var record struct {
 		Motivation string `json:"motivation"`
 		Body       struct {
@@ -205,7 +357,7 @@ func (i *Ingester) handleAnnotation(event *FirehoseEvent) {
 		Title   string `json:"title"`
 	}
 
-	if err := json.NewDecoder(bytes.NewReader(event.Record)).Decode(&record); err != nil {
+	if err := json.Unmarshal(event.Record, &record); err != nil {
 		return
 	}
 
@@ -302,7 +454,7 @@ func (i *Ingester) handleReply(event *FirehoseEvent) {
 		CreatedAt string `json:"createdAt"`
 	}
 
-	if err := json.NewDecoder(bytes.NewReader(event.Record)).Decode(&record); err != nil {
+	if err := json.Unmarshal(event.Record, &record); err != nil {
 		return
 	}
 
@@ -334,7 +486,7 @@ func (i *Ingester) handleLike(event *FirehoseEvent) {
 		CreatedAt string `json:"createdAt"`
 	}
 
-	if err := json.NewDecoder(bytes.NewReader(event.Record)).Decode(&record); err != nil {
+	if err := json.Unmarshal(event.Record, &record); err != nil {
 		return
 	}
 
@@ -369,7 +521,7 @@ func (i *Ingester) handleHighlight(event *FirehoseEvent) {
 		CreatedAt string   `json:"createdAt"`
 	}
 
-	if err := json.NewDecoder(bytes.NewReader(event.Record)).Decode(&record); err != nil {
+	if err := json.Unmarshal(event.Record, &record); err != nil {
 		return
 	}
 
@@ -432,7 +584,7 @@ func (i *Ingester) handleBookmark(event *FirehoseEvent) {
 		CreatedAt   string   `json:"createdAt"`
 	}
 
-	if err := json.NewDecoder(bytes.NewReader(event.Record)).Decode(&record); err != nil {
+	if err := json.Unmarshal(event.Record, &record); err != nil {
 		return
 	}
 
@@ -488,7 +640,7 @@ func (i *Ingester) handleCollection(event *FirehoseEvent) {
 		CreatedAt   string `json:"createdAt"`
 	}
 
-	if err := json.NewDecoder(bytes.NewReader(event.Record)).Decode(&record); err != nil {
+	if err := json.Unmarshal(event.Record, &record); err != nil {
 		return
 	}
 
@@ -532,7 +684,7 @@ func (i *Ingester) handleCollectionItem(event *FirehoseEvent) {
 		CreatedAt  string `json:"createdAt"`
 	}
 
-	if err := json.NewDecoder(bytes.NewReader(event.Record)).Decode(&record); err != nil {
+	if err := json.Unmarshal(event.Record, &record); err != nil {
 		return
 	}
 

@@ -470,7 +470,7 @@ func fetchProfiles(dids []string) (map[string]Author, error) {
 			DID:         p.DID,
 			Handle:      p.Handle,
 			DisplayName: p.DisplayName,
-			Avatar:      p.Avatar,
+			Avatar:      getProxiedAvatarURL(p.DID, p.Avatar),
 		}
 	}
 

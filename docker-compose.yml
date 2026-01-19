@@ -9,6 +9,8 @@ services:
       - OAUTH_KEY_PATH=/data/oauth_private_key.pem
     env_file:
       - .env
+    volumes:
+      - margin-data:/data
     depends_on:
       db:
         condition: service_healthy
@@ -23,7 +25,6 @@ services:
 
     volumes:
       - db-data:/var/lib/postgresql/data
-      - margin-data:/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U margin"]
       interval: 5s

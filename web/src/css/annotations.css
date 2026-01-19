@@ -182,6 +182,9 @@
   font-weight: 400;
   font-family: var(--font-serif, var(--font-sans));
   display: inline;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  padding-right: 4px;
 }
 
 .annotation-text {
@@ -277,7 +280,37 @@
   padding-left: 46px;
 }
 
-@media (max-width: 600px) {
+.annotation-text,
+.reply-text,
+.history-content {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.annotation-highlight mark {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: inline;
+}
+
+.annotation-header-left,
+.annotation-meta,
+.reply-meta {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.annotation-author-row,
+.reply-author {
+  max-width: 100%;
+}
+
+.annotation-source {
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
   .annotation-content,
   .annotation-actions,
   .inline-replies {

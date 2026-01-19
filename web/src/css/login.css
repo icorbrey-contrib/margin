@@ -10,6 +10,26 @@
   margin: 0 auto;
 }
 
+@media (max-width: 600px) {
+  .login-page {
+    padding: 40px 16px;
+  }
+
+  .login-at-logo {
+    font-size: 4rem;
+  }
+
+  .login-brand-name {
+    font-size: 1.25rem;
+  }
+
+  .login-brand-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+  }
+}
+
 .login-at-logo {
   font-size: 5rem;
   font-weight: 800;

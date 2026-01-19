@@ -15,9 +15,7 @@ import AnnotationDetail from "./pages/AnnotationDetail";
 import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Privacy from "./pages/Privacy";
-
 import Terms from "./pages/Terms";
-
 import ScrollToTop from "./components/ScrollToTop";
 
 function AppContent() {

@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
-import { SiFirefox, SiGooglechrome, SiGithub, SiBluesky } from "react-icons/si";
+import {
+  SiFirefox,
+  SiGooglechrome,
+  SiGithub,
+  SiBluesky,
+  SiApple,
+} from "react-icons/si";
 import { FaEdge } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import { getTrendingTags } from "../api/client";
@@ -10,13 +16,27 @@ const isFirefox =
   typeof navigator !== "undefined" && /Firefox/i.test(navigator.userAgent);
 const isEdge =
   typeof navigator !== "undefined" && /Edg/i.test(navigator.userAgent);
+const isMobileSafari =
+  typeof navigator !== "undefined" &&
+  /iPhone|iPad|iPod/.test(navigator.userAgent) &&
+  /Safari/.test(navigator.userAgent) &&
+  !/CriOS|FxiOS|OPiOS|EdgiOS/.test(navigator.userAgent);
 
 function getExtensionInfo() {
+  if (isMobileSafari) {
+    return {
+      url: "https://margin.at/soon",
+      icon: SiApple,
+      name: "iOS",
+      label: "Get the Shortcut",
+    };
+  }
   if (isFirefox) {
     return {
       url: "https://addons.mozilla.org/en-US/firefox/addon/margin/",
       icon: SiFirefox,
       name: "Firefox",
+      label: "Install for Firefox",
     };
   }
   if (isEdge) {
@@ -24,12 +44,14 @@ function getExtensionInfo() {
       url: "https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn",
       icon: FaEdge,
       name: "Edge",
+      label: "Install for Edge",
     };
   }
   return {
     url: "https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa/",
     icon: SiGooglechrome,
     name: "Chrome",
+    label: "Install for Chrome",
   };
 }
 
@@ -50,9 +72,13 @@ export default function RightSidebar() {
   return (
     <aside className="right-sidebar">
       <div className="right-section">
-        <h3 className="right-section-title">Get the Extension</h3>
+        <h3 className="right-section-title">
+          {isMobileSafari ? "Save from Safari" : "Get the Extension"}
+        </h3>
         <p className="right-section-desc">
-          Annotate, highlight, and bookmark any webpage
+          {isMobileSafari
+            ? "Bookmark pages using Safari's share sheet"
+            : "Annotate, highlight, and bookmark any webpage"}
         </p>
         <a
           href={ext.url}
@@ -61,7 +87,7 @@ export default function RightSidebar() {
           className="right-extension-btn"
         >
           <ExtIcon size={18} />
-          Install for {ext.name}
+          {ext.label}
           <ExternalLink size={14} />
         </a>
       </div>

@@ -261,6 +261,9 @@
   margin-bottom: 16px;
   font-style: italic;
   color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .composer-quote-remove {
@@ -727,4 +730,20 @@
 
 .bookmark-time {
   color: var(--text-tertiary);
+}
+
+.bookmark-preview {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .bookmark-preview-content {
+    padding: 12px 14px;
+  }
+
+  .legal-content {
+    padding: 16px;
+  }
 }

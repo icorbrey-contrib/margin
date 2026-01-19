@@ -3,7 +3,6 @@
   let sidebarShadow = null;
   let popoverEl = null;
 
-
   let activeItems = [];
   let currentSelection = null;
 
@@ -640,7 +639,7 @@
         const firstRect = firstRange.getClientRects()[0];
         const totalWidth =
           Math.min(uniqueAuthors.length, maxShow + (overflow > 0 ? 1 : 0)) *
-          18 +
+            18 +
           8;
         const leftPos = firstRect.left - totalWidth;
         const topPos = firstRect.top + firstRect.height / 2 - 12;
@@ -1026,4 +1025,47 @@
       setTimeout(() => fetchAnnotations(), 500);
     }
   });
+
+  let lastUrl = window.location.href;
+
+  function checkUrlChange() {
+    if (window.location.href !== lastUrl) {
+      lastUrl = window.location.href;
+      onUrlChange();
+    }
+  }
+
+  function onUrlChange() {
+    if (typeof CSS !== "undefined" && CSS.highlights) {
+      CSS.highlights.clear();
+    }
+    activeItems = [];
+
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local.get(["showOverlay"], (result) => {
+        if (result.showOverlay !== false) {
+          fetchAnnotations();
+        }
+      });
+    } else {
+      fetchAnnotations();
+    }
+  }
+
+  window.addEventListener("popstate", onUrlChange);
+
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+
+  history.pushState = function (...args) {
+    originalPushState.apply(this, args);
+    checkUrlChange();
+  };
+
+  history.replaceState = function (...args) {
+    originalReplaceState.apply(this, args);
+    checkUrlChange();
+  };
+
+  setInterval(checkUrlChange, 1000);
 })();

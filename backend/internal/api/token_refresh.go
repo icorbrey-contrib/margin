@@ -196,3 +196,7 @@ func (tr *TokenRefresher) ExecuteWithAutoRefresh(
 	client = xrpc.NewClient(newSession.PDS, newSession.AccessToken, newSession.DPoPKey)
 	return fn(client, newSession.DID)
 }
+
+func (tr *TokenRefresher) CreateClientFromSession(session *SessionData) *xrpc.Client {
+	return xrpc.NewClient(session.PDS, session.AccessToken, session.DPoPKey)
+}

@@ -451,15 +451,63 @@
   .main-layout {
     margin-left: 0;
     padding-bottom: 80px;
+    width: 100%;
+    min-width: 0;
   }
 
   .main-content-wrapper {
     padding: 20px 16px;
     max-width: 100%;
+    width: 100%;
     overflow-x: hidden;
+    min-width: 0;
   }
 
   .mobile-nav {
     display: block;
+    max-width: 100vw;
+  }
+
+  .card,
+  .annotation-card,
+  .collection-card,
+  .profile-header,
+  .api-keys-section {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  code {
+    word-break: break-all;
+    overflow-wrap: break-word;
+  }
+
+  pre {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  input,
+  textarea {
+    max-width: 100%;
+  }
+
+  .flex-row,
+  [style*="display: flex"][style*="gap"] {
+    flex-wrap: wrap;
+  }
+
+  .static-page {
+    overflow-x: hidden;
+  }
+
+  .static-page ol,
+  .static-page ul {
+    padding-left: 1.25rem;
+  }
+
+  .static-page code {
+    font-size: 0.75rem;
+    word-break: break-all;
   }
 }

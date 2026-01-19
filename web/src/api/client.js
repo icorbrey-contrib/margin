@@ -430,3 +430,18 @@ export async function startLogin(handle, inviteCode) {
 export async function getTrendingTags(limit = 10) {
   return request(`${API_BASE}/tags/trending?limit=${limit}`);
 }
+
+export async function getAPIKeys() {
+  return request(`${API_BASE}/keys`);
+}
+
+export async function createAPIKey(name) {
+  return request(`${API_BASE}/keys`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteAPIKey(id) {
+  return request(`${API_BASE}/keys/${id}`, { method: "DELETE" });
+}

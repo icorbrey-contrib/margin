@@ -120,6 +120,15 @@ type Notification struct {
 	ReadAt       *time.Time `json:"readAt,omitempty"`
 }
 
+type APIKey struct {
+	ID         string     `json:"id"`
+	OwnerDID   string     `json:"ownerDid"`
+	Name       string     `json:"name"`
+	KeyHash    string     `json:"-"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
+}
+
 func New(dsn string) (*DB, error) {
 	driver := "sqlite3"
 	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
@@ -295,6 +304,17 @@ func (db *DB) Migrate() error {
 	)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_did)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC)`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS api_keys (
+		id TEXT PRIMARY KEY,
+		owner_did TEXT NOT NULL,
+		name TEXT NOT NULL,
+		key_hash TEXT NOT NULL,
+		created_at ` + dateType + ` NOT NULL,
+		last_used_at ` + dateType + `
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_api_keys_owner ON api_keys(owner_did)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`)
 
 	db.runMigrations()
 
