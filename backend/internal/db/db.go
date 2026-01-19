@@ -241,6 +241,7 @@ func (db *DB) Migrate() error {
 	)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_likes_subject_uri ON likes(subject_uri)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_likes_author_did ON likes(author_did)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_likes_author_subject ON likes(author_did, subject_uri)`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS collections (
 		uri TEXT PRIMARY KEY,
