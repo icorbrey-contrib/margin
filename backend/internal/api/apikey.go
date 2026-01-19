@@ -267,6 +267,84 @@ func (h *APIKeyHandler) QuickAnnotation(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+type QuickHighlightRequest struct {
+	URL      string      `json:"url"`
+	Selector interface{} `json:"selector"`
+	Color    string      `json:"color,omitempty"`
+}
+
+func (h *APIKeyHandler) QuickHighlight(w http.ResponseWriter, r *http.Request) {
+	apiKey, err := h.authenticateAPIKey(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	var req QuickHighlightRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.URL == "" || req.Selector == nil {
+		http.Error(w, "URL and selector are required", http.StatusBadRequest)
+		return
+	}
+
+	session, err := h.getSessionByDID(apiKey.OwnerDID)
+	if err != nil {
+		http.Error(w, "User session not found. Please log in to margin.at first.", http.StatusUnauthorized)
+		return
+	}
+
+	urlHash := db.HashURL(req.URL)
+	color := req.Color
+	if color == "" {
+		color = "yellow"
+	}
+
+	record := xrpc.NewHighlightRecord(req.URL, urlHash, req.Selector, color, nil)
+
+	var result *xrpc.CreateRecordOutput
+	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+		var createErr error
+		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionHighlight, record)
+		return createErr
+	})
+	if err != nil {
+		http.Error(w, "Failed to create highlight: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.db.UpdateAPIKeyLastUsed(apiKey.ID)
+
+	selectorJSON, _ := json.Marshal(req.Selector)
+	selectorStr := string(selectorJSON)
+	colorPtr := &color
+
+	highlight := &db.Highlight{
+		URI:          result.URI,
+		AuthorDID:    apiKey.OwnerDID,
+		TargetSource: req.URL,
+		TargetHash:   urlHash,
+		SelectorJSON: &selectorStr,
+		Color:        colorPtr,
+		CreatedAt:    time.Now(),
+		IndexedAt:    time.Now(),
+		CID:          &result.CID,
+	}
+	if err := h.db.CreateHighlight(highlight); err != nil {
+		fmt.Printf("Warning: failed to index highlight in local DB: %v\n", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"uri":     result.URI,
+		"cid":     result.CID,
+		"message": "Highlight created successfully",
+	})
+}
+
 func (h *APIKeyHandler) authenticateAPIKey(r *http.Request) (*db.APIKey, error) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {

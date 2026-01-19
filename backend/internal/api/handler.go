@@ -78,6 +78,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 		r.Post("/quick/bookmark", h.apiKeys.QuickBookmark)
 		r.Post("/quick/annotation", h.apiKeys.QuickAnnotation)
+		r.Post("/quick/highlight", h.apiKeys.QuickHighlight)
 	})
 }
 
