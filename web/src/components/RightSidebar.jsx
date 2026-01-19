@@ -7,6 +7,7 @@ import {
   SiGithub,
   SiBluesky,
   SiApple,
+  SiKofi,
 } from "react-icons/si";
 import { FaEdge } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
@@ -28,7 +29,7 @@ function getExtensionInfo() {
       url: "https://margin.at/soon",
       icon: SiApple,
       name: "iOS",
-      label: "Get the Shortcut",
+      label: "Coming Soon",
     };
   }
   if (isFirefox) {
@@ -166,6 +167,18 @@ export default function RightSidebar() {
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <SiBluesky size={16} />
               Bluesky
+            </div>
+            <ExternalLink size={12} />
+          </a>
+          <a
+            href="https://ko-fi.com/scan"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="right-link"
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <SiKofi size={16} />
+              Donate
             </div>
             <ExternalLink size={12} />
           </a>

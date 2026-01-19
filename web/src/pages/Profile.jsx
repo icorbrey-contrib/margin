@@ -366,17 +366,19 @@ export default function Profile() {
               Save bookmarks from Safari&apos;s share sheet.
             </p>
             <a
-              href="https://margin.at/soon"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
               className="btn btn-primary"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.5rem",
+                opacity: 0.5,
+                pointerEvents: "none",
+                cursor: "default",
               }}
+              onClick={(e) => e.preventDefault()}
             >
-              <AppleIcon size={16} /> Download Shortcut
+              <AppleIcon size={16} /> Coming Soon
             </a>
           </div>
         </div>
