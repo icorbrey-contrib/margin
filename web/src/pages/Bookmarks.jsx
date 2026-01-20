@@ -10,6 +10,7 @@ import {
 } from "../api/client";
 import { BookmarkIcon } from "../components/Icons";
 import BookmarkCard from "../components/BookmarkCard";
+import AddToCollectionModal from "../components/AddToCollectionModal";
 
 export default function Bookmarks() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -21,6 +22,10 @@ export default function Bookmarks() {
   const [newTitle, setNewTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [fetchingTitle, setFetchingTitle] = useState(false);
+  const [collectionModalState, setCollectionModalState] = useState({
+    isOpen: false,
+    uri: null,
+  });
 
   const loadBookmarks = useCallback(async () => {
     if (!user?.did) return;
@@ -285,9 +290,22 @@ export default function Bookmarks() {
               key={bookmark.id}
               bookmark={bookmark}
               onDelete={handleDelete}
+              onAddToCollection={() =>
+                setCollectionModalState({
+                  isOpen: true,
+                  uri: bookmark.uri || bookmark.id,
+                })
+              }
             />
           ))}
         </div>
+      )}
+      {collectionModalState.isOpen && (
+        <AddToCollectionModal
+          isOpen={collectionModalState.isOpen}
+          onClose={() => setCollectionModalState({ isOpen: false, uri: null })}
+          annotationUri={collectionModalState.uri}
+        />
       )}
     </div>
   );

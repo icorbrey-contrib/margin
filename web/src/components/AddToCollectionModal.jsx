@@ -21,17 +21,6 @@ export default function AddToCollectionModal({
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (isOpen && user) {
-      if (!annotationUri) {
-        setLoading(false);
-        return;
-      }
-      loadCollections();
-      setError(null);
-    }
-  }, [isOpen, user, annotationUri, loadCollections]);
-
   const loadCollections = useCallback(async () => {
     try {
       setLoading(true);
@@ -50,6 +39,17 @@ export default function AddToCollectionModal({
       setLoading(false);
     }
   }, [user?.did, annotationUri]);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      if (!annotationUri) {
+        setLoading(false);
+        return;
+      }
+      loadCollections();
+      setError(null);
+    }
+  }, [isOpen, user, annotationUri, loadCollections]);
 
   const handleAdd = async (collectionUri) => {
     if (addedTo.has(collectionUri)) return;
