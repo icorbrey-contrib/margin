@@ -25,9 +25,9 @@
           },
           "icon": {
             "type": "string",
-            "maxLength": 10,
-            "maxGraphemes": 2,
-            "description": "Emoji icon for the collection"
+            "maxLength": 100,
+            "maxGraphemes": 100,
+            "description": "Emoji icon or icon identifier for the collection"
           },
           "createdAt": {
             "type": "string",
