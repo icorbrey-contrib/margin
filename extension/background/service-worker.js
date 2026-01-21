@@ -75,6 +75,22 @@ chrome.runtime.onInstalled.addListener(async () => {
     updateBaseUrls("https://margin.at");
   }
 
+  await ensureContextMenus();
+
+  if (hasSidebarAction) {
+    try {
+      await browser.sidebarAction.close();
+    } catch {
+      /* ignore */
+    }
+  }
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  await ensureContextMenus();
+});
+
+async function ensureContextMenus() {
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
@@ -100,15 +116,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     title: "Open Margin Sidebar",
     contexts: ["page", "selection", "link"],
   });
-
-  if (hasSidebarAction) {
-    try {
-      await browser.sidebarAction.close();
-    } catch {
-      /* ignore */
-    }
-  }
-});
+}
 
 chrome.action.onClicked.addListener(async () => {
   const stored = await chrome.storage.local.get(["apiUrl"]);
