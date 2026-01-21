@@ -986,6 +986,12 @@
       return true;
     }
 
+    if (request.type === "REFRESH_ANNOTATIONS") {
+      fetchAnnotations();
+      sendResponse({ success: true });
+      return true;
+    }
+
     if (request.type === "UPDATE_OVERLAY_VISIBILITY") {
       if (sidebarHost) {
         sidebarHost.style.display = request.show ? "block" : "none";

@@ -71,6 +71,13 @@ async function createHighlight(payload) {
   return res.json();
 }
 
+function refreshTabAnnotations(tabId) {
+  if (!tabId) return;
+  chrome.tabs.sendMessage(tabId, { type: "REFRESH_ANNOTATIONS" }).catch(() => {
+    /* ignore missing content script */
+  });
+}
+
 async function openAnnotationUI(tabId, windowId) {
   if (hasSidePanel) {
     try {
@@ -273,6 +280,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           selector: selector,
         });
         showNotification("Margin", "Text highlighted!");
+        refreshTabAnnotations(tab.id);
       } catch (err) {
         console.error("Highlight API error:", err);
         if (err?.message === "Not authenticated") {
@@ -515,6 +523,7 @@ async function handleMessage(request, sender, sendResponse) {
             color: request.data.color || "yellow",
           });
           sendResponse({ success: true, data: highlightData });
+          refreshTabAnnotations(sender.tab?.id);
         } catch (error) {
           sendResponse({ success: false, error: error.message });
         }
