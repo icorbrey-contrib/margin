@@ -972,6 +972,26 @@
       return true;
     }
 
+    if (request.type === "GET_SELECTOR_FOR_HIGHLIGHT") {
+      const sel = window.getSelection();
+      if (!sel || !sel.toString().trim()) {
+        sendResponse({ success: false, selector: null });
+        return true;
+      }
+      const exact = sel.toString().trim();
+      sendResponse({
+        success: false,
+        selector: { type: "TextQuoteSelector", exact },
+      });
+      return true;
+    }
+
+    if (request.type === "REFRESH_ANNOTATIONS") {
+      fetchAnnotations();
+      sendResponse({ success: true });
+      return true;
+    }
+
     if (request.type === "UPDATE_OVERLAY_VISIBILITY") {
       if (sidebarHost) {
         sidebarHost.style.display = request.show ? "block" : "none";

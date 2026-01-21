@@ -39,6 +39,45 @@ function showNotification(title, message) {
   }
 }
 
+async function createHighlight(payload) {
+  if (!API_BASE) {
+    throw new Error("API URL not configured");
+  }
+
+  const cookie = await chrome.cookies.get({
+    url: API_BASE,
+    name: "margin_session",
+  });
+
+  if (!cookie) {
+    throw new Error("Not authenticated");
+  }
+
+  const res = await fetch(`${API_BASE}/api/highlights`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Session-Token": cookie.value,
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to create highlight: ${res.status} ${errText}`);
+  }
+
+  return res.json();
+}
+
+function refreshTabAnnotations(tabId) {
+  if (!tabId) return;
+  chrome.tabs.sendMessage(tabId, { type: "REFRESH_ANNOTATIONS" }).catch(() => {
+    /* ignore missing content script */
+  });
+}
+
 async function openAnnotationUI(tabId, windowId) {
   if (hasSidePanel) {
     try {
@@ -75,6 +114,22 @@ chrome.runtime.onInstalled.addListener(async () => {
     updateBaseUrls("https://margin.at");
   }
 
+  await ensureContextMenus();
+
+  if (hasSidebarAction) {
+    try {
+      await browser.sidebarAction.close();
+    } catch {
+      /* ignore */
+    }
+  }
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  await ensureContextMenus();
+});
+
+async function ensureContextMenus() {
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
@@ -100,15 +155,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     title: "Open Margin Sidebar",
     contexts: ["page", "selection", "link"],
   });
-
-  if (hasSidebarAction) {
-    try {
-      await browser.sidebarAction.close();
-    } catch {
-      /* ignore */
-    }
-  }
-});
+}
 
 chrome.action.onClicked.addListener(async () => {
   const stored = await chrome.storage.local.get(["apiUrl"]);
@@ -210,50 +257,36 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         type: "GET_SELECTOR_FOR_HIGHLIGHT",
         selectionText: info.selectionText,
       });
+      if (response?.selector) {
+        selector = response.selector;
+      }
       if (response && response.success) return;
     } catch {
       /* ignore */
     }
 
-    if (info.selectionText) {
+    if (!selector && info.selectionText) {
       selector = {
         type: "TextQuoteSelector",
         exact: info.selectionText,
       };
+    }
 
+    if (selector) {
       try {
-        const cookie = await chrome.cookies.get({
-          url: API_BASE,
-          name: "margin_session",
+        await createHighlight({
+          url: tab.url,
+          title: tab.title,
+          selector: selector,
         });
-
-        if (!cookie) {
+        showNotification("Margin", "Text highlighted!");
+        refreshTabAnnotations(tab.id);
+      } catch (err) {
+        console.error("Highlight API error:", err);
+        if (err?.message === "Not authenticated") {
           showNotification("Margin", "Please sign in to create highlights");
           return;
         }
-
-        const res = await fetch(`${API_BASE}/api/highlights`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            url: tab.url,
-            title: tab.title,
-            selector: selector,
-          }),
-        });
-
-        if (res.ok) {
-          showNotification("Margin", "Text highlighted!");
-        } else {
-          const errText = await res.text();
-          console.error("Highlight API error:", res.status, errText);
-          showNotification("Margin", "Failed to create highlight");
-        }
-      } catch (err) {
-        console.error("Highlight API error:", err);
         showNotification("Margin", "Error creating highlight");
       }
     } else {
@@ -482,45 +515,18 @@ async function handleMessage(request, sender, sendResponse) {
       }
 
       case "CREATE_HIGHLIGHT": {
-        if (!API_BASE) {
-          sendResponse({ success: false, error: "API URL not configured" });
-          return;
-        }
-
-        const cookie = await chrome.cookies.get({
-          url: API_BASE,
-          name: "margin_session",
-        });
-
-        if (!cookie) {
-          sendResponse({ success: false, error: "Not authenticated" });
-          return;
-        }
-
-        const highlightRes = await fetch(`${API_BASE}/api/highlights`, {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Session-Token": cookie.value,
-          },
-          body: JSON.stringify({
+        try {
+          const highlightData = await createHighlight({
             url: request.data.url,
             title: request.data.title,
             selector: request.data.selector,
             color: request.data.color || "yellow",
-          }),
-        });
-
-        if (!highlightRes.ok) {
-          const errorText = await highlightRes.text();
-          throw new Error(
-            `Failed to create highlight: ${highlightRes.status} ${errorText}`,
-          );
+          });
+          sendResponse({ success: true, data: highlightData });
+          refreshTabAnnotations(sender.tab?.id);
+        } catch (error) {
+          sendResponse({ success: false, error: error.message });
         }
-
-        const highlightData = await highlightRes.json();
-        sendResponse({ success: true, data: highlightData });
         break;
       }
 
