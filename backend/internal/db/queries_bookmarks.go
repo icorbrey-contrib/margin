@@ -174,3 +174,23 @@ func (db *DB) GetBookmarksByURIs(uris []string) ([]Bookmark, error) {
 	}
 	return bookmarks, nil
 }
+
+func (db *DB) GetBookmarkURIs(authorDID string) ([]string, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri FROM bookmarks WHERE author_did = ?
+	`), authorDID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var uris []string
+	for rows.Next() {
+		var uri string
+		if err := rows.Scan(&uri); err != nil {
+			return nil, err
+		}
+		uris = append(uris, uri)
+	}
+	return uris, nil
+}

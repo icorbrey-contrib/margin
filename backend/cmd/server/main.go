@@ -41,6 +41,9 @@ func main() {
 	}
 
 	ingester := firehose.NewIngester(database)
+	firehose.RelayURL = getEnv("BLOCK_RELAY_URL", "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos")
+	log.Printf("Firehose URL: %s", firehose.RelayURL)
+
 	go func() {
 		if err := ingester.Start(context.Background()); err != nil {
 			log.Printf("Firehose ingester error: %v", err)

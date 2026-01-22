@@ -170,3 +170,23 @@ func (db *DB) GetAnnotationsByURIs(uris []string) ([]Annotation, error) {
 
 	return scanAnnotations(rows)
 }
+
+func (db *DB) GetAnnotationURIs(authorDID string) ([]string, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri FROM annotations WHERE author_did = ?
+	`), authorDID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var uris []string
+	for rows.Next() {
+		var uri string
+		if err := rows.Scan(&uri); err != nil {
+			return nil, err
+		}
+		uris = append(uris, uri)
+	}
+	return uris, nil
+}

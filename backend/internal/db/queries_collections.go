@@ -118,6 +118,29 @@ func (db *DB) GetRecentCollectionItems(limit, offset int) ([]CollectionItem, err
 	return items, nil
 }
 
+func (db *DB) GetCollectionItemsByAuthor(authorDID string) ([]CollectionItem, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, collection_uri, annotation_uri, position, created_at, indexed_at
+		FROM collection_items
+		WHERE author_did = ?
+		ORDER BY created_at DESC
+	`), authorDID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []CollectionItem
+	for rows.Next() {
+		var item CollectionItem
+		if err := rows.Scan(&item.URI, &item.AuthorDID, &item.CollectionURI, &item.AnnotationURI, &item.Position, &item.CreatedAt, &item.IndexedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func (db *DB) GetCollectionURIsForAnnotation(annotationURI string) ([]string, error) {
 	rows, err := db.Query(db.Rebind(`
 		SELECT collection_uri FROM collection_items WHERE annotation_uri = ?

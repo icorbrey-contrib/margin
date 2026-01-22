@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { useEffect } from "react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Sidebar from "./components/Sidebar";
 import RightSidebar from "./components/RightSidebar";
 import MobileNav from "./components/MobileNav";
@@ -19,6 +20,14 @@ import Terms from "./pages/Terms";
 import ScrollToTop from "./components/ScrollToTop";
 
 function AppContent() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetch("/api/sync", { method: "POST" }).catch(console.error);
+    }
+  }, [user]);
+
   return (
     <div className="layout">
       <ScrollToTop />

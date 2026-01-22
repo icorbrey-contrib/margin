@@ -14,6 +14,29 @@ func (db *DB) DeleteLike(uri string) error {
 	return err
 }
 
+func (db *DB) GetLikesByAuthor(authorDID string) ([]Like, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, subject_uri, created_at, indexed_at
+		FROM likes
+		WHERE author_did = ?
+		ORDER BY created_at DESC
+	`), authorDID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var likes []Like
+	for rows.Next() {
+		var l Like
+		if err := rows.Scan(&l.URI, &l.AuthorDID, &l.SubjectURI, &l.CreatedAt, &l.IndexedAt); err != nil {
+			return nil, err
+		}
+		likes = append(likes, l)
+	}
+	return likes, nil
+}
+
 func (db *DB) GetLikeCount(subjectURI string) (int, error) {
 	var count int
 	err := db.QueryRow(db.Rebind(`SELECT COUNT(*) FROM likes WHERE subject_uri = ?`), subjectURI).Scan(&count)

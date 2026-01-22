@@ -54,6 +54,11 @@ func (s *CollectionService) CreateCollection(w http.ResponseWriter, r *http.Requ
 
 	record := xrpc.NewCollectionRecord(req.Name, req.Description, req.Icon)
 
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	var result *xrpc.CreateRecordOutput
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
 		var createErr error
@@ -115,6 +120,11 @@ func (s *CollectionService) AddCollectionItem(w http.ResponseWriter, r *http.Req
 	}
 
 	record := xrpc.NewCollectionItemRecord(collectionURI, req.AnnotationURI, req.Position)
+
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	var result *xrpc.CreateRecordOutput
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
@@ -368,6 +378,12 @@ func (s *CollectionService) UpdateCollection(w http.ResponseWriter, r *http.Requ
 	}
 
 	record := xrpc.NewCollectionRecord(req.Name, req.Description, req.Icon)
+
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	parts := strings.Split(uri, "/")
 	rkey := parts[len(parts)-1]
 

@@ -157,6 +157,11 @@ func (h *APIKeyHandler) QuickBookmark(w http.ResponseWriter, r *http.Request) {
 	urlHash := db.HashURL(req.URL)
 	record := xrpc.NewBookmarkRecord(req.URL, urlHash, req.Title, req.Description)
 
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	var result *xrpc.CreateRecordOutput
 	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
 		var createErr error
@@ -200,26 +205,28 @@ func (h *APIKeyHandler) QuickBookmark(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-type QuickAnnotationRequest struct {
-	URL  string `json:"url"`
-	Text string `json:"text"`
+type QuickSaveRequest struct {
+	URL      string          `json:"url"`
+	Text     string          `json:"text,omitempty"`
+	Selector json.RawMessage `json:"selector,omitempty"`
+	Color    string          `json:"color,omitempty"`
 }
 
-func (h *APIKeyHandler) QuickAnnotation(w http.ResponseWriter, r *http.Request) {
+func (h *APIKeyHandler) QuickSave(w http.ResponseWriter, r *http.Request) {
 	apiKey, err := h.authenticateAPIKey(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	var req QuickAnnotationRequest
+	var req QuickSaveRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if req.URL == "" || req.Text == "" {
-		http.Error(w, "URL and text are required", http.StatusBadRequest)
+	if req.URL == "" {
+		http.Error(w, "URL is required", http.StatusBadRequest)
 		return
 	}
 
@@ -230,40 +237,111 @@ func (h *APIKeyHandler) QuickAnnotation(w http.ResponseWriter, r *http.Request) 
 	}
 
 	urlHash := db.HashURL(req.URL)
-	record := xrpc.NewAnnotationRecord(req.URL, urlHash, req.Text, nil, "")
+
+	var isHighlight bool
+	if req.Selector != nil && req.Text == "" {
+		isHighlight = true
+	}
 
 	var result *xrpc.CreateRecordOutput
-	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
-		var createErr error
-		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionAnnotation, record)
-		return createErr
-	})
+	var createErr error
+
+	if isHighlight {
+		color := req.Color
+		if color == "" {
+			color = "yellow"
+		}
+		record := xrpc.NewHighlightRecord(req.URL, urlHash, req.Selector, color, nil)
+
+		if err := record.Validate(); err != nil {
+			http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+			result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionHighlight, record)
+			return createErr
+		})
+		if err == nil {
+			h.db.UpdateAPIKeyLastUsed(apiKey.ID)
+			selectorJSON, _ := json.Marshal(req.Selector)
+			selectorStr := string(selectorJSON)
+			colorPtr := &color
+
+			highlight := &db.Highlight{
+				URI:          result.URI,
+				AuthorDID:    apiKey.OwnerDID,
+				TargetSource: req.URL,
+				TargetHash:   urlHash,
+				SelectorJSON: &selectorStr,
+				Color:        colorPtr,
+				CreatedAt:    time.Now(),
+				IndexedAt:    time.Now(),
+				CID:          &result.CID,
+			}
+			go func() {
+				if err := h.db.CreateHighlight(highlight); err != nil {
+					fmt.Printf("Warning: failed to index highlight in local DB: %v\n", err)
+				}
+			}()
+		}
+
+	} else {
+		record := xrpc.NewAnnotationRecord(req.URL, urlHash, req.Text, req.Selector, "")
+
+		if err := record.Validate(); err != nil {
+			http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+			result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionAnnotation, record)
+			return createErr
+		})
+		if err == nil {
+			h.db.UpdateAPIKeyLastUsed(apiKey.ID)
+
+			var selectorStrPtr *string
+			if req.Selector != nil {
+				b, _ := json.Marshal(req.Selector)
+				s := string(b)
+				selectorStrPtr = &s
+			}
+
+			bodyValue := req.Text
+			var bodyValuePtr *string
+			if bodyValue != "" {
+				bodyValuePtr = &bodyValue
+			}
+
+			annotation := &db.Annotation{
+				URI:          result.URI,
+				AuthorDID:    apiKey.OwnerDID,
+				Motivation:   "commenting",
+				BodyValue:    bodyValuePtr,
+				TargetSource: req.URL,
+				TargetHash:   urlHash,
+				SelectorJSON: selectorStrPtr,
+				CreatedAt:    time.Now(),
+				IndexedAt:    time.Now(),
+				CID:          &result.CID,
+			}
+			go func() {
+				h.db.CreateAnnotation(annotation)
+			}()
+		}
+	}
+
 	if err != nil {
-		http.Error(w, "Failed to create annotation: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to create record: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	h.db.UpdateAPIKeyLastUsed(apiKey.ID)
-
-	bodyValue := req.Text
-	annotation := &db.Annotation{
-		URI:          result.URI,
-		AuthorDID:    apiKey.OwnerDID,
-		Motivation:   "commenting",
-		BodyValue:    &bodyValue,
-		TargetSource: req.URL,
-		TargetHash:   urlHash,
-		CreatedAt:    time.Now(),
-		IndexedAt:    time.Now(),
-		CID:          &result.CID,
-	}
-	h.db.CreateAnnotation(annotation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"uri":     result.URI,
 		"cid":     result.CID,
-		"message": "Annotation created successfully",
+		"message": "Saved successfully",
 	})
 }
 
@@ -304,6 +382,11 @@ func (h *APIKeyHandler) QuickHighlight(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := xrpc.NewHighlightRecord(req.URL, urlHash, req.Selector, color, nil)
+
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	var result *xrpc.CreateRecordOutput
 	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {

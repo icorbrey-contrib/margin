@@ -22,11 +22,11 @@ func NewAnnotationService(database *db.DB, refresher *TokenRefresher) *Annotatio
 }
 
 type CreateAnnotationRequest struct {
-	URL      string      `json:"url"`
-	Text     string      `json:"text"`
-	Selector interface{} `json:"selector,omitempty"`
-	Title    string      `json:"title,omitempty"`
-	Tags     []string    `json:"tags,omitempty"`
+	URL      string          `json:"url"`
+	Text     string          `json:"text"`
+	Selector json.RawMessage `json:"selector,omitempty"`
+	Title    string          `json:"title,omitempty"`
+	Tags     []string        `json:"tags,omitempty"`
 }
 
 type CreateAnnotationResponse struct {
@@ -77,6 +77,16 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 	}
 
 	var result *xrpc.CreateRecordOutput
+
+	if existing, err := s.checkDuplicateAnnotation(session.DID, req.URL, req.Text); err == nil && existing != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(CreateAnnotationResponse{
+			URI: existing.URI,
+			CID: *existing.CID,
+		})
+		return
+	}
+
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
 		var createErr error
 		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionAnnotation, record)
@@ -237,16 +247,23 @@ func (s *AnnotationService) UpdateAnnotation(w http.ResponseWriter, r *http.Requ
 			return fmt.Errorf("failed to fetch existing record: %w", getErr)
 		}
 
-		var record map[string]interface{}
+		var record xrpc.AnnotationRecord
 		if err := json.Unmarshal(existing.Value, &record); err != nil {
 			return fmt.Errorf("failed to parse existing record: %w", err)
 		}
 
-		record["text"] = req.Text
-		if req.Tags != nil {
-			record["tags"] = req.Tags
+		record.Body = &xrpc.AnnotationBody{
+			Value:  req.Text,
+			Format: "text/plain",
+		}
+		if len(req.Tags) > 0 {
+			record.Tags = req.Tags
 		} else {
-			delete(record, "tags")
+			record.Tags = nil
+		}
+
+		if err := record.Validate(); err != nil {
+			return fmt.Errorf("validation failed: %w", err)
 		}
 
 		var updateErr error
@@ -308,6 +325,11 @@ func (s *AnnotationService) LikeAnnotation(w http.ResponseWriter, r *http.Reques
 	}
 
 	record := xrpc.NewLikeRecord(req.SubjectURI, req.SubjectCID)
+
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	var result *xrpc.CreateRecordOutput
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
@@ -402,6 +424,11 @@ func (s *AnnotationService) CreateReply(w http.ResponseWriter, r *http.Request) 
 	}
 
 	record := xrpc.NewReplyRecord(req.ParentURI, req.ParentCID, req.RootURI, req.RootCID, req.Text)
+
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	var result *xrpc.CreateRecordOutput
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
@@ -509,11 +536,11 @@ func resolveDIDToPDS(did string) (string, error) {
 }
 
 type CreateHighlightRequest struct {
-	URL      string      `json:"url"`
-	Title    string      `json:"title,omitempty"`
-	Selector interface{} `json:"selector"`
-	Color    string      `json:"color,omitempty"`
-	Tags     []string    `json:"tags,omitempty"`
+	URL      string          `json:"url"`
+	Title    string          `json:"title,omitempty"`
+	Selector json.RawMessage `json:"selector"`
+	Color    string          `json:"color,omitempty"`
+	Tags     []string        `json:"tags,omitempty"`
 }
 
 func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Request) {
@@ -537,7 +564,19 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 	urlHash := db.HashURL(req.URL)
 	record := xrpc.NewHighlightRecord(req.URL, urlHash, req.Selector, req.Color, req.Tags)
 
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	var result *xrpc.CreateRecordOutput
+
+	if existing, err := s.checkDuplicateHighlight(session.DID, req.URL, req.Selector); err == nil && existing != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"uri": existing.URI, "cid": *existing.CID})
+		return
+	}
+
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
 		var createErr error
 		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionHighlight, record)
@@ -549,9 +588,8 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 	}
 
 	var selectorJSONPtr *string
-	if req.Selector != nil {
-		selectorBytes, _ := json.Marshal(req.Selector)
-		selectorStr := string(selectorBytes)
+	if len(record.Target.Selector) > 0 {
+		selectorStr := string(record.Target.Selector)
 		selectorJSONPtr = &selectorStr
 	}
 
@@ -622,7 +660,19 @@ func (s *AnnotationService) CreateBookmark(w http.ResponseWriter, r *http.Reques
 	urlHash := db.HashURL(req.URL)
 	record := xrpc.NewBookmarkRecord(req.URL, urlHash, req.Title, req.Description)
 
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	var result *xrpc.CreateRecordOutput
+
+	if existing, err := s.checkDuplicateBookmark(session.DID, req.URL); err == nil && existing != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"uri": existing.URI, "cid": *existing.CID})
+		return
+	}
+
 	err = s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
 		var createErr error
 		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionBookmark, record)
@@ -759,14 +809,18 @@ func (s *AnnotationService) UpdateHighlight(w http.ResponseWriter, r *http.Reque
 			return fmt.Errorf("failed to fetch record: %w", getErr)
 		}
 
-		var record map[string]interface{}
+		var record xrpc.HighlightRecord
 		json.Unmarshal(existing.Value, &record)
 
 		if req.Color != "" {
-			record["color"] = req.Color
+			record.Color = req.Color
 		}
 		if req.Tags != nil {
-			record["tags"] = req.Tags
+			record.Tags = req.Tags
+		}
+
+		if err := record.Validate(); err != nil {
+			return fmt.Errorf("validation failed: %w", err)
 		}
 
 		var updateErr error
@@ -839,17 +893,21 @@ func (s *AnnotationService) UpdateBookmark(w http.ResponseWriter, r *http.Reques
 			return fmt.Errorf("failed to fetch record: %w", getErr)
 		}
 
-		var record map[string]interface{}
+		var record xrpc.BookmarkRecord
 		json.Unmarshal(existing.Value, &record)
 
 		if req.Title != "" {
-			record["title"] = req.Title
+			record.Title = req.Title
 		}
 		if req.Description != "" {
-			record["description"] = req.Description
+			record.Description = req.Description
 		}
 		if req.Tags != nil {
-			record["tags"] = req.Tags
+			record.Tags = req.Tags
+		}
+
+		if err := record.Validate(); err != nil {
+			return fmt.Errorf("validation failed: %w", err)
 		}
 
 		var updateErr error
