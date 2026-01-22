@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
 import {
   normalizeAnnotation,
   normalizeBookmark,
@@ -12,6 +11,7 @@ import {
 import { HeartIcon, TrashIcon, BookmarkIcon } from "./Icons";
 import { Folder } from "lucide-react";
 import ShareMenu from "./ShareMenu";
+import UserMeta from "./UserMeta";
 
 export default function BookmarkCard({
   bookmark,
@@ -90,21 +90,6 @@ export default function BookmarkCard({
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m`;
-    if (hours < 24) return `${hours}h`;
-    if (days < 7) return `${days}d`;
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
   let domain = "";
   try {
     if (data.url) domain = new URL(data.url).hostname.replace("www.", "");
@@ -112,50 +97,11 @@ export default function BookmarkCard({
     /* ignore */
   }
 
-  const authorDisplayName = data.author?.displayName || data.author?.handle;
-  const authorHandle = data.author?.handle;
-  const authorAvatar = data.author?.avatar;
-  const authorDid = data.author?.did;
-  const marginProfileUrl = authorDid ? `/profile/${authorDid}` : null;
-
   return (
     <article className="card annotation-card bookmark-card">
       <header className="annotation-header">
         <div className="annotation-header-left">
-          <Link to={marginProfileUrl || "#"} className="annotation-avatar-link">
-            <div className="annotation-avatar">
-              {authorAvatar ? (
-                <img src={authorAvatar} alt={authorDisplayName} />
-              ) : (
-                <span>
-                  {(authorDisplayName || authorHandle || "??")
-                    ?.substring(0, 2)
-                    .toUpperCase()}
-                </span>
-              )}
-            </div>
-          </Link>
-          <div className="annotation-meta">
-            <div className="annotation-author-row">
-              <Link
-                to={marginProfileUrl || "#"}
-                className="annotation-author-link"
-              >
-                <span className="annotation-author">{authorDisplayName}</span>
-              </Link>
-              {authorHandle && (
-                <a
-                  href={`https://bsky.app/profile/${authorHandle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="annotation-handle"
-                >
-                  @{authorHandle}
-                </a>
-              )}
-            </div>
-            <div className="annotation-time">{formatDate(data.createdAt)}</div>
-          </div>
+          <UserMeta author={data.author} createdAt={data.createdAt} />
         </div>
 
         <div className="annotation-header-right">
