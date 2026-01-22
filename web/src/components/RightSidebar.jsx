@@ -8,6 +8,7 @@ import {
   SiBluesky,
   SiApple,
   SiKofi,
+  SiDiscord,
 } from "react-icons/si";
 import { FaEdge } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
@@ -164,6 +165,18 @@ export default function RightSidebar() {
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <SiBluesky size={16} />
               Bluesky
+            </div>
+            <ExternalLink size={12} />
+          </a>
+          <a
+            href="https://discord.gg/ZQbkGqwzBH"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="right-link"
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <SiDiscord size={16} />
+              Discord
             </div>
             <ExternalLink size={12} />
           </a>
