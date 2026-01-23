@@ -18,6 +18,7 @@ import CollectionDetail from "./pages/CollectionDetail";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import ScrollToTop from "./components/ScrollToTop";
+import { ThemeProvider } from "./context/ThemeContext";
 
 function AppContent() {
   const { user } = useAuth();
@@ -77,10 +78,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/*" element={<AppContent />} />
-      </Routes>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Routes>
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

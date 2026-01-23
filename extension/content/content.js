@@ -7,7 +7,39 @@
   let currentSelection = null;
 
   const OVERLAY_STYLES = `
-    :host { all: initial; }
+    :host { 
+      all: initial; 
+      --bg-primary: #09090b;
+      --bg-secondary: #0f0f12;
+      --bg-tertiary: #18181b;
+      --bg-card: #09090b;
+      --bg-elevated: #18181b;
+      --bg-hover: #27272a;
+      
+      --text-primary: #e4e4e7;
+      --text-secondary: #a1a1aa;
+      --border: #27272a;
+      
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+    }
+    
+    :host(.light) {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f4f4f5;
+      --bg-tertiary: #e4e4e7;
+      --bg-card: #ffffff;
+      --bg-elevated: #f4f4f5;
+      --bg-hover: #e4e4e7;
+      
+      --text-primary: #18181b;
+      --text-secondary: #52525b;
+      --border: #e4e4e7;
+      
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+    }
+
     .margin-overlay {
       position: absolute;
       top: 0;
@@ -20,8 +52,8 @@
     .margin-popover {
       position: absolute;
       width: 320px;
-      background: #09090b;
-      border: 1px solid #27272a;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
@@ -30,7 +62,7 @@
       pointer-events: auto;
       z-index: 2147483647;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #e4e4e7;
+      color: var(--text-primary);
       opacity: 0;
       transform: scale(0.95);
       animation: popover-in 0.15s forwards;
@@ -40,21 +72,22 @@
     @keyframes popover-in { to { opacity: 1; transform: scale(1); } }
     .popover-header {
       padding: 12px 16px;
-      border-bottom: 1px solid #27272a;
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #0f0f12;
+      background: var(--bg-secondary);
       border-radius: 12px 12px 0 0;
       font-weight: 600;
       font-size: 13px;
+      color: var(--text-primary);
     }
     .popover-scroll-area {
       overflow-y: auto;
       max-height: 400px;
     }
     .popover-item-block {
-      border-bottom: 1px solid #27272a;
+      border-bottom: 1px solid var(--border);
       margin-bottom: 0;
       animation: fade-in 0.2s;
     }
@@ -68,36 +101,36 @@
       gap: 8px;
     }
     .popover-avatar {
-      width: 24px; height: 24px; border-radius: 50%; background: #27272a;
+      width: 24px; height: 24px; border-radius: 50%; background: var(--bg-hover);
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px; color: #a1a1aa;
+      font-size: 10px; color: var(--text-secondary);
     }
-    .popover-handle { font-size: 12px; font-weight: 600; color: #e4e4e7; }
-    .popover-close { background: none; border: none; color: #71717a; cursor: pointer; padding: 4px; }
-    .popover-close:hover { color: #e4e4e7; }
-    .popover-content { padding: 4px 16px 12px; font-size: 13px; line-height: 1.5; color: #e4e4e7; }
+    .popover-handle { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .popover-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
+    .popover-close:hover { color: var(--text-primary); }
+    .popover-content { padding: 4px 16px 12px; font-size: 13px; line-height: 1.5; color: var(--text-primary); }
     .popover-quote {
-      margin-top: 8px; padding: 6px 10px; background: #18181b;
-      border-left: 2px solid #6366f1; border-radius: 4px;
-      font-size: 11px; color: #a1a1aa; font-style: italic;
+      margin-top: 8px; padding: 6px 10px; background: var(--bg-tertiary);
+      border-left: 2px solid var(--accent); border-radius: 4px;
+      font-size: 11px; color: var(--text-secondary); font-style: italic;
     }
     .popover-actions {
       padding: 8px 16px;
       display: flex; justify-content: flex-end; gap: 8px;
     }
     .btn-action {
-      background: none; border: 1px solid #27272a; border-radius: 4px;
-      padding: 4px 8px; color: #a1a1aa; font-size: 11px; cursor: pointer;
+      background: none; border: 1px solid var(--border); border-radius: 4px;
+      padding: 4px 8px; color: var(--text-secondary); font-size: 11px; cursor: pointer;
     }
-    .btn-action:hover { background: #27272a; color: #e4e4e7; }
+    .btn-action:hover { background: var(--bg-hover); color: var(--text-primary); }
     
     .margin-selection-popup {
       position: fixed;
       display: flex;
       gap: 4px;
       padding: 6px;
-      background: #09090b;
-      border: 1px solid #27272a;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 8px;
       box-shadow: 0 8px 16px rgba(0,0,0,0.4);
       z-index: 2147483647;
@@ -113,14 +146,14 @@
       background: transparent;
       border: none;
       border-radius: 6px;
-      color: #e4e4e7;
+      color: var(--text-primary);
       font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       transition: background 0.15s;
     }
     .selection-btn:hover {
-      background: #27272a;
+      background: var(--bg-hover);
     }
     .selection-btn svg {
       width: 14px;
@@ -130,8 +163,8 @@
       position: fixed;
       width: 340px;
       max-width: calc(100vw - 40px);
-      background: #09090b;
-      border: 1px solid #27272a;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 16px;
       box-sizing: border-box;
@@ -139,7 +172,7 @@
       z-index: 2147483647;
       pointer-events: auto;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #e4e4e7;
+      color: var(--text-primary);
       animation: popover-in 0.15s forwards;
       overflow: hidden;
     }
@@ -148,11 +181,11 @@
     }
     .inline-compose-quote {
       padding: 8px 12px;
-      background: #18181b;
-      border-left: 3px solid #6366f1;
+      background: var(--bg-tertiary);
+      border-left: 3px solid var(--accent);
       border-radius: 4px;
       font-size: 12px;
-      color: #a1a1aa;
+      color: var(--text-secondary);
       font-style: italic;
       margin-bottom: 12px;
       max-height: 60px;
@@ -163,10 +196,10 @@
       width: 100%;
       min-height: 80px;
       padding: 10px 12px;
-      background: #18181b;
-      border: 1px solid #27272a;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      color: #e4e4e7;
+      color: var(--text-primary);
       font-family: inherit;
       font-size: 13px;
       resize: vertical;
@@ -175,7 +208,7 @@
     }
     .inline-compose-textarea:focus {
       outline: none;
-      border-color: #6366f1;
+      border-color: var(--accent);
     }
     .inline-compose-actions {
       display: flex;
@@ -185,19 +218,19 @@
     .btn-cancel {
       padding: 8px 16px;
       background: transparent;
-      border: 1px solid #27272a;
+      border: 1px solid var(--border);
       border-radius: 6px;
-      color: #a1a1aa;
+      color: var(--text-secondary);
       font-size: 13px;
       cursor: pointer;
     }
     .btn-cancel:hover {
-      background: #27272a;
-      color: #e4e4e7;
+      background: var(--bg-hover);
+      color: var(--text-primary);
     }
     .btn-submit {
       padding: 8px 16px;
-      background: #6366f1;
+      background: var(--accent);
       border: none;
       border-radius: 6px;
       color: white;
@@ -206,26 +239,26 @@
       cursor: pointer;
     }
     .btn-submit:hover {
-      background: #4f46e5;
+      background: var(--accent-hover);
     }
     .btn-submit:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
     .reply-section {
-      border-top: 1px solid #27272a;
+      border-top: 1px solid var(--border);
       padding: 12px 16px;
-      background: #0f0f12;
+      background: var(--bg-secondary);
       border-radius: 0 0 12px 12px;
     }
     .reply-textarea {
       width: 100%;
       min-height: 60px;
       padding: 8px 10px;
-      background: #18181b;
-      border: 1px solid #27272a;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
       border-radius: 6px;
-      color: #e4e4e7;
+      color: var(--text-primary);
       font-family: inherit;
       font-size: 12px;
       resize: none;
@@ -233,11 +266,11 @@
     }
     .reply-textarea:focus {
       outline: none;
-      border-color: #6366f1;
+      border-color: var(--accent);
     }
     .reply-submit {
       padding: 6px 12px;
-      background: #6366f1;
+      background: var(--accent);
       border: none;
       border-radius: 4px;
       color: white;
@@ -251,7 +284,7 @@
     }
     .reply-item {
       padding: 8px 0;
-      border-top: 1px solid #27272a;
+      border-top: 1px solid var(--border);
     }
     .reply-item:first-child {
       border-top: none;
@@ -259,12 +292,12 @@
     .reply-author {
       font-size: 11px;
       font-weight: 600;
-      color: #a1a1aa;
+      color: var(--text-secondary);
       margin-bottom: 4px;
     }
     .reply-text {
       font-size: 12px;
-      color: #e4e4e7;
+      color: var(--text-primary);
       line-height: 1.4;
     }
   `;
@@ -422,6 +455,32 @@
     }
   }
 
+  function applyTheme(theme) {
+    if (!sidebarHost) return;
+    sidebarHost.classList.remove("light", "dark");
+    if (theme === "system" || !theme) {
+      if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+        sidebarHost.classList.add("light");
+      }
+    } else {
+      sidebarHost.classList.add(theme);
+    }
+  }
+
+  window
+    .matchMedia("(prefers-color-scheme: light)")
+    .addEventListener("change", (e) => {
+      chrome.storage.local.get(["theme"], (result) => {
+        if (!result.theme || result.theme === "system") {
+          if (e.matches) {
+            sidebarHost?.classList.add("light");
+          } else {
+            sidebarHost?.classList.remove("light");
+          }
+        }
+      });
+    });
+
   function initOverlay() {
     sidebarHost = document.createElement("div");
     sidebarHost.id = "margin-overlay-host";
@@ -456,7 +515,8 @@
     if (document.documentElement) observer.observe(document.documentElement);
 
     if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.get(["showOverlay"], (result) => {
+      chrome.storage.local.get(["showOverlay", "theme"], (result) => {
+        applyTheme(result.theme);
         if (result.showOverlay === false) {
           sidebarHost.style.display = "none";
         } else {
@@ -469,6 +529,22 @@
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("click", handleDocumentClick, true);
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local") {
+        if (changes.theme) {
+          applyTheme(changes.theme.newValue);
+        }
+        if (changes.showOverlay) {
+          if (changes.showOverlay.newValue === false) {
+            sidebarHost.style.display = "none";
+          } else {
+            sidebarHost.style.display = "";
+            fetchAnnotations();
+          }
+        }
+      }
+    });
   }
 
   function showInlineComposeModal() {

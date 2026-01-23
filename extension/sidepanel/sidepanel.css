@@ -31,6 +31,83 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f4f4f5;
+    --bg-tertiary: #e4e4e7;
+    --bg-card: #ffffff;
+    --bg-hover: #e4e4e7;
+    --bg-elevated: #f4f4f5;
+
+    --text-primary: #18181b;
+    --text-secondary: #52525b;
+    --text-tertiary: #71717a;
+
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --accent-subtle: rgba(79, 70, 229, 0.1);
+    --accent-text: #4f46e5;
+
+    --border: #e4e4e7;
+    --border-hover: #d4d4d8;
+
+    --success: #059669;
+    --error: #dc2626;
+    --warning: #d97706;
+  }
+}
+
+body.light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f4f4f5;
+  --bg-tertiary: #e4e4e7;
+  --bg-card: #ffffff;
+  --bg-hover: #e4e4e7;
+  --bg-elevated: #f4f4f5;
+
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #71717a;
+
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-subtle: rgba(79, 70, 229, 0.1);
+  --accent-text: #4f46e5;
+
+  --border: #e4e4e7;
+  --border-hover: #d4d4d8;
+
+  --success: #059669;
+  --error: #dc2626;
+  --warning: #d97706;
+}
+
+body.dark {
+  --bg-primary: #09090b;
+  --bg-secondary: #0f0f12;
+  --bg-tertiary: #18181b;
+  --bg-card: #09090b;
+  --bg-hover: #18181b;
+  --bg-elevated: #18181b;
+
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-subtle: rgba(99, 102, 241, 0.1);
+  --accent-text: #818cf8;
+
+  --border: #27272a;
+  --border-hover: #3f3f46;
+
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -928,4 +1005,36 @@ body {
 .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(20px);
   background-color: white;
+}
+.theme-toggle-group {
+  display: flex;
+  background: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.theme-btn {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-btn:hover {
+  color: var(--text-primary);
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.theme-btn.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
 }

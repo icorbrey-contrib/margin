@@ -58,12 +58,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes.apiUrl) {
-      apiUrl = changes.apiUrl.newValue || "";
-
-      els.apiUrlInput.value = apiUrl;
-      checkSession();
+    if (area === "local") {
+      if (changes.apiUrl) {
+        apiUrl = changes.apiUrl.newValue || "";
+        els.apiUrlInput.value = apiUrl;
+        checkSession();
+      }
+      if (changes.theme) {
+        const newTheme = changes.theme.newValue || "system";
+        applyTheme(newTheme);
+        updateThemeUI(newTheme);
+      }
     }
+  });
+
+  chrome.storage.local.get(["theme"], (result) => {
+    const currentTheme = result.theme || "system";
+    applyTheme(currentTheme);
+    updateThemeUI(currentTheme);
+  });
+
+  const themeBtns = document.querySelectorAll(".theme-btn");
+  themeBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const theme = btn.getAttribute("data-theme");
+      chrome.storage.local.set({ theme });
+      applyTheme(theme);
+      updateThemeUI(theme);
+    });
   });
 
   try {
@@ -264,7 +286,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const newUrl = els.apiUrlInput.value.replace(/\/$/, "");
     const showOverlay = els.overlayToggle?.checked ?? true;
 
-    await chrome.storage.local.set({ apiUrl: newUrl, showOverlay });
+    await chrome.storage.local.set({
+      apiUrl: newUrl,
+      showOverlay,
+    });
     if (newUrl) {
       apiUrl = newUrl;
     }
@@ -909,6 +934,23 @@ document.addEventListener("DOMContentLoaded", async () => {
           resolve(response);
         }
       });
+    });
+  }
+
+  function applyTheme(theme) {
+    document.body.classList.remove("light", "dark");
+    if (theme === "system") return;
+    document.body.classList.add(theme);
+  }
+
+  function updateThemeUI(theme) {
+    const btns = document.querySelectorAll(".theme-btn");
+    btns.forEach((btn) => {
+      if (btn.getAttribute("data-theme") === theme) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
     });
   }
 });

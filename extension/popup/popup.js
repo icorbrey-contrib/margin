@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     collectionLoading: document.getElementById("collection-loading"),
     collectionsEmpty: document.getElementById("collections-empty"),
     overlayToggle: document.getElementById("overlay-toggle"),
+    themeBtns: document.querySelectorAll(".theme-btn"),
   };
 
   let currentTab = null;
@@ -48,7 +49,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   let pendingSelector = null;
   // let _activeAnnotationUriForCollection = null;
 
-  const storage = await browserAPI.storage.local.get(["apiUrl", "showOverlay"]);
+  const storage = await browserAPI.storage.local.get([
+    "apiUrl",
+    "showOverlay",
+    "theme",
+  ]);
   if (storage.apiUrl) {
     apiUrl = storage.apiUrl;
   }
@@ -57,6 +62,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (els.overlayToggle) {
     els.overlayToggle.checked = storage.showOverlay !== false;
   }
+
+  const currentTheme = storage.theme || "system";
+  applyTheme(currentTheme);
+  updateThemeUI(currentTheme);
 
   try {
     const [tab] = await browserAPI.tabs.query({
@@ -240,6 +249,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     views.settings.style.display = "none";
     checkSession();
+  });
+
+  els.themeBtns.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const theme = btn.getAttribute("data-theme");
+      await browserAPI.storage.local.set({ theme });
+      applyTheme(theme);
+      updateThemeUI(theme);
+    });
   });
 
   els.closeCollectionSelector?.addEventListener("click", () => {
@@ -781,3 +799,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 });
+
+function applyTheme(theme) {
+  document.body.classList.remove("light", "dark");
+  if (theme === "system") return;
+  document.body.classList.add(theme);
+}
+
+function updateThemeUI(theme) {
+  const btns = document.querySelectorAll(".theme-btn");
+  btns.forEach((btn) => {
+    if (btn.getAttribute("data-theme") === theme) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}

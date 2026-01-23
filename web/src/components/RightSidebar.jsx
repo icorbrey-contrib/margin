@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Sun, Moon, Monitor } from "lucide-react";
 import {
   SiFirefox,
   SiGooglechrome,
@@ -12,6 +12,7 @@ import {
 } from "react-icons/si";
 import { FaEdge } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { getTrendingTags } from "../api/client";
 
 const isFirefox =
@@ -58,6 +59,7 @@ function getExtensionInfo() {
 }
 
 export default function RightSidebar() {
+  const { theme, setTheme } = useTheme();
   const { isAuthenticated } = useAuth();
   const ext = getExtensionInfo();
   const ExtIcon = ext.icon;
@@ -196,9 +198,28 @@ export default function RightSidebar() {
       </div>
 
       <div className="right-footer">
-        <Link to="/privacy">Privacy</Link>
-        <span>·</span>
-        <Link to="/terms">Terms</Link>
+        <div className="footer-links">
+          <Link to="/privacy">Privacy</Link>
+          <span>·</span>
+          <Link to="/terms">Terms</Link>
+        </div>
+        <button
+          onClick={() => {
+            const next =
+              theme === "system"
+                ? "light"
+                : theme === "light"
+                  ? "dark"
+                  : "system";
+            setTheme(next);
+          }}
+          className="theme-toggle-mini"
+          title={`Theme: ${theme}`}
+        >
+          {theme === "system" && <Monitor size={14} />}
+          {theme === "light" && <Sun size={14} />}
+          {theme === "dark" && <Moon size={14} />}
+        </button>
       </div>
     </aside>
   );

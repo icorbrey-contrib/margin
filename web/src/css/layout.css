@@ -359,18 +359,46 @@
 .right-footer {
   margin-top: auto;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
   color: var(--text-tertiary);
 }
 
-.right-footer a {
+.footer-links a {
   color: var(--text-tertiary);
+  text-decoration: none;
 }
 
-.right-footer a:hover {
+.footer-links a:hover {
+  text-decoration: underline;
   color: var(--text-secondary);
+}
+
+.theme-toggle-mini {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.theme-toggle-mini:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .mobile-nav {
