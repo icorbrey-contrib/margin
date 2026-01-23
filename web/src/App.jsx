@@ -6,6 +6,7 @@ import RightSidebar from "./components/RightSidebar";
 import MobileNav from "./components/MobileNav";
 import Feed from "./pages/Feed";
 import Url from "./pages/Url";
+import UserUrl from "./pages/UserUrl";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import New from "./pages/New";
@@ -64,6 +65,7 @@ function AppContent() {
               path="/:handle/bookmark/:rkey"
               element={<AnnotationDetail />}
             />
+            <Route path="/:handle/url/*" element={<UserUrl />} />
             <Route path="/collection/*" element={<CollectionDetail />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />

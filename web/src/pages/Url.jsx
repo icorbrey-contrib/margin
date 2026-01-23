@@ -1,9 +1,13 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import { getByTarget } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import { PenIcon, AlertIcon, SearchIcon } from "../components/Icons";
+import { Copy, Check, ExternalLink } from "lucide-react";
 
 export default function Url() {
+  const { user } = useAuth();
   const [url, setUrl] = useState("");
   const [annotations, setAnnotations] = useState([]);
   const [highlights, setHighlights] = useState([]);
@@ -11,6 +15,7 @@ export default function Url() {
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [copied, setCopied] = useState(false);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -27,6 +32,31 @@ export default function Url() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const myAnnotations = user
+    ? annotations.filter((a) => (a.creator?.did || a.author?.did) === user.did)
+    : [];
+  const myHighlights = user
+    ? highlights.filter((h) => (h.creator?.did || h.author?.did) === user.did)
+    : [];
+  const myItemsCount = myAnnotations.length + myHighlights.length;
+
+  const getShareUrl = () => {
+    if (!user?.handle || !url) return null;
+    return `${window.location.origin}/${user.handle}/url/${url}`;
+  };
+
+  const handleCopyShareLink = async () => {
+    const shareUrl = getShareUrl();
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      prompt("Copy this link:", shareUrl);
     }
   };
 
@@ -128,6 +158,41 @@ export default function Url() {
               </button>
             </div>
           </div>
+
+          {user && myItemsCount > 0 && (
+            <div className="share-notes-banner">
+              <div className="share-notes-info">
+                <ExternalLink size={16} />
+                <span>
+                  You have {myItemsCount} note{myItemsCount !== 1 ? "s" : ""} on
+                  this page
+                </span>
+              </div>
+              <div className="share-notes-actions">
+                <Link
+                  to={`/${user.handle}/url/${encodeURIComponent(url)}`}
+                  className="btn btn-ghost btn-sm"
+                >
+                  View
+                </Link>
+                <button
+                  onClick={handleCopyShareLink}
+                  className="btn btn-primary btn-sm"
+                >
+                  {copied ? (
+                    <>
+                      <Check size={14} /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} /> Copy Share Link
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="feed">{renderResults()}</div>
         </>
       )}

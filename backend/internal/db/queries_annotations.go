@@ -146,6 +146,22 @@ func (db *DB) GetAnnotationsByTagAndAuthor(tag, authorDID string, limit, offset 
 	return scanAnnotations(rows)
 }
 
+func (db *DB) GetAnnotationsByAuthorAndTargetHash(authorDID, targetHash string, limit, offset int) ([]Annotation, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE author_did = ? AND target_hash = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, targetHash, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
 func (db *DB) GetAnnotationsByURIs(uris []string) ([]Annotation, error) {
 	if len(uris) == 0 {
 		return []Annotation{}, nil

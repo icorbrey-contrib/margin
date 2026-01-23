@@ -66,6 +66,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/users/{did}/annotations", h.GetUserAnnotations)
 		r.Get("/users/{did}/highlights", h.GetUserHighlights)
 		r.Get("/users/{did}/bookmarks", h.GetUserBookmarks)
+		r.Get("/users/{did}/targets", h.GetUserTargetItems)
 
 		r.Get("/replies", h.GetReplies)
 		r.Get("/likes", h.GetLikeCount)
@@ -662,6 +663,43 @@ func (h *Handler) GetUserBookmarks(w http.ResponseWriter, r *http.Request) {
 		"creator":    did,
 		"items":      enriched,
 		"totalItems": len(enriched),
+	})
+}
+
+func (h *Handler) GetUserTargetItems(w http.ResponseWriter, r *http.Request) {
+	did := chi.URLParam(r, "did")
+	if decoded, err := url.QueryUnescape(did); err == nil {
+		did = decoded
+	}
+
+	source := r.URL.Query().Get("source")
+	if source == "" {
+		source = r.URL.Query().Get("url")
+	}
+	if source == "" {
+		http.Error(w, "source or url parameter required", http.StatusBadRequest)
+		return
+	}
+
+	limit := parseIntParam(r, "limit", 50)
+	offset := parseIntParam(r, "offset", 0)
+
+	urlHash := db.HashURL(source)
+
+	annotations, _ := h.db.GetAnnotationsByAuthorAndTargetHash(did, urlHash, limit, offset)
+	highlights, _ := h.db.GetHighlightsByAuthorAndTargetHash(did, urlHash, limit, offset)
+
+	enrichedAnnotations, _ := hydrateAnnotations(h.db, annotations, h.getViewerDID(r))
+	enrichedHighlights, _ := hydrateHighlights(h.db, highlights, h.getViewerDID(r))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"@context":    "http://www.w3.org/ns/anno.jsonld",
+		"creator":     did,
+		"source":      source,
+		"sourceHash":  urlHash,
+		"annotations": enrichedAnnotations,
+		"highlights":  enrichedHighlights,
 	})
 }
 

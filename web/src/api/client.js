@@ -75,6 +75,12 @@ export async function getUserBookmarks(did, limit = 50, offset = 0) {
   );
 }
 
+export async function getUserTargetItems(did, url, limit = 50, offset = 0) {
+  return request(
+    `${API_BASE}/users/${encodeURIComponent(did)}/targets?source=${encodeURIComponent(url)}&limit=${limit}&offset=${offset}`,
+  );
+}
+
 export async function getHighlights(creatorDid, limit = 50, offset = 0) {
   return request(
     `${API_BASE}/highlights?creator=${encodeURIComponent(creatorDid)}&limit=${limit}&offset=${offset}`,

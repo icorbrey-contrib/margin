@@ -153,6 +153,30 @@ func (db *DB) GetHighlightsByAuthor(authorDID string, limit, offset int) ([]High
 	return highlights, nil
 }
 
+func (db *DB) GetHighlightsByAuthorAndTargetHash(authorDID, targetHash string, limit, offset int) ([]Highlight, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE author_did = ? AND target_hash = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, targetHash, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
 func (db *DB) DeleteHighlight(uri string) error {
 	_, err := db.Exec(db.Rebind(`DELETE FROM highlights WHERE uri = ?`), uri)
 	return err
