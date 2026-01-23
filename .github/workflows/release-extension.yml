@@ -55,14 +55,27 @@ jobs:
           extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
           zip_file: margin-extension-chrome.zip
 
-      # - name: Publish to Edge Add-ons
-      #   uses: nicholaslee119/edge-addon-upload@master
-      #   with:
-      #     product_id: ${{ secrets.EDGE_PRODUCT_ID }}
-      #     client_id: ${{ secrets.EDGE_CLIENT_ID }}
-      #     client_secret: ${{ secrets.EDGE_CLIENT_SECRET }}
-      #     access_token_url: ${{ secrets.EDGE_ACCESS_TOKEN_URL }}
-      #     file_path: margin-extension-chrome.zip
+      - name: Publish to Edge Add-ons
+        continue-on-error: true
+        run: |
+          echo "Uploading package to Edge Add-ons..."
+          curl \
+            -H "Authorization: ApiKey ${{ secrets.EDGE_API_KEY }}" \
+            -H "X-ClientID: ${{ secrets.EDGE_CLIENT_ID }}" \
+            -H "Content-Type: application/zip" \
+            -X POST \
+            -T margin-extension-chrome.zip \
+            -f -sS \
+            https://api.addons.microsoftedge.microsoft.com/v1/products/${{ secrets.EDGE_PRODUCT_ID }}/submissions/draft/package
+
+          echo "Publishing submission..."
+          curl \
+            -H "Authorization: ApiKey ${{ secrets.EDGE_API_KEY }}" \
+            -H "X-ClientID: ${{ secrets.EDGE_CLIENT_ID }}" \
+            -X POST \
+            -d '{ "notes": "New release" }' \
+            -f -sS \
+            https://api.addons.microsoftedge.microsoft.com/v1/products/${{ secrets.EDGE_PRODUCT_ID }}/submissions
 
       - name: Publish to Firefox AMO
         continue-on-error: true
