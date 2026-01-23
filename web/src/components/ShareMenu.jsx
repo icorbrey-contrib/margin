@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Copy, ExternalLink, Check } from "lucide-react";
-import { BlueskyIcon } from "./Icons";
+import { BlueskyIcon, AturiIcon } from "./Icons";
 
 const BLUESKY_COLOR = "#1185fe";
 
@@ -100,6 +100,7 @@ const BLUESKY_FORKS = [
 export default function ShareMenu({ uri, text, customUrl, handle, type }) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedAturi, setCopiedAturi] = useState(false);
   const menuRef = useRef(null);
 
   const getShareUrl = () => {
@@ -160,6 +161,22 @@ export default function ShareMenu({ uri, text, customUrl, handle, type }) {
       }, 1500);
     } catch {
       prompt("Copy this link:", shareUrl);
+    }
+  };
+
+  const handleCopyAturi = async () => {
+    const aturiUrl = uri ? uri.replace("at://", "https://aturi.to/") : "";
+    if (!aturiUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(aturiUrl);
+      setCopiedAturi(true);
+      setTimeout(() => {
+        setCopiedAturi(false);
+        setIsOpen(false);
+      }, 1500);
+    } catch {
+      prompt("Copy this link:", aturiUrl);
     }
   };
 
@@ -224,6 +241,14 @@ export default function ShareMenu({ uri, text, customUrl, handle, type }) {
           <button className="share-menu-item" onClick={handleCopy}>
             {copied ? <Check size={16} /> : <Copy size={16} />}
             <span>{copied ? "Copied!" : "Copy Link"}</span>
+          </button>
+          <button
+            className="share-menu-item"
+            onClick={handleCopyAturi}
+            title="Copy a universal link atproto link (via aturi.to)"
+          >
+            {copiedAturi ? <Check size={16} /> : <AturiIcon size={16} />}
+            <span>{copiedAturi ? "Copied!" : "Copy Universal Link"}</span>
           </button>
           {navigator.share && (
             <button className="share-menu-item" onClick={handleSystemShare}>
