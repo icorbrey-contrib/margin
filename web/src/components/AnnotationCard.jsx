@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { HighlightIcon, TrashIcon } from "./Icons";
 import ShareMenu from "./ShareMenu";
+import UserMeta from "./UserMeta";
 
 function buildTextFragmentUrl(baseUrl, selector) {
   if (!selector || selector.type !== "TextQuoteSelector" || !selector.exact) {
@@ -173,31 +174,6 @@ export default function AnnotationCard({
     }
   };
 
-  const formatDate = (dateString, simple = true) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m`;
-    if (hours < 24) return `${hours}h`;
-    if (days < 7) return `${days}d`;
-    if (simple)
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-    return date.toLocaleString();
-  };
-
-  const authorDisplayName = data.author?.displayName || data.author?.handle;
-  const authorHandle = data.author?.handle;
-  const authorAvatar = data.author?.avatar;
-  const authorDid = data.author?.did;
-  const marginProfileUrl = authorDid ? `/profile/${authorDid}` : null;
   const highlightedText =
     data.selector?.type === "TextQuoteSelector" ? data.selector.exact : null;
   const fragmentUrl = buildTextFragmentUrl(data.url, data.selector);
@@ -245,40 +221,7 @@ export default function AnnotationCard({
     <article className="card annotation-card">
       <header className="annotation-header">
         <div className="annotation-header-left">
-          <Link to={marginProfileUrl || "#"} className="annotation-avatar-link">
-            <div className="annotation-avatar">
-              {authorAvatar ? (
-                <img src={authorAvatar} alt={authorDisplayName} />
-              ) : (
-                <span>
-                  {(authorDisplayName || authorHandle || "??")
-                    ?.substring(0, 2)
-                    .toUpperCase()}
-                </span>
-              )}
-            </div>
-          </Link>
-          <div className="annotation-meta">
-            <div className="annotation-author-row">
-              <Link
-                to={marginProfileUrl || "#"}
-                className="annotation-author-link"
-              >
-                <span className="annotation-author">{authorDisplayName}</span>
-              </Link>
-              {authorHandle && (
-                <a
-                  href={`https://bsky.app/profile/${authorHandle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="annotation-handle"
-                >
-                  @{authorHandle}
-                </a>
-              )}
-            </div>
-            <div className="annotation-time">{formatDate(data.createdAt)}</div>
-          </div>
+          <UserMeta author={data.author} createdAt={data.createdAt} />
         </div>
         <div className="annotation-header-right">
           <div style={{ display: "flex", gap: "4px" }}>
@@ -606,60 +549,11 @@ export function HighlightCard({
     }
   };
 
-  const formatDate = (dateString, simple = true) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m`;
-    if (hours < 24) return `${hours}h`;
-    if (days < 7) return `${days}d`;
-    if (simple)
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-    return date.toLocaleString();
-  };
-
   return (
     <article className="card annotation-card">
       <header className="annotation-header">
         <div className="annotation-header-left">
-          <Link
-            to={data.author?.did ? `/profile/${data.author.did}` : "#"}
-            className="annotation-avatar-link"
-          >
-            <div className="annotation-avatar">
-              {data.author?.avatar ? (
-                <img src={data.author.avatar} alt="avatar" />
-              ) : (
-                <span>??</span>
-              )}
-            </div>
-          </Link>
-          <div className="annotation-meta">
-            <Link to="#" className="annotation-author-link">
-              <span className="annotation-author">
-                {data.author?.displayName || "Unknown"}
-              </span>
-            </Link>
-            <div className="annotation-time">{formatDate(data.createdAt)}</div>
-            {data.author?.handle && (
-              <a
-                href={`https://bsky.app/profile/${data.author.handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="annotation-handle"
-              >
-                @{data.author.handle}
-              </a>
-            )}
-          </div>
+          <UserMeta author={data.author} createdAt={data.createdAt} />
         </div>
 
         <div className="annotation-header-right">
