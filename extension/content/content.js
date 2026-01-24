@@ -484,15 +484,10 @@
   function initOverlay() {
     sidebarHost = document.createElement("div");
     sidebarHost.id = "margin-overlay-host";
-    const getScrollHeight = () => {
-      const bodyH = document.body?.scrollHeight || 0;
-      const docH = document.documentElement?.scrollHeight || 0;
-      return Math.max(bodyH, docH);
-    };
-
     sidebarHost.style.cssText = `
         position: absolute; top: 0; left: 0; width: 100%; 
-        height: ${getScrollHeight()}px; 
+        height: 0; 
+        overflow: visible;
         pointer-events: none; z-index: 2147483647;
     `;
     document.body?.appendChild(sidebarHost) ||
@@ -507,12 +502,6 @@
     container.className = "margin-overlay";
     container.id = "margin-overlay-container";
     sidebarShadow.appendChild(container);
-
-    const observer = new ResizeObserver(() => {
-      sidebarHost.style.height = `${getScrollHeight()}px`;
-    });
-    if (document.body) observer.observe(document.body);
-    if (document.documentElement) observer.observe(document.documentElement);
 
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.local.get(["showOverlay", "theme"], (result) => {
@@ -538,6 +527,10 @@
         if (changes.showOverlay) {
           if (changes.showOverlay.newValue === false) {
             sidebarHost.style.display = "none";
+            activeItems = [];
+            if (typeof CSS !== "undefined" && CSS.highlights) {
+              CSS.highlights.clear();
+            }
           } else {
             sidebarHost.style.display = "";
             fetchAnnotations();
@@ -633,6 +626,9 @@
   function handleMouseMove(e) {
     const x = e.clientX;
     const y = e.clientY;
+
+    if (sidebarHost && sidebarHost.style.display === "none") return;
+
     let foundItems = [];
     let firstRange = null;
     for (const { range, item } of activeItems) {
@@ -644,9 +640,19 @@
           y >= rect.top &&
           y <= rect.bottom
         ) {
-          if (!firstRange) firstRange = range;
-          if (!foundItems.some((f) => f.item === item)) {
-            foundItems.push({ range, item, rect });
+          let container = range.commonAncestorContainer;
+          if (container.nodeType === Node.TEXT_NODE) {
+            container = container.parentNode;
+          }
+
+          if (
+            container &&
+            (e.target.contains(container) || container.contains(e.target))
+          ) {
+            if (!firstRange) firstRange = range;
+            if (!foundItems.some((f) => f.item === item)) {
+              foundItems.push({ range, item, rect });
+            }
           }
           break;
         }
@@ -737,6 +743,9 @@
   function handleDocumentClick(e) {
     const x = e.clientX;
     const y = e.clientY;
+
+    if (sidebarHost && sidebarHost.style.display === "none") return;
+
     if (popoverEl && sidebarShadow) {
       const rect = popoverEl.getBoundingClientRect();
       if (
@@ -759,8 +768,18 @@
           y >= rect.top &&
           y <= rect.bottom
         ) {
-          if (!clickedItems.includes(item)) {
-            clickedItems.push(item);
+          let container = range.commonAncestorContainer;
+          if (container.nodeType === Node.TEXT_NODE) {
+            container = container.parentNode;
+          }
+
+          if (
+            container &&
+            (e.target.contains(container) || container.contains(e.target))
+          ) {
+            if (!clickedItems.includes(item)) {
+              clickedItems.push(item);
+            }
           }
           break;
         }
@@ -1075,6 +1094,7 @@
       if (request.show) {
         fetchAnnotations();
       } else {
+        activeItems = [];
         if (typeof CSS !== "undefined" && CSS.highlights) {
           CSS.highlights.clear();
         }

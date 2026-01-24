@@ -369,14 +369,22 @@ async function handleMessage(request, sender, sendResponse) {
 
         if (sender.tab) {
           const count = items.length;
-          chrome.action.setBadgeText({
-            text: count > 0 ? count.toString() : "",
-            tabId: sender.tab.id,
-          });
-          chrome.action.setBadgeBackgroundColor({
-            color: "#6366f1",
-            tabId: sender.tab.id,
-          });
+          chrome.action
+            .setBadgeText({
+              text: count > 0 ? count.toString() : "",
+              tabId: sender.tab.id,
+            })
+            .catch(() => {
+              /* ignore */
+            });
+          chrome.action
+            .setBadgeBackgroundColor({
+              color: "#6366f1",
+              tabId: sender.tab.id,
+            })
+            .catch(() => {
+              /* ignore */
+            });
         }
         break;
       }
