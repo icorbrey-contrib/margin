@@ -19,6 +19,7 @@ import (
 	"margin.at/internal/api"
 	"margin.at/internal/db"
 	"margin.at/internal/firehose"
+	internalMiddleware "margin.at/internal/middleware"
 	"margin.at/internal/oauth"
 	"margin.at/internal/sync"
 )
@@ -55,7 +56,7 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
+	r.Use(internalMiddleware.PrivacyLogger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
