@@ -133,7 +133,9 @@ export default function Profile() {
   const displayName = profile?.displayName || profile?.handle || handle;
   const displayHandle =
     profile?.handle || (handle?.startsWith("did:") ? null : handle);
-  const avatarUrl = profile?.avatar;
+  const avatarUrl = profile?.did
+    ? `/api/avatar/${encodeURIComponent(profile.did)}`
+    : null;
 
   const getInitial = () => {
     return (displayName || displayHandle || "??")
