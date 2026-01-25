@@ -86,15 +86,46 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 }
 
 func (c *Client) ResolveHandle(ctx context.Context, handle string) (string, error) {
-	url := fmt.Sprintf("https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=%s", url.QueryEscape(handle))
-	resp, err := http.Get(url)
+	did, err := c.resolveHandleAt(ctx, handle, "https://public.api.bsky.app")
+	if err == nil {
+		return did, nil
+	}
+
+	parts := strings.Split(handle, ".")
+	if len(parts) >= 2 {
+		if len(parts) > 2 {
+			domain := strings.Join(parts[1:], ".")
+			did, err := c.resolveHandleAt(ctx, handle, fmt.Sprintf("https://%s", domain))
+			if err == nil {
+				return did, nil
+			}
+		}
+
+		did, err := c.resolveHandleAt(ctx, handle, fmt.Sprintf("https://%s", handle))
+		if err == nil {
+			return did, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to resolve handle %s: %v", handle, err)
+}
+
+func (c *Client) resolveHandleAt(ctx context.Context, handle, service string) (string, error) {
+	endpoint := fmt.Sprintf("%s/xrpc/com.atproto.identity.resolveHandle?handle=%s", strings.TrimSuffix(service, "/"), url.QueryEscape(handle))
+
+	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("failed to resolve handle: %d", resp.StatusCode)
+		return "", fmt.Errorf("status %d from %s", resp.StatusCode, service)
 	}
 
 	var result struct {

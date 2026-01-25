@@ -4,9 +4,11 @@ import { useAuth } from "../context/AuthContext";
 import { searchActors, startLogin } from "../api/client";
 import { AtSign } from "lucide-react";
 import logo from "../assets/logo.svg";
+import SignUpModal from "../components/SignUpModal";
 
 export default function Login() {
   const { isAuthenticated, user, logout } = useAuth();
+  const [showSignUp, setShowSignUp] = useState(false);
   const [handle, setHandle] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [showInviteInput, setShowInviteInput] = useState(false);
@@ -26,7 +28,6 @@ export default function Login() {
     "Bluesky",
     "Blacksky",
     "Tangled",
-    "selfhosted.social",
     "Northsky",
     "witchcraft.systems",
     "topphie.social",
@@ -291,7 +292,21 @@ export default function Login() {
           <Link to="/terms">Terms of Service</Link> and{" "}
           <Link to="/privacy">Privacy Policy</Link>.
         </p>
+
+        <div className="login-divider">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary login-signup-btn"
+          onClick={() => setShowSignUp(true)}
+        >
+          Create New Account
+        </button>
       </form>
+
+      {showSignUp && <SignUpModal onClose={() => setShowSignUp(false)} />}
     </div>
   );
 }
