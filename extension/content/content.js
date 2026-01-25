@@ -1024,10 +1024,18 @@
 
   function fetchAnnotations(retryCount = 0) {
     if (typeof chrome !== "undefined" && chrome.runtime) {
+      const citedUrls = Array.from(document.querySelectorAll("[cite]"))
+        .map((el) => el.getAttribute("cite"))
+        .filter((url) => url && url.startsWith("http"));
+      const uniqueCitedUrls = [...new Set(citedUrls)];
+
       chrome.runtime.sendMessage(
         {
           type: "GET_ANNOTATIONS",
-          data: { url: window.location.href },
+          data: {
+            url: window.location.href,
+            citedUrls: uniqueCitedUrls,
+          },
         },
         (res) => {
           if (res && res.success && res.data && res.data.length > 0) {
@@ -1043,6 +1051,27 @@
     }
   }
 
+  function findCanonicalUrl(range) {
+    if (!range) return null;
+    let node = range.commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) {
+      node = node.parentNode;
+    }
+
+    while (node && node !== document.body) {
+      if (
+        (node.tagName === "BLOCKQUOTE" || node.tagName === "Q") &&
+        node.hasAttribute("cite")
+      ) {
+        if (node.contains(range.commonAncestorContainer)) {
+          return node.getAttribute("cite");
+        }
+      }
+      node = node.parentNode;
+    }
+    return null;
+  }
+
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === "GET_SELECTOR_FOR_ANNOTATE_INLINE") {
       const sel = window.getSelection();
@@ -1051,7 +1080,12 @@
         return true;
       }
       const exact = sel.toString().trim();
-      sendResponse({ selector: { type: "TextQuoteSelector", exact } });
+      const canonicalUrl = findCanonicalUrl(sel.getRangeAt(0));
+
+      sendResponse({
+        selector: { type: "TextQuoteSelector", exact },
+        canonicalUrl,
+      });
       return true;
     }
 
@@ -1074,9 +1108,12 @@
         return true;
       }
       const exact = sel.toString().trim();
+      const canonicalUrl = findCanonicalUrl(sel.getRangeAt(0));
+
       sendResponse({
         success: false,
         selector: { type: "TextQuoteSelector", exact },
+        canonicalUrl,
       });
       return true;
     }

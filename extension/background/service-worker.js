@@ -205,6 +205,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   if (info.menuItemId === "margin-annotate") {
     let selector = null;
+    let canonicalUrl = null;
 
     try {
       const response = await chrome.tabs.sendMessage(tab.id, {
@@ -212,6 +213,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         selectionText: info.selectionText,
       });
       selector = response?.selector;
+      canonicalUrl = response?.canonicalUrl;
     } catch {
       /* ignore */
     }
@@ -223,12 +225,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       };
     }
 
+    const targetUrl = canonicalUrl || tab.url;
+
     if (selector) {
       try {
         await chrome.tabs.sendMessage(tab.id, {
           type: "SHOW_INLINE_ANNOTATE",
           data: {
-            url: tab.url,
+            url: targetUrl,
             title: tab.title,
             selector: selector,
           },
@@ -240,7 +244,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
 
     if (WEB_BASE) {
-      let composeUrl = `${WEB_BASE}/new?url=${encodeURIComponent(tab.url)}`;
+      let composeUrl = `${WEB_BASE}/new?url=${encodeURIComponent(targetUrl)}`;
       if (selector) {
         composeUrl += `&selector=${encodeURIComponent(JSON.stringify(selector))}`;
       }
@@ -251,6 +255,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   if (info.menuItemId === "margin-highlight") {
     let selector = null;
+    let canonicalUrl = null;
 
     try {
       const response = await chrome.tabs.sendMessage(tab.id, {
@@ -259,6 +264,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       });
       if (response?.selector) {
         selector = response.selector;
+        canonicalUrl = response.canonicalUrl;
       }
       if (response && response.success) return;
     } catch {
@@ -272,10 +278,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       };
     }
 
+    const targetUrl = canonicalUrl || tab.url;
+
     if (selector) {
       try {
         await createHighlight({
-          url: tab.url,
+          url: targetUrl,
           title: tab.title,
           selector: selector,
         });
@@ -359,13 +367,34 @@ async function handleMessage(request, sender, sendResponse) {
           : API_BASE;
 
         const pageUrl = request.data.url;
-        const res = await fetch(
-          `${currentApiUrl}/api/targets?source=${encodeURIComponent(pageUrl)}`,
-        );
-        const data = await res.json();
+        const citedUrls = request.data.citedUrls || [];
+        const uniqueUrls = [...new Set([pageUrl, ...citedUrls])];
 
-        const items = [...(data.annotations || []), ...(data.highlights || [])];
-        sendResponse({ success: true, data: items });
+        const fetchPromises = uniqueUrls.map((u) =>
+          fetch(
+            `${currentApiUrl}/api/targets?source=${encodeURIComponent(u)}`,
+          ).then((r) => r.json().catch(() => ({}))),
+        );
+
+        const results = await Promise.all(fetchPromises);
+        let allItems = [];
+        const seenIds = new Set();
+
+        results.forEach((data) => {
+          const items = [
+            ...(data.annotations || []),
+            ...(data.highlights || []),
+          ];
+          items.forEach((item) => {
+            const id = item.uri || item.id;
+            if (id && !seenIds.has(id)) {
+              seenIds.add(id);
+              allItems.push(item);
+            }
+          });
+        });
+
+        sendResponse({ success: true, data: allItems });
 
         if (sender.tab) {
           const count = items.length;
