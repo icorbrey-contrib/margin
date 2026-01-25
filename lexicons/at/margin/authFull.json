@@ -20,7 +20,8 @@
             "at.margin.reply",
             "at.margin.like",
             "at.margin.collection",
-            "at.margin.collectionItem"
+            "at.margin.collectionItem",
+            "at.margin.profile"
           ]
         }
       ]

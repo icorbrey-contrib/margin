@@ -2,16 +2,19 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import BookmarkCard from "../components/BookmarkCard";
+import { getLinkIconType, formatUrl } from "../utils/formatting";
 import {
   getUserAnnotations,
   getUserHighlights,
   getUserBookmarks,
   getCollections,
+  getProfile,
   getAPIKeys,
   createAPIKey,
   deleteAPIKey,
 } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import EditProfileModal from "../components/EditProfileModal";
 import CollectionIcon from "../components/CollectionIcon";
 import CollectionRow from "../components/CollectionRow";
 import {
@@ -19,7 +22,27 @@ import {
   HighlightIcon,
   BookmarkIcon,
   BlueskyIcon,
+  GithubIcon,
+  LinkedinIcon,
+  TangledIcon,
+  LinkIcon,
 } from "../components/Icons";
+
+function LinkIconComponent({ url }) {
+  const type = getLinkIconType(url);
+  switch (type) {
+    case "github":
+      return <GithubIcon size={14} />;
+    case "bluesky":
+      return <BlueskyIcon size={14} />;
+    case "linkedin":
+      return <LinkedinIcon size={14} />;
+    case "tangled":
+      return <TangledIcon size={14} />;
+    default:
+      return <LinkIcon size={14} />;
+  }
+}
 
 function KeyIcon({ size = 16 }) {
   return (
@@ -53,6 +76,7 @@ export default function Profile() {
   const [keysLoading, setKeysLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const isOwnProfile = user && (user.did === handle || user.handle === handle);
 
@@ -61,27 +85,49 @@ export default function Profile() {
       try {
         setLoading(true);
 
-        const profileRes = await fetch(
+        const bskyPromise = fetch(
           `https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(handle)}`,
-        );
-        let did = handle;
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          setProfile(profileData);
-          did = profileData.did;
+        ).then((res) => (res.ok ? res.json() : null));
+
+        const marginPromise = getProfile(handle).catch(() => null);
+
+        const marginData = await marginPromise;
+        let did = handle.startsWith("did:") ? handle : marginData?.did;
+        if (!did) {
+          const bskyData = await bskyPromise;
+          if (bskyData) {
+            did = bskyData.did;
+            setProfile(bskyData);
+          }
+        } else {
+          if (marginData) {
+            setProfile((prev) => ({ ...prev, ...marginData }));
+          }
         }
 
-        const [annData, hlData, bmData, collData] = await Promise.all([
-          getUserAnnotations(did),
-          getUserHighlights(did).catch(() => ({ items: [] })),
-          getUserBookmarks(did).catch(() => ({ items: [] })),
-          getCollections(did).catch(() => ({ items: [] })),
-        ]);
-        setAnnotations(annData.items || []);
-        setHighlights(hlData.items || []);
-        setBookmarks(bmData.items || []);
-        setCollections(collData.items || []);
+        if (did) {
+          const [annData, hlData, bmData, collData] = await Promise.all([
+            getUserAnnotations(did),
+            getUserHighlights(did).catch(() => ({ items: [] })),
+            getUserBookmarks(did).catch(() => ({ items: [] })),
+            getCollections(did).catch(() => ({ items: [] })),
+          ]);
+          setAnnotations(annData.items || []);
+          setHighlights(hlData.items || []);
+          setBookmarks(bmData.items || []);
+          setCollections(collData.items || []);
+
+          const bskyData = await bskyPromise;
+          if (bskyData || marginData) {
+            setProfile((prev) => ({
+              ...(bskyData || {}),
+              ...prev,
+              ...(marginData || {}),
+            }));
+          }
+        }
       } catch (err) {
+        console.error(err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -432,8 +478,57 @@ export default function Profile() {
               <strong>{highlights.length}</strong> highlights
             </span>
           </div>
+
+          {(profile?.bio || profile?.website || profile?.links?.length > 0) && (
+            <div className="profile-margin-details">
+              {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+              <div className="profile-links">
+                {profile.website && (
+                  <a
+                    href={profile.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="profile-link-chip main-website"
+                  >
+                    <LinkIcon size={14} /> {formatUrl(profile.website)}
+                  </a>
+                )}
+                {profile.links?.map((link, i) => (
+                  <a
+                    key={i}
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="profile-link-chip"
+                  >
+                    <LinkIconComponent url={link} /> {formatUrl(link)}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isOwnProfile && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ marginTop: "1rem", alignSelf: "flex-start" }}
+              onClick={() => setShowEditModal(true)}
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
       </header>
+
+      {showEditModal && (
+        <EditProfileModal
+          profile={profile}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={() => {
+            window.location.reload();
+          }}
+        />
+      )}
 
       <div className="profile-tabs">
         <button

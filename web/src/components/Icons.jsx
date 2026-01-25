@@ -1,3 +1,6 @@
+import tangledLogo from "../assets/tangled.svg";
+import { FaGithub, FaLinkedin } from "react-icons/fa";
+
 export function HeartIcon({ filled = false, size = 18 }) {
   return filled ? (
     <svg
@@ -460,5 +463,28 @@ export function TopphieIcon({ size = 18 }) {
       <ellipse cx="76" cy="462.5" rx="76" ry="75.5" fill="currentColor" />
       <circle cx="268.5" cy="269.5" r="75.5" fill="currentColor" />
     </svg>
+  );
+}
+
+export function GithubIcon({ size = 18 }) {
+  return <FaGithub size={size} />;
+}
+
+export function LinkedinIcon({ size = 18 }) {
+  return <FaLinkedin size={size} />;
+}
+
+export function TangledIcon({ size = 18 }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: "currentColor",
+        WebkitMask: `url(${tangledLogo}) no-repeat center / contain`,
+        mask: `url(${tangledLogo}) no-repeat center / contain`,
+        display: "inline-block",
+      }}
+    />
   );
 }

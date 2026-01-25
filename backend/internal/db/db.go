@@ -129,6 +129,17 @@ type APIKey struct {
 	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
 }
 
+type Profile struct {
+	URI       string    `json:"uri"`
+	AuthorDID string    `json:"authorDid"`
+	Bio       *string   `json:"bio,omitempty"`
+	Website   *string   `json:"website,omitempty"`
+	LinksJSON *string   `json:"links,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+	IndexedAt time.Time `json:"indexedAt"`
+	CID       *string   `json:"cid,omitempty"`
+}
+
 func New(dsn string) (*DB, error) {
 	driver := "sqlite3"
 	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
@@ -328,6 +339,18 @@ func (db *DB) Migrate() error {
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_api_keys_owner ON api_keys(owner_did)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`)
 
+	db.Exec(`CREATE TABLE IF NOT EXISTS profiles (
+		uri TEXT PRIMARY KEY,
+		author_did TEXT NOT NULL,
+		bio TEXT,
+		website TEXT,
+		links_json TEXT,
+		created_at ` + dateType + ` NOT NULL,
+		indexed_at ` + dateType + ` NOT NULL,
+		cid TEXT
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_profiles_author_did ON profiles(author_did)`)
+
 	db.runMigrations()
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS cursors (
@@ -365,6 +388,39 @@ func (db *DB) SetCursor(id string, cursor int64) error {
 	return err
 }
 
+func (db *DB) GetProfile(did string) (*Profile, error) {
+	var p Profile
+	err := db.QueryRow("SELECT uri, author_did, bio, website, links_json, created_at, indexed_at FROM profiles WHERE author_did = $1", did).Scan(
+		&p.URI, &p.AuthorDID, &p.Bio, &p.Website, &p.LinksJSON, &p.CreatedAt, &p.IndexedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (db *DB) UpsertProfile(p *Profile) error {
+	query := `
+		INSERT INTO profiles (uri, author_did, bio, website, links_json, created_at, indexed_at) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7) 
+		ON CONFLICT(uri) DO UPDATE SET 
+			bio = EXCLUDED.bio, 
+			website = EXCLUDED.website,
+			links_json = EXCLUDED.links_json,
+			indexed_at = EXCLUDED.indexed_at
+	`
+	_, err := db.Exec(db.Rebind(query), p.URI, p.AuthorDID, p.Bio, p.Website, p.LinksJSON, p.CreatedAt, p.IndexedAt)
+	return err
+}
+
+func (db *DB) DeleteProfile(uri string) error {
+	_, err := db.Exec("DELETE FROM profiles WHERE uri = $1", uri)
+	return err
+}
+
 func (db *DB) runMigrations() {
 
 	db.Exec(`ALTER TABLE sessions ADD COLUMN dpop_key TEXT`)
@@ -385,6 +441,8 @@ func (db *DB) runMigrations() {
 	db.Exec(`UPDATE annotations SET body_value = text WHERE body_value IS NULL AND text IS NOT NULL`)
 	db.Exec(`UPDATE annotations SET target_title = title WHERE target_title IS NULL AND title IS NOT NULL`)
 	db.Exec(`UPDATE annotations SET motivation = 'commenting' WHERE motivation IS NULL`)
+
+	db.Exec(`ALTER TABLE profiles ADD COLUMN website TEXT`)
 
 	if db.driver == "postgres" {
 		db.Exec(`ALTER TABLE cursors ALTER COLUMN last_cursor TYPE BIGINT`)

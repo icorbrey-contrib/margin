@@ -23,6 +23,7 @@ const (
 	CollectionLike           = "at.margin.like"
 	CollectionCollection     = "at.margin.collection"
 	CollectionCollectionItem = "at.margin.collectionItem"
+	CollectionProfile        = "at.margin.profile"
 )
 
 var RelayURL = "wss://jetstream2.us-east.bsky.network/subscribe"
@@ -50,6 +51,7 @@ func NewIngester(database *db.DB, syncService *internal_sync.Service) *Ingester 
 	i.RegisterHandler(CollectionLike, i.handleLike)
 	i.RegisterHandler(CollectionCollection, i.handleCollection)
 	i.RegisterHandler(CollectionCollectionItem, i.handleCollectionItem)
+	i.RegisterHandler(CollectionProfile, i.handleProfile)
 
 	return i
 }
@@ -231,6 +233,8 @@ func (i *Ingester) handleDelete(collection, uri string) {
 		i.db.DeleteCollection(uri)
 	case CollectionCollectionItem:
 		i.db.RemoveFromCollection(uri)
+	case CollectionProfile:
+		i.db.DeleteProfile(uri)
 	}
 }
 
@@ -628,5 +632,58 @@ func (i *Ingester) handleCollectionItem(event *FirehoseEvent) {
 		log.Printf("Failed to index collection item: %v", err)
 	} else {
 		log.Printf("Indexed collection item from %s", event.Repo)
+	}
+}
+
+func (i *Ingester) handleProfile(event *FirehoseEvent) {
+	if event.Rkey != "self" {
+		return
+	}
+
+	var record struct {
+		Bio       string   `json:"bio"`
+		Website   string   `json:"website"`
+		Links     []string `json:"links"`
+		CreatedAt string   `json:"createdAt"`
+	}
+
+	if err := json.Unmarshal(event.Record, &record); err != nil {
+		return
+	}
+
+	uri := fmt.Sprintf("at://%s/%s/%s", event.Repo, event.Collection, event.Rkey)
+
+	createdAt, err := time.Parse(time.RFC3339, record.CreatedAt)
+	if err != nil {
+		createdAt = time.Now()
+	}
+
+	var bioPtr, websitePtr, linksJSONPtr *string
+	if record.Bio != "" {
+		bioPtr = &record.Bio
+	}
+	if record.Website != "" {
+		websitePtr = &record.Website
+	}
+	if len(record.Links) > 0 {
+		linksBytes, _ := json.Marshal(record.Links)
+		linksStr := string(linksBytes)
+		linksJSONPtr = &linksStr
+	}
+
+	profile := &db.Profile{
+		URI:       uri,
+		AuthorDID: event.Repo,
+		Bio:       bioPtr,
+		Website:   websitePtr,
+		LinksJSON: linksJSONPtr,
+		CreatedAt: createdAt,
+		IndexedAt: time.Now(),
+	}
+
+	if err := i.db.UpsertProfile(profile); err != nil {
+		log.Printf("Failed to index profile: %v", err)
+	} else {
+		log.Printf("Indexed profile from %s", event.Repo)
 	}
 }

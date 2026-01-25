@@ -1,0 +1,150 @@
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+
+	"margin.at/internal/db"
+	"margin.at/internal/xrpc"
+)
+
+type UpdateProfileRequest struct {
+	Bio     string   `json:"bio"`
+	Website string   `json:"website"`
+	Links   []string `json:"links"`
+}
+
+func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	session, err := h.refresher.GetSessionWithAutoRefresh(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	record := &xrpc.MarginProfileRecord{
+		Type:      xrpc.CollectionProfile,
+		Bio:       req.Bio,
+		Website:   req.Website,
+		Links:     req.Links,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+
+	if err := record.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+		_, err := client.PutRecord(r.Context(), did, xrpc.CollectionProfile, "self", record)
+		return err
+	})
+
+	if err != nil {
+		http.Error(w, "Failed to update profile: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	linksJSON, _ := json.Marshal(req.Links)
+	profile := &db.Profile{
+		URI:       fmt.Sprintf("at://%s/%s/self", session.DID, xrpc.CollectionProfile),
+		AuthorDID: session.DID,
+		Bio:       &req.Bio,
+		Website:   &req.Website,
+		LinksJSON: stringPtr(string(linksJSON)),
+		CreatedAt: time.Now(),
+		IndexedAt: time.Now(),
+	}
+	h.db.UpsertProfile(profile)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(req)
+}
+
+func stringPtr(s string) *string {
+	return &s
+}
+
+func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	did := chi.URLParam(r, "did")
+	if decoded, err := url.QueryUnescape(did); err == nil {
+		did = decoded
+	}
+
+	if did == "" {
+		http.Error(w, "DID required", http.StatusBadRequest)
+		return
+	}
+
+	if !strings.HasPrefix(did, "did:") {
+		var resolvedDID string
+		err := h.db.QueryRow("SELECT did FROM sessions WHERE handle = $1 LIMIT 1", did).Scan(&resolvedDID)
+		if err == nil {
+			did = resolvedDID
+		} else {
+			resolvedDID, err = xrpc.ResolveHandle(did)
+			if err == nil {
+				did = resolvedDID
+			}
+		}
+	}
+
+	profile, err := h.db.GetProfile(did)
+	if err != nil {
+		http.Error(w, "Failed to fetch profile", http.StatusInternalServerError)
+		return
+	}
+
+	if profile == nil {
+		w.Header().Set("Content-Type", "application/json")
+		if did != "" && strings.HasPrefix(did, "did:") {
+			json.NewEncoder(w).Encode(map[string]string{"did": did})
+		} else {
+			w.Write([]byte("{}"))
+		}
+		return
+	}
+
+	resp := struct {
+		URI       string   `json:"uri"`
+		DID       string   `json:"did"`
+		Bio       string   `json:"bio"`
+		Website   string   `json:"website"`
+		Links     []string `json:"links"`
+		CreatedAt string   `json:"createdAt"`
+		IndexedAt string   `json:"indexedAt"`
+	}{
+		URI:       profile.URI,
+		DID:       profile.AuthorDID,
+		CreatedAt: profile.CreatedAt.Format(time.RFC3339),
+		IndexedAt: profile.IndexedAt.Format(time.RFC3339),
+	}
+
+	if profile.Bio != nil {
+		resp.Bio = *profile.Bio
+	}
+	if profile.Website != nil {
+		resp.Website = *profile.Website
+	}
+	if profile.LinksJSON != nil && *profile.LinksJSON != "" {
+		_ = json.Unmarshal([]byte(*profile.LinksJSON), &resp.Links)
+	}
+	if resp.Links == nil {
+		resp.Links = []string{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}

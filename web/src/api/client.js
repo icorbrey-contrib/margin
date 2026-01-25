@@ -57,6 +57,10 @@ export async function getAnnotation(uri) {
   return request(`${API_BASE}/annotation?uri=${encodeURIComponent(uri)}`);
 }
 
+export async function getProfile(did) {
+  return request(`${API_BASE}/profile/${encodeURIComponent(did)}`);
+}
+
 export async function getUserAnnotations(did, limit = 50, offset = 0) {
   return request(
     `${API_BASE}/users/${encodeURIComponent(did)}/annotations?limit=${limit}&offset=${offset}`,
@@ -161,6 +165,13 @@ export async function updateCollection(uri, name, description, icon) {
   return request(`${API_BASE}/collections?uri=${encodeURIComponent(uri)}`, {
     method: "PUT",
     body: JSON.stringify({ name, description, icon }),
+  });
+}
+
+export async function updateProfile({ bio, website, links }) {
+  return request(`${API_BASE}/profile`, {
+    method: "PUT",
+    body: JSON.stringify({ bio, website, links }),
   });
 }
 

@@ -15,6 +15,7 @@ const (
 	CollectionLike           = "at.margin.like"
 	CollectionCollection     = "at.margin.collection"
 	CollectionCollectionItem = "at.margin.collectionItem"
+	CollectionProfile        = "at.margin.profile"
 )
 
 const (
@@ -361,4 +362,22 @@ func NewCollectionItemRecord(collection, annotation string, position int) *Colle
 		Position:   position,
 		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
 	}
+}
+
+type MarginProfileRecord struct {
+	Type      string   `json:"$type"`
+	Bio       string   `json:"bio,omitempty"`
+	Website   string   `json:"website,omitempty"`
+	Links     []string `json:"links,omitempty"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+func (r *MarginProfileRecord) Validate() error {
+	if len(r.Bio) > 5000 {
+		return fmt.Errorf("bio too long")
+	}
+	if len(r.Links) > 20 {
+		return fmt.Errorf("too many links")
+	}
+	return nil
 }
