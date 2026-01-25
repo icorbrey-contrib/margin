@@ -140,7 +140,17 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	pkceVerifier, pkceChallenge := client.GeneratePKCE()
 
-	scope := "atproto transition:generic"
+	scope := "atproto " +
+		"at.margin.annotation " +
+		"at.margin.highlight " +
+		"at.margin.bookmark " +
+		"at.margin.reply " +
+		"at.margin.like " +
+		"at.margin.collection " +
+		"at.margin.collectionItem " +
+		"rpc:app.bsky.actor.searchActorsTypeahead?aud=* " +
+		"rpc:app.bsky.actor.getProfiles?aud=* " +
+		"rpc:com.atproto.identity.resolveHandle?aud=*"
 
 	parResp, state, dpopNonce, err := client.SendPAR(meta, handle, scope, dpopKey, pkceChallenge)
 	if err != nil {
@@ -240,7 +250,17 @@ func (h *Handler) HandleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pkceVerifier, pkceChallenge := client.GeneratePKCE()
-	scope := "atproto transition:generic"
+	scope := "atproto " +
+		"at.margin.annotation " +
+		"at.margin.highlight " +
+		"at.margin.bookmark " +
+		"at.margin.reply " +
+		"at.margin.like " +
+		"at.margin.collection " +
+		"at.margin.collectionItem " +
+		"rpc:app.bsky.actor.searchActorsTypeahead?aud=* " +
+		"rpc:app.bsky.actor.getProfiles?aud=* " +
+		"rpc:com.atproto.identity.resolveHandle?aud=*"
 
 	parResp, state, dpopNonce, err := client.SendPAR(meta, req.Handle, scope, dpopKey, pkceChallenge)
 	if err != nil {
@@ -481,16 +501,26 @@ func (h *Handler) HandleClientMetadata(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"client_id":                       client.ClientID,
-		"client_name":                     "Margin",
-		"client_uri":                      baseURL,
-		"logo_uri":                        baseURL + "/logo.svg",
-		"tos_uri":                         baseURL + "/terms",
-		"policy_uri":                      baseURL + "/privacy",
-		"redirect_uris":                   []string{client.RedirectURI},
-		"grant_types":                     []string{"authorization_code", "refresh_token"},
-		"response_types":                  []string{"code"},
-		"scope":                           "atproto transition:generic",
+		"client_id":      client.ClientID,
+		"client_name":    "Margin",
+		"client_uri":     baseURL,
+		"logo_uri":       baseURL + "/logo.svg",
+		"tos_uri":        baseURL + "/terms",
+		"policy_uri":     baseURL + "/privacy",
+		"redirect_uris":  []string{client.RedirectURI},
+		"grant_types":    []string{"authorization_code", "refresh_token"},
+		"response_types": []string{"code"},
+		"scope": "atproto " +
+			"at.margin.annotation " +
+			"at.margin.highlight " +
+			"at.margin.bookmark " +
+			"at.margin.reply " +
+			"at.margin.like " +
+			"at.margin.collection " +
+			"at.margin.collectionItem " +
+			"rpc:app.bsky.actor.searchActorsTypeahead?aud=* " +
+			"rpc:app.bsky.actor.getProfiles?aud=* " +
+			"rpc:com.atproto.identity.resolveHandle?aud=*",
 		"token_endpoint_auth_method":      "private_key_jwt",
 		"token_endpoint_auth_signing_alg": "ES256",
 		"dpop_bound_access_tokens":        true,
