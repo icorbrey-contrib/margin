@@ -505,36 +505,6 @@ func (s *AnnotationService) DeleteReply(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
-func resolveDIDToPDS(did string) (string, error) {
-	if strings.HasPrefix(did, "did:plc:") {
-		client := &http.Client{
-			Timeout: 10 * time.Second,
-		}
-		resp, err := client.Get("https://plc.directory/" + did)
-		if err != nil {
-			return "", err
-		}
-		defer resp.Body.Close()
-
-		var doc struct {
-			Service []struct {
-				Type            string `json:"type"`
-				ServiceEndpoint string `json:"serviceEndpoint"`
-			} `json:"service"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&doc); err != nil {
-			return "", err
-		}
-
-		for _, svc := range doc.Service {
-			if svc.Type == "AtprotoPersonalDataServer" {
-				return svc.ServiceEndpoint, nil
-			}
-		}
-	}
-	return "", nil
-}
-
 type CreateHighlightRequest struct {
 	URL      string          `json:"url"`
 	Title    string          `json:"title,omitempty"`

@@ -480,7 +480,7 @@ func (h *APIKeyHandler) getSessionByDID(did string) (*SessionData, error) {
 		return nil, fmt.Errorf("invalid session DPoP key: %w", err)
 	}
 
-	pds, err := resolveDIDToPDS(sessDID)
+	pds, err := xrpc.ResolveDIDToPDS(sessDID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve PDS: %w", err)
 	}

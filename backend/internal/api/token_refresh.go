@@ -89,7 +89,7 @@ func (tr *TokenRefresher) GetSessionWithAutoRefresh(r *http.Request) (*SessionDa
 		return nil, fmt.Errorf("invalid session DPoP key")
 	}
 
-	pds, err := resolveDIDToPDS(did)
+	pds, err := xrpc.ResolveDIDToPDS(did)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve PDS")
 	}

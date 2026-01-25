@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"margin.at/internal/db"
+	internal_sync "margin.at/internal/sync"
 	"margin.at/internal/xrpc"
 )
 
@@ -22,14 +23,16 @@ type Handler struct {
 	annotationService *AnnotationService
 	refresher         *TokenRefresher
 	apiKeys           *APIKeyHandler
+	syncService       *internal_sync.Service
 }
 
-func NewHandler(database *db.DB, annotationService *AnnotationService, refresher *TokenRefresher) *Handler {
+func NewHandler(database *db.DB, annotationService *AnnotationService, refresher *TokenRefresher, syncService *internal_sync.Service) *Handler {
 	return &Handler{
 		db:                database,
 		annotationService: annotationService,
 		refresher:         refresher,
 		apiKeys:           NewAPIKeyHandler(database, refresher),
+		syncService:       syncService,
 	}
 }
 

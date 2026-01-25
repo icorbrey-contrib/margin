@@ -20,6 +20,7 @@ import (
 	"margin.at/internal/db"
 	"margin.at/internal/firehose"
 	"margin.at/internal/oauth"
+	"margin.at/internal/sync"
 )
 
 func main() {
@@ -35,13 +36,15 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	oauthHandler, err := oauth.NewHandler(database)
+	syncSvc := sync.NewService(database)
+
+	oauthHandler, err := oauth.NewHandler(database, syncSvc)
 	if err != nil {
 		log.Fatalf("Failed to initialize OAuth: %v", err)
 	}
 
-	ingester := firehose.NewIngester(database)
-	firehose.RelayURL = getEnv("BLOCK_RELAY_URL", "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos")
+	ingester := firehose.NewIngester(database, syncSvc)
+	firehose.RelayURL = getEnv("BLOCK_RELAY_URL", "wss://jetstream2.us-east.bsky.network/subscribe")
 	log.Printf("Firehose URL: %s", firehose.RelayURL)
 
 	go func() {
@@ -71,7 +74,7 @@ func main() {
 	tokenRefresher := api.NewTokenRefresher(database, oauthHandler.GetPrivateKey())
 	annotationSvc := api.NewAnnotationService(database, tokenRefresher)
 
-	handler := api.NewHandler(database, annotationSvc, tokenRefresher)
+	handler := api.NewHandler(database, annotationSvc, tokenRefresher, syncSvc)
 	handler.RegisterRoutes(r)
 
 	r.Post("/api/annotations", annotationSvc.CreateAnnotation)

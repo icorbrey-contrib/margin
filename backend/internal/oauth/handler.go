@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"margin.at/internal/db"
+	internal_sync "margin.at/internal/sync"
 	"margin.at/internal/xrpc"
 )
 
@@ -26,9 +27,10 @@ type Handler struct {
 	privateKey        *ecdsa.PrivateKey
 	pending           map[string]*PendingAuth
 	pendingMu         sync.RWMutex
+	syncService       *internal_sync.Service
 }
 
-func NewHandler(database *db.DB) (*Handler, error) {
+func NewHandler(database *db.DB, syncService *internal_sync.Service) (*Handler, error) {
 
 	configuredBaseURL := os.Getenv("BASE_URL")
 
@@ -42,6 +44,7 @@ func NewHandler(database *db.DB) (*Handler, error) {
 		configuredBaseURL: configuredBaseURL,
 		privateKey:        privateKey,
 		pending:           make(map[string]*PendingAuth),
+		syncService:       syncService,
 	}, nil
 }
 
@@ -364,6 +367,18 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	})
 
 	go h.cleanupOrphanedReplies(tokenResp.Sub, tokenResp.AccessToken, string(dpopKeyPEM), pending.PDS)
+	go func() {
+		log.Printf("Starting background sync for %s...", tokenResp.Sub)
+		_, err := h.syncService.PerformSync(context.Background(), tokenResp.Sub, func(ctx context.Context, did string) (*xrpc.Client, error) {
+			return xrpc.NewClient(pending.PDS, tokenResp.AccessToken, pending.DPoPKey), nil
+		})
+
+		if err != nil {
+			log.Printf("Background sync failed for %s: %v", tokenResp.Sub, err)
+		} else {
+			log.Printf("Background sync completed for %s", tokenResp.Sub)
+		}
+	}()
 
 	http.Redirect(w, r, "/?logged_in=true", http.StatusFound)
 }

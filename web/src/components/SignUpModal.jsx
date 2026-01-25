@@ -122,9 +122,10 @@ export default function SignUpModal({ onClose }) {
       domain = "." + domain;
     }
 
-    const fullHandle = formData.handle.endsWith(domain)
-      ? formData.handle
-      : `${formData.handle}${domain}`;
+    const cleanHandle = formData.handle.trim().replace(/^@/, "");
+    const fullHandle = cleanHandle.endsWith(domain)
+      ? cleanHandle
+      : `${cleanHandle}${domain}`;
 
     try {
       await createAccount(serverInfo.service, {

@@ -1,20 +1,18 @@
 package firehose
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
+	"strings"
+	"sync"
 	"time"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/gorilla/websocket"
-	"github.com/ipfs/go-cid"
-
 	"margin.at/internal/db"
+	internal_sync "margin.at/internal/sync"
+	"margin.at/internal/xrpc"
 )
 
 const (
@@ -27,15 +25,37 @@ const (
 	CollectionCollectionItem = "at.margin.collectionItem"
 )
 
-var RelayURL = "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos"
+var RelayURL = "wss://jetstream2.us-east.bsky.network/subscribe"
 
 type Ingester struct {
-	db     *db.DB
-	cancel context.CancelFunc
+	db       *db.DB
+	sync     *internal_sync.Service
+	cancel   context.CancelFunc
+	handlers map[string]RecordHandler
 }
 
-func NewIngester(database *db.DB) *Ingester {
-	return &Ingester{db: database}
+type RecordHandler func(event *FirehoseEvent)
+
+func NewIngester(database *db.DB, syncService *internal_sync.Service) *Ingester {
+	i := &Ingester{
+		db:       database,
+		sync:     syncService,
+		handlers: make(map[string]RecordHandler),
+	}
+
+	i.RegisterHandler(CollectionAnnotation, i.handleAnnotation)
+	i.RegisterHandler(CollectionHighlight, i.handleHighlight)
+	i.RegisterHandler(CollectionBookmark, i.handleBookmark)
+	i.RegisterHandler(CollectionReply, i.handleReply)
+	i.RegisterHandler(CollectionLike, i.handleLike)
+	i.RegisterHandler(CollectionCollection, i.handleCollection)
+	i.RegisterHandler(CollectionCollectionItem, i.handleCollectionItem)
+
+	return i
+}
+
+func (i *Ingester) RegisterHandler(collection string, handler RecordHandler) {
+	i.handlers[collection] = handler
 }
 
 func (i *Ingester) Start(ctx context.Context) error {
@@ -59,7 +79,7 @@ func (i *Ingester) run(ctx context.Context) {
 			return
 		default:
 			if err := i.subscribe(ctx); err != nil {
-				log.Printf("Firehose error: %v, reconnecting in 5s...", err)
+				log.Printf("Jetstream error: %v, reconnecting in 5s...", err)
 				if ctx.Err() != nil {
 					return
 				}
@@ -69,35 +89,36 @@ func (i *Ingester) run(ctx context.Context) {
 	}
 }
 
-type FrameHeader struct {
-	Op int    `cbor:"op"`
-	T  string `cbor:"t"`
-}
-type Commit struct {
-	Repo   string   `cbor:"repo"`
-	Rev    string   `cbor:"rev"`
-	Seq    int64    `cbor:"seq"`
-	Prev   *cid.Cid `cbor:"prev"`
-	Time   string   `cbor:"time"`
-	Blocks []byte   `cbor:"blocks"`
-	Ops    []RepoOp `cbor:"ops"`
+type JetstreamEvent struct {
+	Did    string           `json:"did"`
+	Time   int64            `json:"time_us"`
+	Kind   string           `json:"kind"`
+	Commit *JetstreamCommit `json:"commit,omitempty"`
 }
 
-type RepoOp struct {
-	Action string   `cbor:"action"`
-	Path   string   `cbor:"path"`
-	Cid    *cid.Cid `cbor:"cid"`
+type JetstreamCommit struct {
+	Rev        string          `json:"rev"`
+	Operation  string          `json:"operation"`
+	Collection string          `json:"collection"`
+	Rkey       string          `json:"rkey"`
+	Record     json.RawMessage `json:"record,omitempty"`
+	Cid        string          `json:"cid,omitempty"`
 }
 
 func (i *Ingester) subscribe(ctx context.Context) error {
 	cursor := i.getLastCursor()
 
-	url := RelayURL
-	if cursor > 0 {
-		url = fmt.Sprintf("%s?cursor=%d", RelayURL, cursor)
+	var collections []string
+	for collection := range i.handlers {
+		collections = append(collections, collection)
 	}
 
-	log.Printf("Connecting to firehose: %s", url)
+	url := fmt.Sprintf("%s?wantedCollections=%s", RelayURL, strings.Join(collections, "&wantedCollections="))
+	if cursor > 0 {
+		url = fmt.Sprintf("%s&cursor=%d", url, cursor)
+	}
+
+	log.Printf("Connecting to Jetstream: %s", url)
 
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
 	if err != nil {
@@ -105,7 +126,7 @@ func (i *Ingester) subscribe(ctx context.Context) error {
 	}
 	defer conn.Close()
 
-	log.Printf("Connected to firehose")
+	log.Printf("Connected to Jetstream")
 
 	for {
 		select {
@@ -119,155 +140,79 @@ func (i *Ingester) subscribe(ctx context.Context) error {
 			return fmt.Errorf("websocket read failed: %w", err)
 		}
 
-		i.handleMessage(message)
-	}
-}
-
-func (i *Ingester) handleMessage(data []byte) {
-	reader := bytes.NewReader(data)
-
-	var header FrameHeader
-	decoder := cbor.NewDecoder(reader)
-	if err := decoder.Decode(&header); err != nil {
-		return
-	}
-
-	if header.Op != 1 {
-		return
-	}
-
-	if header.T != "#commit" {
-		return
-	}
-
-	var commit Commit
-	if err := decoder.Decode(&commit); err != nil {
-		return
-	}
-
-	for _, op := range commit.Ops {
-		collection, rkey := parseOpPath(op.Path)
-		if !isMarginCollection(collection) {
+		var event JetstreamEvent
+		if err := json.Unmarshal(message, &event); err != nil {
 			continue
 		}
 
-		uri := fmt.Sprintf("at://%s/%s/%s", commit.Repo, collection, rkey)
+		if event.Kind == "commit" && event.Commit != nil {
+			i.handleCommit(event)
 
-		switch op.Action {
-		case "create", "update":
-			if op.Cid != nil && len(commit.Blocks) > 0 {
-				record := extractRecord(commit.Blocks, *op.Cid)
-				if record != nil {
-					i.handleRecord(commit.Repo, collection, rkey, record, commit.Seq)
+			if event.Time > 0 {
+				if err := i.db.SetCursor("firehose_cursor", event.Time); err != nil {
+					log.Printf("Failed to save cursor: %v", err)
 				}
 			}
-		case "delete":
-			i.handleDelete(collection, uri)
-		}
-	}
-
-	if commit.Seq > 0 {
-		if err := i.db.SetCursor("firehose_cursor", commit.Seq); err != nil {
-			log.Printf("Failed to save cursor: %v", err)
 		}
 	}
 }
 
-func parseOpPath(path string) (collection, rkey string) {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == '/' {
-			return path[:i], path[i+1:]
-		}
-	}
-	return path, ""
-}
+func (i *Ingester) handleCommit(event JetstreamEvent) {
+	commit := event.Commit
+	uri := fmt.Sprintf("at://%s/%s/%s", event.Did, commit.Collection, commit.Rkey)
 
-func isMarginCollection(collection string) bool {
-	switch collection {
-	case CollectionAnnotation, CollectionHighlight, CollectionBookmark,
-		CollectionReply, CollectionLike, CollectionCollection, CollectionCollectionItem:
-		return true
-	}
-	return false
-}
-
-func extractRecord(blocks []byte, targetCid cid.Cid) map[string]interface{} {
-	reader := bytes.NewReader(blocks)
-
-	headerLen, err := binary.ReadUvarint(reader)
-	if err != nil {
-		return nil
-	}
-	reader.Seek(int64(headerLen), io.SeekCurrent)
-
-	for reader.Len() > 0 {
-		blockLen, err := binary.ReadUvarint(reader)
-		if err != nil {
-			break
-		}
-
-		blockData := make([]byte, blockLen)
-		if _, err := io.ReadFull(reader, blockData); err != nil {
-			break
-		}
-
-		blockCid, cidLen, err := parseCidFromBlock(blockData)
-		if err != nil {
-			continue
-		}
-
-		if blockCid.Equals(targetCid) {
-			var record map[string]interface{}
-			if err := cbor.Unmarshal(blockData[cidLen:], &record); err != nil {
-				return nil
+	switch commit.Operation {
+	case "create", "update":
+		if len(commit.Record) > 0 {
+			firehoseEvent := &FirehoseEvent{
+				Repo:       event.Did,
+				Collection: commit.Collection,
+				Rkey:       commit.Rkey,
+				Record:     commit.Record,
+				Operation:  commit.Operation,
+				Cursor:     event.Time,
 			}
-			return record
-		}
-	}
 
-	return nil
+			i.dispatchToHandler(firehoseEvent)
+
+			go i.triggerLazySync(event.Did)
+		}
+	case "delete":
+		i.handleDelete(commit.Collection, uri)
+	}
 }
 
-func parseCidFromBlock(data []byte) (cid.Cid, int, error) {
-	if len(data) < 2 {
-		return cid.Cid{}, 0, fmt.Errorf("data too short")
+func (i *Ingester) dispatchToHandler(event *FirehoseEvent) {
+	if handler, ok := i.handlers[event.Collection]; ok {
+		handler(event)
 	}
-	version, n1 := binary.Uvarint(data)
-	if n1 <= 0 {
-		return cid.Cid{}, 0, fmt.Errorf("invalid version varint")
+}
+
+var lastSyncAttempts sync.Map
+
+func (i *Ingester) triggerLazySync(did string) {
+	lastSync, ok := lastSyncAttempts.Load(did)
+	if ok {
+		if time.Since(lastSync.(time.Time)) < 5*time.Minute {
+			return
+		}
 	}
+	lastSyncAttempts.Store(did, time.Now())
 
-	if version == 1 {
-		codec, n2 := binary.Uvarint(data[n1:])
-		if n2 <= 0 {
-			return cid.Cid{}, 0, fmt.Errorf("invalid codec varint")
-		}
-
-		mhStart := n1 + n2
-		hashType, n3 := binary.Uvarint(data[mhStart:])
-		if n3 <= 0 {
-			return cid.Cid{}, 0, fmt.Errorf("invalid hash type varint")
-		}
-
-		hashLen, n4 := binary.Uvarint(data[mhStart+n3:])
-		if n4 <= 0 {
-			return cid.Cid{}, 0, fmt.Errorf("invalid hash length varint")
-		}
-
-		totalCidLen := mhStart + n3 + n4 + int(hashLen)
-
-		c, err := cid.Cast(data[:totalCidLen])
-		if err != nil {
-			return cid.Cid{}, 0, err
-		}
-
-		_ = codec
-		_ = hashType
-
-		return c, totalCidLen, nil
+	pds, err := xrpc.ResolveDIDToPDS(did)
+	if err != nil || pds == "" {
+		return
 	}
 
-	return cid.Cid{}, 0, fmt.Errorf("unsupported CID version")
+	_, err = i.sync.PerformSync(context.Background(), did, func(ctx context.Context, _ string) (*xrpc.Client, error) {
+		return &xrpc.Client{
+			PDS: pds,
+		}, nil
+	})
+
+	if err == nil {
+		log.Printf("Auto-synced repo for active user: %s", did)
+	}
 }
 
 func (i *Ingester) handleDelete(collection, uri string) {
@@ -289,39 +234,13 @@ func (i *Ingester) handleDelete(collection, uri string) {
 	}
 }
 
-func (i *Ingester) handleRecord(repo, collection, rkey string, record map[string]interface{}, seq int64) {
-	_ = fmt.Sprintf("at://%s/%s/%s", repo, collection, rkey)
-
-	recordJSON, err := json.Marshal(record)
+func (i *Ingester) getLastCursor() int64 {
+	cursor, err := i.db.GetCursor("firehose_cursor")
 	if err != nil {
-		return
+		log.Printf("Failed to get last cursor from DB: %v", err)
+		return 0
 	}
-
-	event := &FirehoseEvent{
-		Repo:       repo,
-		Collection: collection,
-		Rkey:       rkey,
-		Record:     recordJSON,
-		Operation:  "create",
-		Cursor:     seq,
-	}
-
-	switch collection {
-	case CollectionAnnotation:
-		i.handleAnnotation(event)
-	case CollectionHighlight:
-		i.handleHighlight(event)
-	case CollectionBookmark:
-		i.handleBookmark(event)
-	case CollectionReply:
-		i.handleReply(event)
-	case CollectionLike:
-		i.handleLike(event)
-	case CollectionCollection:
-		i.handleCollection(event)
-	case CollectionCollectionItem:
-		i.handleCollectionItem(event)
-	}
+	return cursor
 }
 
 type FirehoseEvent struct {
@@ -710,13 +629,4 @@ func (i *Ingester) handleCollectionItem(event *FirehoseEvent) {
 	} else {
 		log.Printf("Indexed collection item from %s", event.Repo)
 	}
-}
-
-func (i *Ingester) getLastCursor() int64 {
-	cursor, err := i.db.GetCursor("firehose_cursor")
-	if err != nil {
-		log.Printf("Failed to get last cursor from DB: %v", err)
-		return 0
-	}
-	return cursor
 }

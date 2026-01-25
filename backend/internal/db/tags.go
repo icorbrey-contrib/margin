@@ -1,5 +1,7 @@
 package db
 
+import "fmt"
+
 type TrendingTag struct {
 	Tag   string `json:"tag"`
 	Count int    `json:"count"`
@@ -14,12 +16,19 @@ func (db *DB) GetTrendingTags(limit int) ([]TrendingTag, error) {
 		WHERE tags_json IS NOT NULL 
 			AND tags_json != '' 
 			AND tags_json != '[]'
+			AND created_at > %s
 		GROUP BY tag
+		HAVING count > 2
 		ORDER BY count DESC
 		LIMIT ?
 	`
 
-	rows, err := db.Query(db.Rebind(query), limit)
+	dateFilter := "datetime('now', '-7 days')"
+	if db.driver == "postgres" {
+		dateFilter = "NOW() - INTERVAL '7 days'"
+	}
+
+	rows, err := db.Query(db.Rebind(fmt.Sprintf(query, dateFilter)), limit)
 	if err != nil {
 		return nil, err
 	}
