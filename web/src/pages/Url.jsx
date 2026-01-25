@@ -1,13 +1,14 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
-import { getByTarget } from "../api/client";
+import { getByTarget, searchActors } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { PenIcon, AlertIcon, SearchIcon } from "../components/Icons";
 import { Copy, Check, ExternalLink } from "lucide-react";
 
 export default function Url() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [url, setUrl] = useState("");
   const [annotations, setAnnotations] = useState([]);
   const [highlights, setHighlights] = useState([]);
@@ -17,14 +18,90 @@ export default function Url() {
   const [activeTab, setActiveTab] = useState("all");
   const [copied, setCopied] = useState(false);
 
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputRef = useRef(null);
+  const suggestionsRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const isUrl = url.includes("http") || url.includes("://");
+      if (url.length >= 2 && !isUrl) {
+        try {
+          const data = await searchActors(url);
+          setSuggestions(data.actors || []);
+          setShowSuggestions(true);
+        } catch {
+          // ignore
+        }
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [url]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleKeyDown = (e) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.max(prev - 1, -1));
+    } else if (e.key === "Enter" && selectedIndex >= 0) {
+      e.preventDefault();
+      selectSuggestion(suggestions[selectedIndex]);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+    }
+  };
+
+  const selectSuggestion = (actor) => {
+    navigate(`/profile/${encodeURIComponent(actor.handle)}`);
+  };
+
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!url.trim()) return;
 
+    setLoading(true);
+    setError(null);
+    setSearched(true);
+
+    const isProtocol = url.startsWith("http://") || url.startsWith("https://");
+    if (!isProtocol) {
+      try {
+        const actorRes = await searchActors(url);
+        if (actorRes?.actors?.length > 0) {
+          const match = actorRes.actors[0];
+          navigate(`/profile/${encodeURIComponent(match.handle)}`);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     try {
-      setLoading(true);
-      setError(null);
-      setSearched(true);
       const data = await getByTarget(url);
       setAnnotations(data.annotations || []);
       setHighlights(data.highlights || []);
@@ -87,26 +164,136 @@ export default function Url() {
   return (
     <div className="url-page">
       <div className="page-header">
-        <h1 className="page-title">Browse by URL</h1>
+        <h1 className="page-title">Explore</h1>
         <p className="page-description">
-          See annotations and highlights for any webpage
+          Search for a URL to view its context layer, or find a user by their
+          handle
         </p>
       </div>
 
-      <form onSubmit={handleSearch} className="url-input-wrapper">
+      <form
+        onSubmit={handleSearch}
+        className="url-input-wrapper"
+        style={{ position: "relative" }}
+      >
         <div className="url-input-container">
           <input
-            type="url"
+            ref={inputRef}
+            type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/article"
+            onKeyDown={handleKeyDown}
+            placeholder="https://... or handle"
             className="url-input"
+            autoComplete="off"
             required
           />
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? "Searching..." : "Search"}
           </button>
         </div>
+
+        {showSuggestions && suggestions.length > 0 && (
+          <div
+            className="login-suggestions"
+            ref={suggestionsRef}
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              marginTop: "8px",
+              width: "100%",
+              zIndex: 50,
+              background: "var(--bg-primary)",
+              borderRadius: "12px",
+              boxShadow: "var(--shadow-lg)",
+              border: "1px solid var(--border)",
+              maxHeight: "300px",
+              overflowY: "auto",
+            }}
+          >
+            {suggestions.map((actor, index) => (
+              <button
+                key={actor.did}
+                type="button"
+                className={`login-suggestion ${index === selectedIndex ? "selected" : ""}`}
+                onClick={() => selectSuggestion(actor)}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  border: "none",
+                  background:
+                    index === selectedIndex
+                      ? "var(--bg-secondary)"
+                      : "transparent",
+                  cursor: "pointer",
+                }}
+              >
+                <div
+                  className="login-suggestion-avatar"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    background: "var(--bg-tertiary)",
+                  }}
+                >
+                  {actor.avatar ? (
+                    <img
+                      src={actor.avatar}
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "100%",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      {(actor.displayName || actor.handle)
+                        .substring(0, 2)
+                        .toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="login-suggestion-info"
+                  style={{ display: "flex", flexDirection: "column" }}
+                >
+                  <span
+                    className="login-suggestion-name"
+                    style={{ fontWeight: 600, fontSize: "0.95rem" }}
+                  >
+                    {actor.displayName || actor.handle}
+                  </span>
+                  <span
+                    className="login-suggestion-handle"
+                    style={{
+                      color: "var(--text-secondary)",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    @{actor.handle}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </form>
 
       {error && (
