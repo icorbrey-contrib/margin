@@ -1,0 +1,10 @@
+name = "margin-avatar-proxy"
+main = "worker.js"
+compatibility_date = "2026-01-25"
+
+[observability]
+enabled = true
+
+[[routes]]
+pattern = "avatars.margin.at"
+custom_domain = true

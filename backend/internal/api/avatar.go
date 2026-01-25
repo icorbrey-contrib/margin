@@ -1,26 +1,15 @@
 package api
 
 import (
-	"encoding/json"
-	"io"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
-	"sync"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-)
-
-type avatarCache struct {
-	url       string
-	fetchedAt time.Time
-}
-
-var (
-	avatarCacheMu  sync.RWMutex
-	avatarCacheMap = make(map[string]avatarCache)
-	avatarCacheTTL = 5 * time.Minute
 )
 
 func (h *Handler) HandleAvatarProxy(w http.ResponseWriter, r *http.Request) {
@@ -34,73 +23,21 @@ func (h *Handler) HandleAvatarProxy(w http.ResponseWriter, r *http.Request) {
 		did = decoded
 	}
 
-	avatarURL := getAvatarURL(did)
-	if avatarURL == "" {
-		http.Error(w, "Avatar not found", http.StatusNotFound)
+	cdnURL := os.Getenv("AVATAR_CDN_URL")
+	if cdnURL == "" {
+		cdnURL = "https://avatars.margin.at"
+	}
+
+	secret := os.Getenv("AVATAR_SHARED_SECRET")
+	if secret != "" {
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write([]byte(did))
+		sig := hex.EncodeToString(mac.Sum(nil))
+		http.Redirect(w, r, fmt.Sprintf("%s/%s/%s", cdnURL, sig, did), http.StatusMovedPermanently)
 		return
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(avatarURL)
-	if err != nil {
-		http.Error(w, "Failed to fetch avatar", http.StatusBadGateway)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Avatar not available", http.StatusNotFound)
-		return
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "image/jpeg"
-	}
-
-	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Cache-Control", "public, max-age=3600")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	io.Copy(w, resp.Body)
-}
-
-func getAvatarURL(did string) string {
-	avatarCacheMu.RLock()
-	if cached, ok := avatarCacheMap[did]; ok && time.Since(cached.fetchedAt) < avatarCacheTTL {
-		avatarCacheMu.RUnlock()
-		return cached.url
-	}
-	avatarCacheMu.RUnlock()
-
-	q := url.Values{}
-	q.Add("actor", did)
-
-	resp, err := http.Get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?" + q.Encode())
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return ""
-	}
-
-	var profile struct {
-		Avatar string `json:"avatar"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
-		return ""
-	}
-
-	avatarCacheMu.Lock()
-	avatarCacheMap[did] = avatarCache{
-		url:       profile.Avatar,
-		fetchedAt: time.Now(),
-	}
-	avatarCacheMu.Unlock()
-
-	return profile.Avatar
+	http.Redirect(w, r, fmt.Sprintf("%s/unsigned/%s", cdnURL, did), http.StatusMovedPermanently)
 }
 
 func getProxiedAvatarURL(did, originalURL string) string {

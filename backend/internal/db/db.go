@@ -141,10 +141,21 @@ func New(dsn string) (*DB, error) {
 	}
 
 	if driver == "sqlite3" {
-		db.SetMaxOpenConns(1)
-	} else {
+		if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
+			return nil, fmt.Errorf("failed to set WAL mode: %w", err)
+		}
+		db.Exec("PRAGMA synchronous=NORMAL;")
+		db.Exec("PRAGMA busy_timeout=5000;")
+		db.Exec("PRAGMA cache_size=-2000;")
+		db.Exec("PRAGMA foreign_keys=ON;")
+
 		db.SetMaxOpenConns(25)
-		db.SetMaxIdleConns(5)
+		db.SetMaxIdleConns(25)
+		db.SetConnMaxLifetime(5 * time.Minute)
+	} else {
+		db.SetMaxOpenConns(50)
+		db.SetMaxIdleConns(25)
+		db.SetConnMaxLifetime(10 * time.Minute)
 	}
 
 	if err := db.Ping(); err != nil {

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -37,6 +38,10 @@ func redactURL(u *url.URL) string {
 
 	for _, key := range sensitiveKeys {
 		if q.Has(key) {
+			val := q.Get(key)
+			if strings.Contains(val, "margin.at") {
+				continue
+			}
 			q.Set(key, "[REDACTED]")
 		}
 	}
