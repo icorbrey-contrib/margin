@@ -147,10 +147,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		"at.margin.reply " +
 		"at.margin.like " +
 		"at.margin.collection " +
-		"at.margin.collectionItem " +
-		"rpc:app.bsky.actor.searchActorsTypeahead?aud=* " +
-		"rpc:app.bsky.actor.getProfiles?aud=* " +
-		"rpc:com.atproto.identity.resolveHandle?aud=*"
+		"at.margin.collectionItem"
 
 	parResp, state, dpopNonce, err := client.SendPAR(meta, handle, scope, dpopKey, pkceChallenge)
 	if err != nil {
@@ -257,10 +254,7 @@ func (h *Handler) HandleStart(w http.ResponseWriter, r *http.Request) {
 		"at.margin.reply " +
 		"at.margin.like " +
 		"at.margin.collection " +
-		"at.margin.collectionItem " +
-		"rpc:app.bsky.actor.searchActorsTypeahead?aud=* " +
-		"rpc:app.bsky.actor.getProfiles?aud=* " +
-		"rpc:com.atproto.identity.resolveHandle?aud=*"
+		"at.margin.collectionItem"
 
 	parResp, state, dpopNonce, err := client.SendPAR(meta, req.Handle, scope, dpopKey, pkceChallenge)
 	if err != nil {
@@ -517,10 +511,7 @@ func (h *Handler) HandleClientMetadata(w http.ResponseWriter, r *http.Request) {
 			"at.margin.reply " +
 			"at.margin.like " +
 			"at.margin.collection " +
-			"at.margin.collectionItem " +
-			"rpc:app.bsky.actor.searchActorsTypeahead?aud=* " +
-			"rpc:app.bsky.actor.getProfiles?aud=* " +
-			"rpc:com.atproto.identity.resolveHandle?aud=*",
+			"at.margin.collectionItem",
 		"token_endpoint_auth_method":      "private_key_jwt",
 		"token_endpoint_auth_signing_alg": "ES256",
 		"dpop_bound_access_tokens":        true,
