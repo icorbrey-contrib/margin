@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"margin.at/internal/db"
@@ -29,6 +30,9 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 		xrpc.CollectionLike,
 		xrpc.CollectionCollection,
 		xrpc.CollectionCollectionItem,
+		xrpc.CollectionSembleCard,
+		xrpc.CollectionSembleCollection,
+		xrpc.CollectionSembleCollectionLink,
 	}
 
 	results := make(map[string]string)
@@ -101,16 +105,20 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 			switch collectionNSID {
 			case xrpc.CollectionAnnotation:
 				localURIs, err = s.db.GetAnnotationURIs(did)
+				localURIs = filterURIsByCollection(localURIs, xrpc.CollectionAnnotation)
 			case xrpc.CollectionHighlight:
 				localURIs, err = s.db.GetHighlightURIs(did)
+				localURIs = filterURIsByCollection(localURIs, xrpc.CollectionHighlight)
 			case xrpc.CollectionBookmark:
 				localURIs, err = s.db.GetBookmarkURIs(did)
+				localURIs = filterURIsByCollection(localURIs, xrpc.CollectionBookmark)
 			case xrpc.CollectionCollection:
 				cols, e := s.db.GetCollectionsByAuthor(did)
 				if e == nil {
 					for _, c := range cols {
 						localURIs = append(localURIs, c.URI)
 					}
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionCollection)
 				} else {
 					err = e
 				}
@@ -120,6 +128,7 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 					for _, item := range items {
 						localURIs = append(localURIs, item.URI)
 					}
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionCollectionItem)
 				} else {
 					err = e
 				}
@@ -129,6 +138,7 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 					for _, r := range replies {
 						localURIs = append(localURIs, r.URI)
 					}
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionReply)
 				} else {
 					err = e
 				}
@@ -138,6 +148,41 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 					for _, l := range likes {
 						localURIs = append(localURIs, l.URI)
 					}
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionLike)
+				} else {
+					err = e
+				}
+			case xrpc.CollectionSembleCard:
+				annos, e1 := s.db.GetAnnotationURIs(did)
+				books, e2 := s.db.GetBookmarkURIs(did)
+				if e1 != nil {
+					err = e1
+					break
+				}
+				if e2 != nil {
+					err = e2
+					break
+				}
+				localURIs = append(localURIs, annos...)
+				localURIs = append(localURIs, books...)
+				localURIs = filterURIsByCollection(localURIs, xrpc.CollectionSembleCard)
+			case xrpc.CollectionSembleCollection:
+				cols, e := s.db.GetCollectionsByAuthor(did)
+				if e == nil {
+					for _, c := range cols {
+						localURIs = append(localURIs, c.URI)
+					}
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionSembleCollection)
+				} else {
+					err = e
+				}
+			case xrpc.CollectionSembleCollectionLink:
+				items, e := s.db.GetCollectionItemsByAuthor(did)
+				if e == nil {
+					for _, item := range items {
+						localURIs = append(localURIs, item.URI)
+					}
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionSembleCollectionLink)
 				} else {
 					err = e
 				}
@@ -161,6 +206,13 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 							_ = s.db.DeleteReply(uri)
 						case xrpc.CollectionLike:
 							_ = s.db.DeleteLike(uri)
+						case xrpc.CollectionSembleCard:
+							_ = s.db.DeleteAnnotation(uri)
+							_ = s.db.DeleteBookmark(uri)
+						case xrpc.CollectionSembleCollection:
+							_ = s.db.DeleteCollection(uri)
+						case xrpc.CollectionSembleCollectionLink:
+							_ = s.db.RemoveFromCollection(uri)
 						}
 						deletedCount++
 					}
@@ -173,6 +225,20 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 		}
 	}
 	return results, nil
+}
+
+func filterURIsByCollection(uris []string, collectionNSID string) []string {
+	if len(uris) == 0 || collectionNSID == "" {
+		return uris
+	}
+	needle := "/" + collectionNSID + "/"
+	out := make([]string, 0, len(uris))
+	for _, u := range uris {
+		if strings.Contains(u, needle) {
+			out = append(out, u)
+		}
+	}
+	return out
 }
 
 func strPtr(s string) *string {
@@ -422,6 +488,119 @@ func (s *Service) upsertRecord(did, collection, uri, cid string, value json.RawM
 			SubjectURI: record.Subject.URI,
 			CreatedAt:  createdAt,
 			IndexedAt:  time.Now(),
+		})
+
+	case xrpc.CollectionSembleCard:
+		var card xrpc.SembleCard
+		if err := json.Unmarshal(value, &card); err != nil {
+			return err
+		}
+
+		createdAt := card.GetCreatedAtTime()
+
+		content, err := card.ParseContent()
+		if err != nil {
+			return nil
+		}
+
+		switch card.Type {
+		case "NOTE":
+			note, ok := content.(*xrpc.SembleNoteContent)
+			if !ok {
+				return nil
+			}
+
+			targetSource := card.URL
+			if targetSource == "" {
+				return nil
+			}
+
+			targetHash := db.HashURL(targetSource)
+			motivation := "commenting"
+			bodyValue := note.Text
+
+			return s.db.CreateAnnotation(&db.Annotation{
+				URI:          uri,
+				AuthorDID:    did,
+				Motivation:   motivation,
+				BodyValue:    &bodyValue,
+				TargetSource: targetSource,
+				TargetHash:   targetHash,
+				CreatedAt:    createdAt,
+				IndexedAt:    time.Now(),
+				CID:          cidPtr,
+			})
+
+		case "URL":
+			urlContent, ok := content.(*xrpc.SembleURLContent)
+			if !ok {
+				return nil
+			}
+
+			source := urlContent.URL
+			if source == "" {
+				return nil
+			}
+			sourceHash := db.HashURL(source)
+
+			var titlePtr *string
+			if urlContent.Metadata != nil && urlContent.Metadata.Title != "" {
+				t := urlContent.Metadata.Title
+				titlePtr = &t
+			}
+
+			return s.db.CreateBookmark(&db.Bookmark{
+				URI:        uri,
+				AuthorDID:  did,
+				Source:     source,
+				SourceHash: sourceHash,
+				Title:      titlePtr,
+				CreatedAt:  createdAt,
+				IndexedAt:  time.Now(),
+				CID:        cidPtr,
+			})
+		}
+
+	case xrpc.CollectionSembleCollection:
+		var record xrpc.SembleCollection
+		if err := json.Unmarshal(value, &record); err != nil {
+			return err
+		}
+		createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
+
+		var descPtr, iconPtr *string
+		if record.Description != "" {
+			d := record.Description
+			descPtr = &d
+		}
+		icon := "icon:semble"
+		iconPtr = &icon
+
+		return s.db.CreateCollection(&db.Collection{
+			URI:         uri,
+			AuthorDID:   did,
+			Name:        record.Name,
+			Description: descPtr,
+			Icon:        iconPtr,
+			CreatedAt:   createdAt,
+			IndexedAt:   time.Now(),
+		})
+
+	case xrpc.CollectionSembleCollectionLink:
+		var record xrpc.SembleCollectionLink
+		if err := json.Unmarshal(value, &record); err != nil {
+			return err
+		}
+		createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
+
+		return s.db.AddToCollection(&db.CollectionItem{
+			URI:           uri,
+			AuthorDID:     did,
+			CollectionURI: record.Collection.URI,
+			AnnotationURI: record.Card.URI,
+			Position:      0,
+			CreatedAt:     createdAt,
+			IndexedAt:     time.Now(),
 		})
 	}
 	return nil

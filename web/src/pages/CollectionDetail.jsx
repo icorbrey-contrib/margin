@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import { ArrowLeft, Edit2, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Plus, ExternalLink } from "lucide-react";
 import {
-  getCollections,
+  getCollection,
   getCollectionItems,
   removeItemFromCollection,
   deleteCollection,
@@ -27,6 +27,8 @@ export default function CollectionDetail() {
   const [error, setError] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   const searchParams = new URLSearchParams(location.search);
   const paramAuthorDid = searchParams.get("author");
 
@@ -34,77 +36,95 @@ export default function CollectionDetail() {
     user?.did &&
     (collection?.creator?.did === user.did || paramAuthorDid === user.did);
 
-  const fetchContext = useCallback(async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    let active = true;
 
-      let targetUri = null;
-      let targetDid = paramAuthorDid || user?.did;
-
-      if (handle && rkey) {
-        try {
-          targetDid = await resolveHandle(handle);
-          targetUri = `at://${targetDid}/at.margin.collection/${rkey}`;
-        } catch (e) {
-          console.error("Failed to resolve handle", e);
-        }
-      } else if (wildcardPath) {
-        targetUri = decodeURIComponent(wildcardPath);
-      } else if (rkey && targetDid) {
-        targetUri = `at://${targetDid}/at.margin.collection/${rkey}`;
+    const fetchContext = async () => {
+      if (active) {
+        setLoading(true);
+        setError(null);
       }
 
-      if (!targetUri) {
-        if (!user && !handle && !paramAuthorDid) {
-          setError("Please log in to view your collections");
+      try {
+        let targetUri = null;
+        let targetDid = paramAuthorDid || user?.did;
+
+        if (handle && rkey) {
+          try {
+            targetDid = await resolveHandle(handle);
+            if (!active) return;
+            targetUri = `at://${targetDid}/at.margin.collection/${rkey}`;
+          } catch (e) {
+            console.error("Failed to resolve handle", e);
+            if (active) setError("Could not resolve user handle");
+          }
+        } else if (wildcardPath) {
+          targetUri = decodeURIComponent(wildcardPath);
+        } else if (rkey && targetDid) {
+          targetUri = `at://${targetDid}/at.margin.collection/${rkey}`;
+        }
+
+        if (!targetUri) {
+          if (active) {
+            if (!user && !handle && !paramAuthorDid) {
+              setError("Please log in to view your collections");
+            } else if (!error) {
+              setError("Invalid collection URL");
+            }
+          }
           return;
         }
-        setError("Invalid collection URL");
-        return;
+
+        if (!targetDid && targetUri.startsWith("at://")) {
+          const parts = targetUri.split("/");
+          if (parts.length > 2) targetDid = parts[2];
+        }
+
+        const collectionData = await getCollection(targetUri);
+        if (!active) return;
+
+        setCollection(collectionData);
+
+        const itemsData = await getCollectionItems(collectionData.uri);
+        if (!active) return;
+
+        setItems(itemsData || []);
+      } catch (err) {
+        console.error("Fetch failed:", err);
+        if (active) {
+          if (
+            err.message.includes("404") ||
+            err.message.includes("not found")
+          ) {
+            setError("Collection not found");
+          } else {
+            setError(err.message || "Failed to load collection");
+          }
+        }
+      } finally {
+        if (active) setLoading(false);
       }
+    };
 
-      if (!targetDid && targetUri.startsWith("at://")) {
-        const parts = targetUri.split("/");
-        if (parts.length > 2) targetDid = parts[2];
-      }
-
-      if (!targetDid) {
-        setError("Could not determine collection owner");
-        return;
-      }
-
-      const [cols, itemsData] = await Promise.all([
-        getCollections(targetDid),
-        getCollectionItems(targetUri),
-      ]);
-
-      const found =
-        cols.items?.find((c) => c.uri === targetUri) ||
-        cols.items?.find(
-          (c) => targetUri && c.uri.endsWith(targetUri.split("/").pop()),
-        );
-
-      if (!found) {
-        setError("Collection not found");
-        return;
-      }
-      setCollection(found);
-      setItems(itemsData || []);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load collection");
-    } finally {
-      setLoading(false);
-    }
-  }, [paramAuthorDid, user, handle, rkey, wildcardPath]);
-
-  useEffect(() => {
     fetchContext();
-  }, [fetchContext]);
+
+    return () => {
+      active = false;
+    };
+  }, [
+    paramAuthorDid,
+    user?.did,
+    handle,
+    rkey,
+    wildcardPath,
+    refreshTrigger,
+    error,
+    user,
+  ]);
 
   const handleEditSuccess = () => {
-    fetchContext();
     setIsEditModalOpen(false);
+    setRefreshTrigger((v) => v + 1);
   };
 
   const handleDeleteItem = async (itemUri) => {
@@ -189,25 +209,48 @@ export default function CollectionDetail() {
           />
           {isOwner && (
             <>
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="collection-detail-edit"
-                title="Edit Collection"
-              >
-                <Edit2 size={18} />
-              </button>
-              <button
-                onClick={async () => {
-                  if (confirm("Delete this collection and all its items?")) {
-                    await deleteCollection(collection.uri);
-                    navigate("/collections");
-                  }
-                }}
-                className="collection-detail-delete"
-                title="Delete Collection"
-              >
-                <Trash2 size={18} />
-              </button>
+              {collection.uri.includes("network.cosmik.collection") ? (
+                <a
+                  href={`https://semble.so/profile/${collection.creator?.handle || collection.creator?.did}/collections/${collection.uri.split("/").pop()}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="collection-detail-edit btn btn-secondary btn-sm"
+                  style={{
+                    textDecoration: "none",
+                    display: "flex",
+                    gap: "6px",
+                    alignItems: "center",
+                  }}
+                  title="Manage on Semble"
+                >
+                  <span>Manage on Semble</span>
+                  <ExternalLink size={16} />
+                </a>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="collection-detail-edit"
+                    title="Edit Collection"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (
+                        confirm("Delete this collection and all its items?")
+                      ) {
+                        await deleteCollection(collection.uri);
+                        navigate("/collections");
+                      }
+                    }}
+                    className="collection-detail-delete"
+                    title="Delete Collection"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -229,15 +272,16 @@ export default function CollectionDetail() {
         ) : (
           items.map((item) => (
             <div key={item.uri} className="collection-item-wrapper">
-              {isOwner && (
-                <button
-                  onClick={() => handleDeleteItem(item.uri)}
-                  className="collection-item-remove"
-                  title="Remove from collection"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
+              {isOwner &&
+                !collection.uri.includes("network.cosmik.collection") && (
+                  <button
+                    onClick={() => handleDeleteItem(item.uri)}
+                    className="collection-item-remove"
+                    title="Remove from collection"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
 
               {item.annotation ? (
                 <AnnotationCard annotation={item.annotation} />

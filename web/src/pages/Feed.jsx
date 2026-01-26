@@ -18,6 +18,10 @@ export default function Feed() {
     return localStorage.getItem("feedFilter") || "all";
   });
 
+  const [feedType, setFeedType] = useState(() => {
+    return localStorage.getItem("feedType") || "all";
+  });
+
   const [annotations, setAnnotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,6 +29,10 @@ export default function Feed() {
   useEffect(() => {
     localStorage.setItem("feedFilter", filter);
   }, [filter]);
+
+  useEffect(() => {
+    localStorage.setItem("feedType", feedType);
+  }, [feedType]);
 
   const [collectionModalState, setCollectionModalState] = useState({
     isOpen: false,
@@ -39,7 +47,7 @@ export default function Feed() {
         setLoading(true);
         let creatorDid = "";
 
-        if (filter === "my-tags") {
+        if (feedType === "my-feed") {
           if (user?.did) {
             creatorDid = user.did;
           } else {
@@ -54,6 +62,8 @@ export default function Feed() {
           0,
           tagFilter || "",
           creatorDid,
+          feedType,
+          filter !== "all" ? filter : "",
         );
         setAnnotations(data.items || []);
       } catch (err) {
@@ -63,20 +73,26 @@ export default function Feed() {
       }
     }
     fetchFeed();
-  }, [tagFilter, filter, user]);
+  }, [tagFilter, filter, feedType, user]);
 
   const filteredAnnotations =
-    filter === "all" || filter === "my-tags"
-      ? annotations
-      : annotations.filter((a) => {
-          if (filter === "commenting")
-            return a.motivation === "commenting" || a.type === "Annotation";
-          if (filter === "highlighting")
-            return a.motivation === "highlighting" || a.type === "Highlight";
-          if (filter === "bookmarking")
-            return a.motivation === "bookmarking" || a.type === "Bookmark";
-          return a.motivation === filter;
-        });
+    feedType === "all" ||
+    feedType === "popular" ||
+    feedType === "semble" ||
+    feedType === "margin" ||
+    feedType === "my-feed"
+      ? filter === "all"
+        ? annotations
+        : annotations.filter((a) => {
+            if (filter === "commenting")
+              return a.motivation === "commenting" || a.type === "Annotation";
+            if (filter === "highlighting")
+              return a.motivation === "highlighting" || a.type === "Highlight";
+            if (filter === "bookmarking")
+              return a.motivation === "bookmarking" || a.type === "Bookmark";
+            return a.motivation === filter;
+          })
+      : annotations;
 
   return (
     <div className="feed-page">
@@ -117,35 +133,68 @@ export default function Feed() {
       </div>
 
       {}
-      <div className="feed-filters">
+      <div
+        className="feed-filters"
+        style={{
+          marginBottom: "12px",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
         <button
-          className={`filter-tab ${filter === "all" ? "active" : ""}`}
-          onClick={() => setFilter("all")}
+          className={`filter-tab ${feedType === "all" ? "active" : ""}`}
+          onClick={() => setFeedType("all")}
         >
           All
         </button>
+        <button
+          className={`filter-tab ${feedType === "popular" ? "active" : ""}`}
+          onClick={() => setFeedType("popular")}
+        >
+          Popular
+        </button>
+        <button
+          className={`filter-tab ${feedType === "margin" ? "active" : ""}`}
+          onClick={() => setFeedType("margin")}
+        >
+          Margin
+        </button>
+        <button
+          className={`filter-tab ${feedType === "semble" ? "active" : ""}`}
+          onClick={() => setFeedType("semble")}
+        >
+          Semble
+        </button>
         {user && (
           <button
-            className={`filter-tab ${filter === "my-tags" ? "active" : ""}`}
-            onClick={() => setFilter("my-tags")}
+            className={`filter-tab ${feedType === "my-feed" ? "active" : ""}`}
+            onClick={() => setFeedType("my-feed")}
           >
             My Feed
           </button>
         )}
+      </div>
+
+      <div className="feed-filters">
         <button
-          className={`filter-tab ${filter === "commenting" ? "active" : ""}`}
+          className={`filter-pill ${filter === "all" ? "active" : ""}`}
+          onClick={() => setFilter("all")}
+        >
+          All Types
+        </button>
+        <button
+          className={`filter-pill ${filter === "commenting" ? "active" : ""}`}
           onClick={() => setFilter("commenting")}
         >
           Annotations
         </button>
         <button
-          className={`filter-tab ${filter === "highlighting" ? "active" : ""}`}
+          className={`filter-pill ${filter === "highlighting" ? "active" : ""}`}
           onClick={() => setFilter("highlighting")}
         >
           Highlights
         </button>
         <button
-          className={`filter-tab ${filter === "bookmarking" ? "active" : ""}`}
+          className={`filter-pill ${filter === "bookmarking" ? "active" : ""}`}
           onClick={() => setFilter("bookmarking")}
         >
           Bookmarks

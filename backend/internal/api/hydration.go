@@ -549,6 +549,9 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 			highlightURIs = append(highlightURIs, item.AnnotationURI)
 		} else if strings.Contains(item.AnnotationURI, "at.margin.bookmark") {
 			bookmarkURIs = append(bookmarkURIs, item.AnnotationURI)
+		} else if strings.Contains(item.AnnotationURI, "network.cosmik.card") {
+			annotationURIs = append(annotationURIs, item.AnnotationURI)
+			bookmarkURIs = append(bookmarkURIs, item.AnnotationURI)
 		}
 	}
 
@@ -633,6 +636,17 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 			apiItem.Highlight = &val
 		} else if val, ok := bookmarksMap[item.AnnotationURI]; ok {
 			apiItem.Bookmark = &val
+		} else if strings.Contains(item.AnnotationURI, "network.cosmik.card") {
+			apiItem.Annotation = &APIAnnotation{
+				ID:   item.AnnotationURI,
+				Type: "Semble Card",
+				Target: APITarget{
+					Source: "https://semble.so",
+					Title:  "Content Unavailable",
+				},
+				CreatedAt: item.CreatedAt,
+				Author:    profiles[item.AuthorDID],
+			}
 		}
 
 		result[i] = apiItem

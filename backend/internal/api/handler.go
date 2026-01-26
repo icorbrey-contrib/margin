@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -62,6 +64,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/collections/{collection}/items", collectionService.GetCollectionItems)
 		r.Delete("/collections/items", collectionService.RemoveCollectionItem)
 		r.Get("/collections/containing", collectionService.GetAnnotationCollections)
+		r.Get("/collection", collectionService.GetCollection)
 		r.Post("/sync", h.SyncAll)
 
 		r.Get("/targets", h.GetByTarget)
@@ -138,10 +141,11 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	limit := parseIntParam(r, "limit", 50)
 	tag := r.URL.Query().Get("tag")
 	creator := r.URL.Query().Get("creator")
+	feedType := r.URL.Query().Get("type")
 
 	viewerDID := h.getViewerDID(r)
 
-	if viewerDID != "" && (creator == viewerDID || (creator == "" && tag == "")) {
+	if viewerDID != "" && (creator == viewerDID || (creator == "" && tag == "" && feedType == "my-feed")) {
 		if creator == viewerDID {
 			h.serveUserFeedFromPDS(w, r, viewerDID, tag, limit)
 			return
@@ -154,36 +158,78 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	var collectionItems []db.CollectionItem
 	var err error
 
+	motivation := r.URL.Query().Get("motivation")
+
 	if tag != "" {
 		if creator != "" {
-			annotations, _ = h.db.GetAnnotationsByTagAndAuthor(tag, creator, limit, 0)
-			highlights, _ = h.db.GetHighlightsByTagAndAuthor(tag, creator, limit, 0)
-			bookmarks, _ = h.db.GetBookmarksByTagAndAuthor(tag, creator, limit, 0)
+			if motivation == "" || motivation == "commenting" {
+				annotations, _ = h.db.GetAnnotationsByTagAndAuthor(tag, creator, limit, 0)
+			}
+			if motivation == "" || motivation == "highlighting" {
+				highlights, _ = h.db.GetHighlightsByTagAndAuthor(tag, creator, limit, 0)
+			}
+			if motivation == "" || motivation == "bookmarking" {
+				bookmarks, _ = h.db.GetBookmarksByTagAndAuthor(tag, creator, limit, 0)
+			}
 			collectionItems = []db.CollectionItem{}
 		} else {
-			annotations, _ = h.db.GetAnnotationsByTag(tag, limit, 0)
-			highlights, _ = h.db.GetHighlightsByTag(tag, limit, 0)
-			bookmarks, _ = h.db.GetBookmarksByTag(tag, limit, 0)
+			if motivation == "" || motivation == "commenting" {
+				annotations, _ = h.db.GetAnnotationsByTag(tag, limit, 0)
+			}
+			if motivation == "" || motivation == "highlighting" {
+				highlights, _ = h.db.GetHighlightsByTag(tag, limit, 0)
+			}
+			if motivation == "" || motivation == "bookmarking" {
+				bookmarks, _ = h.db.GetBookmarksByTag(tag, limit, 0)
+			}
 			collectionItems = []db.CollectionItem{}
 		}
 	} else if creator != "" {
-		annotations, _ = h.db.GetAnnotationsByAuthor(creator, limit, 0)
-		highlights, _ = h.db.GetHighlightsByAuthor(creator, limit, 0)
-		bookmarks, _ = h.db.GetBookmarksByAuthor(creator, limit, 0)
+		if motivation == "" || motivation == "commenting" {
+			annotations, _ = h.db.GetAnnotationsByAuthor(creator, limit, 0)
+		}
+		if motivation == "" || motivation == "highlighting" {
+			highlights, _ = h.db.GetHighlightsByAuthor(creator, limit, 0)
+		}
+		if motivation == "" || motivation == "bookmarking" {
+			bookmarks, _ = h.db.GetBookmarksByAuthor(creator, limit, 0)
+		}
 		collectionItems = []db.CollectionItem{}
 	} else {
-		annotations, _ = h.db.GetRecentAnnotations(limit, 0)
-		highlights, _ = h.db.GetRecentHighlights(limit, 0)
-		bookmarks, _ = h.db.GetRecentBookmarks(limit, 0)
-		collectionItems, err = h.db.GetRecentCollectionItems(limit, 0)
-		if err != nil {
-			log.Printf("Error fetching collection items: %v\n", err)
+		if motivation == "" || motivation == "commenting" {
+			annotations, _ = h.db.GetRecentAnnotations(limit, 0)
+		}
+		if motivation == "" || motivation == "highlighting" {
+			highlights, _ = h.db.GetRecentHighlights(limit, 0)
+		}
+		if motivation == "" || motivation == "bookmarking" {
+			bookmarks, _ = h.db.GetRecentBookmarks(limit, 0)
+		}
+		if motivation == "" {
+			collectionItems, err = h.db.GetRecentCollectionItems(limit, 0)
+			if err != nil {
+				log.Printf("Error fetching collection items: %v\n", err)
+			}
 		}
 	}
 
 	authAnnos, _ := hydrateAnnotations(h.db, annotations, viewerDID)
 	authHighs, _ := hydrateHighlights(h.db, highlights, viewerDID)
 	authBooks, _ := hydrateBookmarks(h.db, bookmarks, viewerDID)
+
+	if len(collectionItems) > 0 {
+		var sembleURIs []string
+		for _, item := range collectionItems {
+			if strings.Contains(item.AnnotationURI, "network.cosmik.card") {
+				sembleURIs = append(sembleURIs, item.AnnotationURI)
+			}
+		}
+		if len(sembleURIs) > 0 {
+			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+			defer cancel()
+			ensureSembleCardsIndexed(ctx, h.db, sembleURIs)
+		}
+	}
 
 	authCollectionItems, _ := hydrateCollectionItems(h.db, collectionItems, viewerDID)
 
@@ -201,7 +247,41 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		feed = append(feed, ci)
 	}
 
-	sortFeed(feed)
+	if feedType != "" && feedType != "all" && feedType != "my-feed" {
+		var filtered []interface{}
+		for _, item := range feed {
+			isSemble := false
+			var uri string
+			switch v := item.(type) {
+			case APIAnnotation:
+				uri = v.ID
+			case APIHighlight:
+				uri = v.ID
+			case APIBookmark:
+				uri = v.ID
+			case APICollectionItem:
+				uri = v.ID
+			}
+			if strings.Contains(uri, "network.cosmik") {
+				isSemble = true
+			}
+
+			if feedType == "semble" && isSemble {
+				filtered = append(filtered, item)
+			} else if feedType == "margin" && !isSemble {
+				filtered = append(filtered, item)
+			} else if feedType == "popular" {
+				filtered = append(filtered, item)
+			}
+		}
+		feed = filtered
+	}
+
+	if feedType == "popular" {
+		sortFeedByPopularity(feed)
+	} else {
+		sortFeed(feed)
+	}
 
 	if len(feed) > limit {
 		feed = feed[:limit]
@@ -289,9 +369,34 @@ func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, d
 		}
 	}()
 
+	collectionItems := []db.CollectionItem{}
+	if tag == "" {
+		items, err := h.db.GetCollectionItemsByAuthor(did)
+		if err != nil {
+			log.Printf("Error fetching collection items for user feed: %v", err)
+		} else {
+			collectionItems = items
+		}
+	}
+
+	if len(collectionItems) > 0 {
+		var sembleURIs []string
+		for _, item := range collectionItems {
+			if strings.Contains(item.AnnotationURI, "network.cosmik.card") {
+				sembleURIs = append(sembleURIs, item.AnnotationURI)
+			}
+		}
+		if len(sembleURIs) > 0 {
+			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+			defer cancel()
+			ensureSembleCardsIndexed(ctx, h.db, sembleURIs)
+		}
+	}
+
 	authAnnos, _ := hydrateAnnotations(h.db, annotations, did)
 	authHighs, _ := hydrateHighlights(h.db, highlights, did)
 	authBooks, _ := hydrateBookmarks(h.db, bookmarks, did)
+	authCollectionItems, _ := hydrateCollectionItems(h.db, collectionItems, did)
 
 	var feed []interface{}
 	for _, a := range authAnnos {
@@ -302,6 +407,9 @@ func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, d
 	}
 	for _, b := range authBooks {
 		feed = append(feed, b)
+	}
+	for _, ci := range authCollectionItems {
+		feed = append(feed, ci)
 	}
 
 	sortFeed(feed)
@@ -363,6 +471,43 @@ func getCreatedAt(item interface{}) time.Time {
 	}
 }
 
+func sortFeedByPopularity(feed []interface{}) {
+	for i := 0; i < len(feed); i++ {
+		for j := i + 1; j < len(feed); j++ {
+			p1 := getPopularity(feed[i])
+			p2 := getPopularity(feed[j])
+			if p1 < p2 {
+				feed[i], feed[j] = feed[j], feed[i]
+			}
+		}
+	}
+}
+
+func getPopularity(item interface{}) int {
+	switch v := item.(type) {
+	case APIAnnotation:
+		return v.LikeCount + v.ReplyCount
+	case APIHighlight:
+		return v.LikeCount + v.ReplyCount
+	case APIBookmark:
+		return v.LikeCount + v.ReplyCount
+	case APICollectionItem:
+		pop := 0
+		if v.Annotation != nil {
+			pop += v.Annotation.LikeCount + v.Annotation.ReplyCount
+		}
+		if v.Highlight != nil {
+			pop += v.Highlight.LikeCount + v.Highlight.ReplyCount
+		}
+		if v.Bookmark != nil {
+			pop += v.Bookmark.LikeCount + v.Bookmark.ReplyCount
+		}
+		return pop
+	default:
+		return 0
+	}
+}
+
 func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Query().Get("uri")
 	if uri == "" {
@@ -400,6 +545,33 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 			if enriched, _ := hydrateHighlights(h.db, []db.Highlight{*highlight}, h.getViewerDID(r)); len(enriched) > 0 {
 				serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 				return
+			}
+		}
+	}
+
+	if strings.Contains(uri, "at.margin.annotation") || strings.Contains(uri, "at.margin.bookmark") {
+		if strings.HasPrefix(uri, "at://") {
+			uriWithoutScheme := strings.TrimPrefix(uri, "at://")
+			parts := strings.Split(uriWithoutScheme, "/")
+			if len(parts) >= 3 {
+				did := parts[0]
+				rkey := parts[len(parts)-1]
+
+				sembleURI := fmt.Sprintf("at://%s/network.cosmik.card/%s", did, rkey)
+
+				if annotation, err := h.db.GetAnnotationByURI(sembleURI); err == nil {
+					if enriched, _ := hydrateAnnotations(h.db, []db.Annotation{*annotation}, h.getViewerDID(r)); len(enriched) > 0 {
+						serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
+						return
+					}
+				}
+
+				if bookmark, err := h.db.GetBookmarkByURI(sembleURI); err == nil {
+					if enriched, _ := hydrateBookmarks(h.db, []db.Bookmark{*bookmark}, h.getViewerDID(r)); len(enriched) > 0 {
+						serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
+						return
+					}
+				}
 			}
 		}
 	}
@@ -530,25 +702,14 @@ func (h *Handler) GetUserAnnotations(w http.ResponseWriter, r *http.Request) {
 	viewerDID := h.getViewerDID(r)
 
 	if offset == 0 && viewerDID != "" && did == viewerDID {
-		raw, err := h.FetchLatestUserRecords(r, did, xrpc.CollectionAnnotation, limit)
-		if err == nil {
-			for _, r := range raw {
-				if a, ok := r.(*db.Annotation); ok {
-					annotations = append(annotations, *a)
-				}
+		go func() {
+			if _, err := h.FetchLatestUserRecords(r, did, xrpc.CollectionAnnotation, limit); err != nil {
+				log.Printf("Background sync error (annotations): %v", err)
 			}
-			go func() {
-				for _, a := range annotations {
-					h.db.CreateAnnotation(&a)
-				}
-			}()
-		} else {
-			log.Printf("PDS Fetch Error (User Annos): %v", err)
-			annotations, err = h.db.GetAnnotationsByAuthor(did, limit, offset)
-		}
-	} else {
-		annotations, err = h.db.GetAnnotationsByAuthor(did, limit, offset)
+		}()
 	}
+
+	annotations, err = h.db.GetAnnotationsByAuthor(did, limit, offset)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -581,25 +742,14 @@ func (h *Handler) GetUserHighlights(w http.ResponseWriter, r *http.Request) {
 	viewerDID := h.getViewerDID(r)
 
 	if offset == 0 && viewerDID != "" && did == viewerDID {
-		raw, err := h.FetchLatestUserRecords(r, did, xrpc.CollectionHighlight, limit)
-		if err == nil {
-			for _, r := range raw {
-				if hi, ok := r.(*db.Highlight); ok {
-					highlights = append(highlights, *hi)
-				}
+		go func() {
+			if _, err := h.FetchLatestUserRecords(r, did, xrpc.CollectionHighlight, limit); err != nil {
+				log.Printf("Background sync error (highlights): %v", err)
 			}
-			go func() {
-				for _, hi := range highlights {
-					h.db.CreateHighlight(&hi)
-				}
-			}()
-		} else {
-			log.Printf("PDS Fetch Error (User Highs): %v", err)
-			highlights, err = h.db.GetHighlightsByAuthor(did, limit, offset)
-		}
-	} else {
-		highlights, err = h.db.GetHighlightsByAuthor(did, limit, offset)
+		}()
 	}
+
+	highlights, err = h.db.GetHighlightsByAuthor(did, limit, offset)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -632,25 +782,14 @@ func (h *Handler) GetUserBookmarks(w http.ResponseWriter, r *http.Request) {
 	viewerDID := h.getViewerDID(r)
 
 	if offset == 0 && viewerDID != "" && did == viewerDID {
-		raw, err := h.FetchLatestUserRecords(r, did, xrpc.CollectionBookmark, limit)
-		if err == nil {
-			for _, r := range raw {
-				if b, ok := r.(*db.Bookmark); ok {
-					bookmarks = append(bookmarks, *b)
-				}
+		go func() {
+			if _, err := h.FetchLatestUserRecords(r, did, xrpc.CollectionBookmark, limit); err != nil {
+				log.Printf("Background sync error (bookmarks): %v", err)
 			}
-			go func() {
-				for _, b := range bookmarks {
-					h.db.CreateBookmark(&b)
-				}
-			}()
-		} else {
-			log.Printf("PDS Fetch Error (User Books): %v", err)
-			bookmarks, err = h.db.GetBookmarksByAuthor(did, limit, offset)
-		}
-	} else {
-		bookmarks, err = h.db.GetBookmarksByAuthor(did, limit, offset)
+		}()
 	}
+
+	bookmarks, err = h.db.GetBookmarksByAuthor(did, limit, offset)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

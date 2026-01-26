@@ -24,7 +24,7 @@ export default function CollectionRow({ collection, onEdit }) {
         </div>
         <ChevronRight size={20} className="collection-row-arrow" />
       </Link>
-      {onEdit && (
+      {onEdit && !collection.uri.includes("network.cosmik") && (
         <button
           onClick={(e) => {
             e.preventDefault();

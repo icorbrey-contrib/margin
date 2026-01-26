@@ -224,7 +224,27 @@ export default function AnnotationCard({
           <UserMeta author={data.author} createdAt={data.createdAt} />
         </div>
         <div className="annotation-header-right">
-          <div style={{ display: "flex", gap: "4px" }}>
+          <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            {data.uri && data.uri.includes("network.cosmik") && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "0.75rem",
+                  color: "var(--text-tertiary)",
+                  marginRight: "8px",
+                }}
+                title="Added using Semble"
+              >
+                <span>via Semble</span>
+                <img
+                  src="/semble-logo.svg"
+                  alt="Semble"
+                  style={{ width: "16px", height: "16px" }}
+                />
+              </div>
+            )}
             {hasEditHistory && !data.color && !data.description && (
               <button
                 className="annotation-action action-icon-only"
@@ -235,7 +255,7 @@ export default function AnnotationCard({
               </button>
             )}
 
-            {isOwner && (
+            {isOwner && !(data.uri && data.uri.includes("network.cosmik")) && (
               <>
                 {!data.color && !data.description && (
                   <button
@@ -407,6 +427,7 @@ export default function AnnotationCard({
             text={data.title || data.url}
             handle={data.author?.handle}
             type="Annotation"
+            url={data.url}
           />
           <button
             className="annotation-action"
@@ -557,7 +578,27 @@ export function HighlightCard({
         </div>
 
         <div className="annotation-header-right">
-          <div style={{ display: "flex", gap: "4px" }}>
+          <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            {data.uri && data.uri.includes("network.cosmik") && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "0.75rem",
+                  color: "var(--text-tertiary)",
+                  marginRight: "8px",
+                }}
+                title="Added using Semble"
+              >
+                <span>via Semble</span>
+                <img
+                  src="/semble-logo.svg"
+                  alt="Semble"
+                  style={{ width: "16px", height: "16px" }}
+                />
+              </div>
+            )}
             {isOwner && (
               <>
                 <button

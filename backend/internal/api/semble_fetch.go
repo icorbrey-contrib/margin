@@ -1,0 +1,219 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"margin.at/internal/db"
+	"margin.at/internal/xrpc"
+)
+
+func ensureSembleCardsIndexed(ctx context.Context, database *db.DB, uris []string) {
+	if len(uris) == 0 || database == nil {
+		return
+	}
+
+	uniq := make(map[string]struct{}, len(uris))
+	deduped := make([]string, 0, len(uris))
+	for _, u := range uris {
+		if u == "" {
+			continue
+		}
+		if _, ok := uniq[u]; ok {
+			continue
+		}
+		uniq[u] = struct{}{}
+		deduped = append(deduped, u)
+	}
+	if len(deduped) == 0 {
+		return
+	}
+
+	existingAnnos, _ := database.GetAnnotationsByURIs(deduped)
+	existingBooks, _ := database.GetBookmarksByURIs(deduped)
+
+	foundSet := make(map[string]bool, len(existingAnnos)+len(existingBooks))
+	for _, a := range existingAnnos {
+		foundSet[a.URI] = true
+	}
+	for _, b := range existingBooks {
+		foundSet[b.URI] = true
+	}
+
+	missing := make([]string, 0)
+	for _, u := range deduped {
+		if !foundSet[u] {
+			missing = append(missing, u)
+		}
+	}
+	if len(missing) == 0 {
+		return
+	}
+
+	log.Printf("Active Cache: Fetching %d missing Semble cards...", len(missing))
+	fetchAndIndexSembleCards(ctx, database, missing)
+}
+
+func fetchAndIndexSembleCards(ctx context.Context, database *db.DB, uris []string) {
+	sem := make(chan struct{}, 5)
+	var wg sync.WaitGroup
+
+	for _, uri := range uris {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		wg.Add(1)
+		go func(u string) {
+			defer wg.Done()
+
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+
+			if err := fetchSembleCard(ctx, database, u); err != nil {
+				if ctx.Err() == nil {
+					log.Printf("Failed to lazy fetch card %s: %v", u, err)
+				}
+			}
+		}(uri)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		return
+	}
+}
+
+func fetchSembleCard(ctx context.Context, database *db.DB, uri string) error {
+	if database == nil {
+		return fmt.Errorf("nil database")
+	}
+
+	if !strings.HasPrefix(uri, "at://") {
+		return fmt.Errorf("invalid uri")
+	}
+	uriWithoutScheme := strings.TrimPrefix(uri, "at://")
+	parts := strings.Split(uriWithoutScheme, "/")
+	if len(parts) < 3 {
+		return fmt.Errorf("invalid uri parts: expected at least 3 parts")
+	}
+	did, collection, rkey := parts[0], parts[1], parts[2]
+
+	pds, err := xrpc.ResolveDIDToPDS(did)
+	if err != nil {
+		return fmt.Errorf("failed to resolve PDS: %w", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	url := fmt.Sprintf("%s/xrpc/com.atproto.repo.getRecord?repo=%s&collection=%s&rkey=%s", pds, did, collection, rkey)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to fetch record: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	var output xrpc.GetRecordOutput
+	if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+		return err
+	}
+
+	var card xrpc.SembleCard
+	if err := json.Unmarshal(output.Value, &card); err != nil {
+		return err
+	}
+
+	createdAt := card.GetCreatedAtTime()
+	content, err := card.ParseContent()
+	if err != nil {
+		return err
+	}
+
+	switch card.Type {
+	case "NOTE":
+		note, ok := content.(*xrpc.SembleNoteContent)
+		if !ok {
+			return fmt.Errorf("invalid note content")
+		}
+
+		targetSource := card.URL
+		if targetSource == "" {
+			return fmt.Errorf("missing target source")
+		}
+
+		targetHash := db.HashURL(targetSource)
+		motivation := "commenting"
+		bodyValue := note.Text
+
+		annotation := &db.Annotation{
+			URI:          uri,
+			AuthorDID:    did,
+			Motivation:   motivation,
+			BodyValue:    &bodyValue,
+			TargetSource: targetSource,
+			TargetHash:   targetHash,
+			CreatedAt:    createdAt,
+			IndexedAt:    time.Now(),
+		}
+		return database.CreateAnnotation(annotation)
+
+	case "URL":
+		urlContent, ok := content.(*xrpc.SembleURLContent)
+		if !ok {
+			return fmt.Errorf("invalid url content")
+		}
+
+		source := urlContent.URL
+		if source == "" {
+			return fmt.Errorf("missing source")
+		}
+		sourceHash := db.HashURL(source)
+
+		var titlePtr *string
+		if urlContent.Metadata != nil && urlContent.Metadata.Title != "" {
+			t := urlContent.Metadata.Title
+			titlePtr = &t
+		}
+
+		bookmark := &db.Bookmark{
+			URI:        uri,
+			AuthorDID:  did,
+			Source:     source,
+			SourceHash: sourceHash,
+			Title:      titlePtr,
+			CreatedAt:  createdAt,
+			IndexedAt:  time.Now(),
+		}
+		return database.CreateBookmark(bookmark)
+	}
+
+	return nil
+}

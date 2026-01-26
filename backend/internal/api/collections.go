@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -286,7 +288,18 @@ func (s *CollectionService) GetCollectionItems(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	enrichedItems := make([]EnrichedCollectionItem, 0, len(items))
+	var sembleURIs []string
+	for _, item := range items {
+		if strings.Contains(item.AnnotationURI, "network.cosmik.card") {
+			sembleURIs = append(sembleURIs, item.AnnotationURI)
+		}
+	}
+
+	if len(sembleURIs) > 0 {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		ensureSembleCardsIndexed(ctx, s.db, sembleURIs)
+	}
 
 	session, err := s.refresher.GetSessionWithAutoRefresh(r)
 	viewerDID := ""
@@ -294,48 +307,10 @@ func (s *CollectionService) GetCollectionItems(w http.ResponseWriter, r *http.Re
 		viewerDID = session.DID
 	}
 
-	for _, item := range items {
-		enriched := EnrichedCollectionItem{
-			URI:           item.URI,
-			CollectionURI: item.CollectionURI,
-			AnnotationURI: item.AnnotationURI,
-			Position:      item.Position,
-			CreatedAt:     item.CreatedAt,
-		}
-
-		if strings.Contains(item.AnnotationURI, "at.margin.annotation") {
-			enriched.Type = "annotation"
-			if a, err := s.db.GetAnnotationByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateAnnotations(s.db, []db.Annotation{*a}, viewerDID)
-				if len(hydrated) > 0 {
-					enriched.Annotation = &hydrated[0]
-				}
-			}
-		} else if strings.Contains(item.AnnotationURI, "at.margin.highlight") {
-			enriched.Type = "highlight"
-			if h, err := s.db.GetHighlightByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateHighlights(s.db, []db.Highlight{*h}, viewerDID)
-				if len(hydrated) > 0 {
-					enriched.Highlight = &hydrated[0]
-				}
-			}
-		} else if strings.Contains(item.AnnotationURI, "at.margin.bookmark") {
-			enriched.Type = "bookmark"
-			if b, err := s.db.GetBookmarkByURI(item.AnnotationURI); err == nil {
-				hydrated, _ := hydrateBookmarks(s.db, []db.Bookmark{*b}, viewerDID)
-				if len(hydrated) > 0 {
-					enriched.Bookmark = &hydrated[0]
-				}
-			} else {
-				log.Printf("GetBookmarkByURI failed for %s: %v\n", item.AnnotationURI, err)
-			}
-		} else {
-			log.Printf("Unknown annotation type for URI: %s\n", item.AnnotationURI)
-		}
-
-		if enriched.Annotation != nil || enriched.Highlight != nil || enriched.Bookmark != nil {
-			enrichedItems = append(enrichedItems, enriched)
-		}
+	enrichedItems, err := hydrateCollectionItems(s.db, items, viewerDID)
+	if err != nil {
+		log.Printf("Hydration error: %v", err)
+		enrichedItems = []APICollectionItem{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -465,4 +440,57 @@ func (s *CollectionService) DeleteCollection(w http.ResponseWriter, r *http.Requ
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+}
+
+func (s *CollectionService) GetCollection(w http.ResponseWriter, r *http.Request) {
+	uri := r.URL.Query().Get("uri")
+	if uri == "" {
+		http.Error(w, "URI required", http.StatusBadRequest)
+		return
+	}
+
+	collection, err := s.db.GetCollectionByURI(uri)
+	if err != nil {
+		if strings.Contains(uri, "at.margin.collection") && strings.HasPrefix(uri, "at://") {
+			uriWithoutScheme := strings.TrimPrefix(uri, "at://")
+			parts := strings.Split(uriWithoutScheme, "/")
+			if len(parts) >= 3 {
+				did := parts[0]
+				rkey := parts[len(parts)-1]
+				sembleURI := fmt.Sprintf("at://%s/network.cosmik.collection/%s", did, rkey)
+
+				collection, err = s.db.GetCollectionByURI(sembleURI)
+			}
+		}
+	}
+
+	if err != nil || collection == nil {
+		http.Error(w, "Collection not found", http.StatusNotFound)
+		return
+	}
+
+	profiles := fetchProfilesForDIDs([]string{collection.AuthorDID})
+	creator := profiles[collection.AuthorDID]
+
+	icon := ""
+	if collection.Icon != nil {
+		icon = *collection.Icon
+	}
+	desc := ""
+	if collection.Description != nil {
+		desc = *collection.Description
+	}
+
+	apiCollection := APICollection{
+		URI:         collection.URI,
+		Name:        collection.Name,
+		Description: desc,
+		Icon:        icon,
+		Creator:     creator,
+		CreatedAt:   collection.CreatedAt,
+		IndexedAt:   collection.IndexedAt,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(apiCollection)
 }

@@ -89,6 +89,17 @@ export default function CollectionIcon({ icon, size = 22, className = "" }) {
     return <Folder size={size} className={className} />;
   }
 
+  if (icon === "icon:semble") {
+    return (
+      <img
+        src="/semble-logo.svg"
+        alt="Semble"
+        style={{ width: size, height: size, objectFit: "contain" }}
+        className={className}
+      />
+    );
+  }
+
   if (icon.startsWith("icon:")) {
     const iconName = icon.replace("icon:", "");
     const IconComponent = ICON_MAP[iconName];

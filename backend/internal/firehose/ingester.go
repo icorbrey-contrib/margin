@@ -16,14 +16,16 @@ import (
 )
 
 const (
-	CollectionAnnotation     = "at.margin.annotation"
-	CollectionHighlight      = "at.margin.highlight"
-	CollectionBookmark       = "at.margin.bookmark"
-	CollectionReply          = "at.margin.reply"
-	CollectionLike           = "at.margin.like"
-	CollectionCollection     = "at.margin.collection"
-	CollectionCollectionItem = "at.margin.collectionItem"
-	CollectionProfile        = "at.margin.profile"
+	CollectionAnnotation       = "at.margin.annotation"
+	CollectionHighlight        = "at.margin.highlight"
+	CollectionBookmark         = "at.margin.bookmark"
+	CollectionReply            = "at.margin.reply"
+	CollectionLike             = "at.margin.like"
+	CollectionCollection       = "at.margin.collection"
+	CollectionCollectionItem   = "at.margin.collectionItem"
+	CollectionProfile          = "at.margin.profile"
+	CollectionSembleCard       = "network.cosmik.card"
+	CollectionSembleCollection = "network.cosmik.collection"
 )
 
 var RelayURL = "wss://jetstream2.us-east.bsky.network/subscribe"
@@ -52,6 +54,9 @@ func NewIngester(database *db.DB, syncService *internal_sync.Service) *Ingester 
 	i.RegisterHandler(CollectionCollection, i.handleCollection)
 	i.RegisterHandler(CollectionCollectionItem, i.handleCollectionItem)
 	i.RegisterHandler(CollectionProfile, i.handleProfile)
+	i.RegisterHandler(CollectionSembleCard, i.handleSembleCard)
+	i.RegisterHandler(CollectionSembleCollection, i.handleSembleCollection)
+	i.RegisterHandler(xrpc.CollectionSembleCollectionLink, i.handleSembleCollectionLink)
 
 	return i
 }
@@ -235,6 +240,14 @@ func (i *Ingester) handleDelete(collection, uri string) {
 		i.db.RemoveFromCollection(uri)
 	case CollectionProfile:
 		i.db.DeleteProfile(uri)
+	case CollectionSembleCard:
+		i.db.DeleteAnnotation(uri)
+		i.db.DeleteBookmark(uri)
+	case CollectionSembleCollection:
+		i.db.DeleteCollection(uri)
+	case xrpc.CollectionSembleCollectionLink:
+		i.db.RemoveFromCollection(uri)
+
 	}
 }
 
@@ -685,5 +698,155 @@ func (i *Ingester) handleProfile(event *FirehoseEvent) {
 		log.Printf("Failed to index profile: %v", err)
 	} else {
 		log.Printf("Indexed profile from %s", event.Repo)
+	}
+}
+
+func (i *Ingester) handleSembleCard(event *FirehoseEvent) {
+	var card xrpc.SembleCard
+	if err := json.Unmarshal(event.Record, &card); err != nil {
+		return
+	}
+
+	uri := fmt.Sprintf("at://%s/%s/%s", event.Repo, event.Collection, event.Rkey)
+	createdAt := card.GetCreatedAtTime()
+
+	content, err := card.ParseContent()
+	if err != nil {
+		return
+	}
+
+	switch card.Type {
+	case "NOTE":
+		note, ok := content.(*xrpc.SembleNoteContent)
+		if !ok {
+			return
+		}
+
+		targetSource := card.URL
+		if targetSource == "" {
+			return
+		}
+
+		targetHash := db.HashURL(targetSource)
+		motivation := "commenting"
+		bodyValue := note.Text
+
+		annotation := &db.Annotation{
+			URI:          uri,
+			AuthorDID:    event.Repo,
+			Motivation:   motivation,
+			BodyValue:    &bodyValue,
+			TargetSource: targetSource,
+			TargetHash:   targetHash,
+			CreatedAt:    createdAt,
+			IndexedAt:    time.Now(),
+		}
+		if err := i.db.CreateAnnotation(annotation); err != nil {
+			log.Printf("Failed to index Semble NOTE as annotation: %v", err)
+		} else {
+			if card.ParentCard != nil {
+				log.Printf("Indexed Semble NOTE from %s on %s (Parent: %s)", event.Repo, targetSource, card.ParentCard.URI)
+			} else {
+				log.Printf("Indexed Semble NOTE from %s on %s", event.Repo, targetSource)
+			}
+		}
+
+	case "URL":
+		urlContent, ok := content.(*xrpc.SembleURLContent)
+		if !ok {
+			return
+		}
+
+		source := urlContent.URL
+		if source == "" {
+			return
+		}
+		sourceHash := db.HashURL(source)
+
+		var titlePtr *string
+		if urlContent.Metadata != nil && urlContent.Metadata.Title != "" {
+			t := urlContent.Metadata.Title
+			titlePtr = &t
+		}
+
+		bookmark := &db.Bookmark{
+			URI:        uri,
+			AuthorDID:  event.Repo,
+			Source:     source,
+			SourceHash: sourceHash,
+			Title:      titlePtr,
+			CreatedAt:  createdAt,
+			IndexedAt:  time.Now(),
+		}
+		if err := i.db.CreateBookmark(bookmark); err != nil {
+			log.Printf("Failed to index Semble URL as bookmark: %v", err)
+		} else {
+			log.Printf("Indexed Semble URL from %s: %s", event.Repo, source)
+		}
+	}
+}
+
+func (i *Ingester) handleSembleCollection(event *FirehoseEvent) {
+	var record xrpc.SembleCollection
+	if err := json.Unmarshal(event.Record, &record); err != nil {
+		return
+	}
+
+	uri := fmt.Sprintf("at://%s/%s/%s", event.Repo, event.Collection, event.Rkey)
+	createdAt, err := time.Parse(time.RFC3339, record.CreatedAt)
+	if err != nil {
+		createdAt = time.Now()
+	}
+
+	var descPtr, iconPtr *string
+	if record.Description != "" {
+		descPtr = &record.Description
+	}
+	icon := "icon:semble"
+	iconPtr = &icon
+
+	collection := &db.Collection{
+		URI:         uri,
+		AuthorDID:   event.Repo,
+		Name:        record.Name,
+		Description: descPtr,
+		Icon:        iconPtr,
+		CreatedAt:   createdAt,
+		IndexedAt:   time.Now(),
+	}
+
+	if err := i.db.CreateCollection(collection); err != nil {
+		log.Printf("Failed to index Semble collection: %v", err)
+	} else {
+		log.Printf("Indexed Semble collection from %s: %s", event.Repo, record.Name)
+	}
+}
+
+func (i *Ingester) handleSembleCollectionLink(event *FirehoseEvent) {
+	var record xrpc.SembleCollectionLink
+	if err := json.Unmarshal(event.Record, &record); err != nil {
+		return
+	}
+
+	uri := fmt.Sprintf("at://%s/%s/%s", event.Repo, event.Collection, event.Rkey)
+	createdAt, err := time.Parse(time.RFC3339, record.CreatedAt)
+	if err != nil {
+		createdAt = time.Now()
+	}
+
+	item := &db.CollectionItem{
+		URI:           uri,
+		AuthorDID:     event.Repo,
+		CollectionURI: record.Collection.URI,
+		AnnotationURI: record.Card.URI,
+		Position:      0,
+		CreatedAt:     createdAt,
+		IndexedAt:     time.Now(),
+	}
+
+	if err := i.db.AddToCollection(item); err != nil {
+		log.Printf("Failed to index Semble collection link: %v", err)
+	} else {
+		log.Printf("Indexed Semble collection link from %s", event.Repo)
 	}
 }

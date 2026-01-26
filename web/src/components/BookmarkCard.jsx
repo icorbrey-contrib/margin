@@ -105,17 +105,41 @@ export default function BookmarkCard({
         </div>
 
         <div className="annotation-header-right">
-          <div style={{ display: "flex", gap: "4px" }}>
-            {(isOwner || onDelete) && (
-              <button
-                className="annotation-action action-icon-only"
-                onClick={handleDelete}
-                disabled={deleting}
-                title="Delete"
+          <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            {data.uri && data.uri.includes("network.cosmik") && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "0.75rem",
+                  color: "var(--text-tertiary)",
+                  marginRight: "8px",
+                }}
+                title="Added using Semble"
               >
-                <TrashIcon size={16} />
-              </button>
+                <span>via Semble</span>
+                <img
+                  src="/semble-logo.svg"
+                  alt="Semble"
+                  style={{ width: "16px", height: "16px" }}
+                />
+              </div>
             )}
+            <div style={{ display: "flex", gap: "4px" }}>
+              {((isOwner &&
+                !(data.uri && data.uri.includes("network.cosmik"))) ||
+                onDelete) && (
+                <button
+                  className="annotation-action action-icon-only"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  title="Delete"
+                >
+                  <TrashIcon size={16} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -164,6 +188,7 @@ export default function BookmarkCard({
             text={data.title || data.description}
             handle={data.author?.handle}
             type="Bookmark"
+            url={data.url}
           />
           <button
             className="annotation-action"

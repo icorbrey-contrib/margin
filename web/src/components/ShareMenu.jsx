@@ -97,7 +97,7 @@ const BLUESKY_FORKS = [
   { name: "Deer", domain: "deer.social", Icon: DeerIcon },
 ];
 
-export default function ShareMenu({ uri, text, customUrl, handle, type }) {
+export default function ShareMenu({ uri, text, customUrl, handle, type, url }) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedAturi, setCopiedAturi] = useState(false);
@@ -109,12 +109,16 @@ export default function ShareMenu({ uri, text, customUrl, handle, type }) {
 
     const uriParts = uri.split("/");
     const rkey = uriParts[uriParts.length - 1];
+    const did = uriParts[2];
+
+    if (uri.includes("network.cosmik.card")) {
+      return `${window.location.origin}/at/${did}/${rkey}`;
+    }
 
     if (handle && type) {
       return `${window.location.origin}/${handle}/${type.toLowerCase()}/${rkey}`;
     }
 
-    const did = uriParts[2];
     return `${window.location.origin}/at/${did}/${rkey}`;
   };
 
@@ -195,6 +199,37 @@ export default function ShareMenu({ uri, text, customUrl, handle, type }) {
     setIsOpen(false);
   };
 
+  const isSemble = uri && uri.includes("network.cosmik");
+  const sembleUrl = (() => {
+    if (!isSemble) return "";
+    const parts = uri.split("/");
+    const rkey = parts[parts.length - 1];
+    const userHandle = handle || (parts.length > 2 ? parts[2] : "");
+
+    if (uri.includes("network.cosmik.collection")) {
+      return `https://semble.so/profile/${userHandle}/collections/${rkey}`;
+    }
+
+    if (uri.includes("network.cosmik.card") && url) {
+      return `https://semble.so/url?id=${encodeURIComponent(url)}`;
+    }
+
+    return `https://semble.so/profile/${userHandle}`;
+  })();
+
+  const handleCopySemble = async () => {
+    try {
+      await navigator.clipboard.writeText(sembleUrl);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setIsOpen(false);
+      }, 1500);
+    } catch {
+      prompt("Copy this link:", sembleUrl);
+    }
+  };
+
   return (
     <div className="share-menu-container" ref={menuRef}>
       <button
@@ -222,39 +257,82 @@ export default function ShareMenu({ uri, text, customUrl, handle, type }) {
 
       {isOpen && (
         <div className="share-menu">
-          <div className="share-menu-section">
-            <div className="share-menu-label">Share to</div>
-            {BLUESKY_FORKS.map((fork) => (
+          {isSemble ? (
+            <>
+              <div className="share-menu-section">
+                <div
+                  className="share-menu-label"
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <img
+                    src="/semble-logo.svg"
+                    alt=""
+                    style={{ width: "12px", height: "12px" }}
+                  />
+                  Semble
+                </div>
+                <a
+                  href={sembleUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="share-menu-item"
+                  style={{ textDecoration: "none" }}
+                >
+                  <ExternalLink size={16} />
+                  <span>Open on Semble</span>
+                </a>
+                <button className="share-menu-item" onClick={handleCopySemble}>
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  <span>{copied ? "Copied!" : "Copy Semble Link"}</span>
+                </button>
+              </div>
+              <div className="share-menu-divider" />
               <button
-                key={fork.domain}
                 className="share-menu-item"
-                onClick={() => handleShareToFork(fork.domain)}
+                onClick={handleCopyAturi}
+                title="Copy Universal URL"
               >
-                <span className="share-menu-icon">
-                  <fork.Icon />
-                </span>
-                <span>{fork.name}</span>
+                {copiedAturi ? <Check size={16} /> : <AturiIcon size={16} />}
+                <span>{copiedAturi ? "Copied!" : "Copy Universal URL"}</span>
               </button>
-            ))}
-          </div>
-          <div className="share-menu-divider" />
-          <button className="share-menu-item" onClick={handleCopy}>
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-            <span>{copied ? "Copied!" : "Copy Link"}</span>
-          </button>
-          <button
-            className="share-menu-item"
-            onClick={handleCopyAturi}
-            title="Copy a universal link atproto link (via aturi.to)"
-          >
-            {copiedAturi ? <Check size={16} /> : <AturiIcon size={16} />}
-            <span>{copiedAturi ? "Copied!" : "Copy Universal Link"}</span>
-          </button>
-          {navigator.share && (
-            <button className="share-menu-item" onClick={handleSystemShare}>
-              <ExternalLink size={16} />
-              <span>More...</span>
-            </button>
+            </>
+          ) : (
+            <>
+              <div className="share-menu-section">
+                <div className="share-menu-label">Share to</div>
+                {BLUESKY_FORKS.map((fork) => (
+                  <button
+                    key={fork.domain}
+                    className="share-menu-item"
+                    onClick={() => handleShareToFork(fork.domain)}
+                  >
+                    <span className="share-menu-icon">
+                      <fork.Icon />
+                    </span>
+                    <span>{fork.name}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="share-menu-divider" />
+              <button className="share-menu-item" onClick={handleCopy}>
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                <span>{copied ? "Copied!" : "Copy Link"}</span>
+              </button>
+              <button
+                className="share-menu-item"
+                onClick={handleCopyAturi}
+                title="Copy a universal link atproto link (via aturi.to)"
+              >
+                {copiedAturi ? <Check size={16} /> : <AturiIcon size={16} />}
+                <span>{copiedAturi ? "Copied!" : "Copy Universal Link"}</span>
+              </button>
+              {navigator.share && (
+                <button className="share-menu-item" onClick={handleSystemShare}>
+                  <ExternalLink size={16} />
+                  <span>More...</span>
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

@@ -28,10 +28,14 @@ export async function getAnnotationFeed(
   offset = 0,
   tag = "",
   creator = "",
+  feedType = "",
+  motivation = "",
 ) {
   let url = `${API_BASE}/annotations/feed?limit=${limit}&offset=${offset}`;
   if (tag) url += `&tag=${encodeURIComponent(tag)}`;
   if (creator) url += `&creator=${encodeURIComponent(creator)}`;
+  if (feedType) url += `&type=${encodeURIComponent(feedType)}`;
+  if (motivation) url += `&motivation=${encodeURIComponent(motivation)}`;
   return request(url);
 }
 
@@ -135,6 +139,10 @@ export async function getCollections(did) {
   let url = `${API_BASE}/collections`;
   if (did) url += `?author=${encodeURIComponent(did)}`;
   return request(url);
+}
+
+export async function getCollection(uri) {
+  return request(`${API_BASE}/collection?uri=${encodeURIComponent(uri)}`);
 }
 
 export async function getCollectionsContaining(annotationUri) {
