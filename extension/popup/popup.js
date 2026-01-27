@@ -425,7 +425,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       if (res.success) {
-        renderAnnotations(res.data);
+        if (currentUserDid) {
+          const isBookmarked = res.data.some(
+            (item) =>
+              item.type === "Bookmark" && item.creator.did === currentUserDid,
+          );
+          if (els.bookmarkBtn) {
+            if (isBookmarked) {
+              els.bookmarkBtn.textContent = "✓ Bookmarked";
+              els.bookmarkBtn.disabled = true;
+            } else {
+              els.bookmarkBtn.textContent = "Bookmark Page";
+              els.bookmarkBtn.disabled = false;
+            }
+          }
+        }
+
+        const listItems = res.data.filter((item) => item.type !== "Bookmark");
+        renderAnnotations(listItems);
       }
     } catch (err) {
       console.error("Load annotations error:", err);

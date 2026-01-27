@@ -46,12 +46,13 @@ func (s *AnnotationService) checkDuplicateHighlight(did, url string, selector js
 }
 
 func (s *AnnotationService) checkDuplicateBookmark(did, url string) (*db.Bookmark, error) {
-	recentBooks, err := s.db.GetBookmarksByAuthor(did, 5, 0)
+	urlHash := db.HashURL(url)
+	bookmarks, err := s.db.GetBookmarksByTargetHash(urlHash, 50, 0)
 	if err != nil {
 		return nil, err
 	}
-	for _, b := range recentBooks {
-		if b.Source == url && time.Since(b.CreatedAt) < 10*time.Second {
+	for _, b := range bookmarks {
+		if b.AuthorDID == did && b.Source == url {
 			return &b, nil
 		}
 	}

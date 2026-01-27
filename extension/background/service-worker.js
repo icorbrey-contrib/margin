@@ -384,6 +384,7 @@ async function handleMessage(request, sender, sendResponse) {
           const items = [
             ...(data.annotations || []),
             ...(data.highlights || []),
+            ...(data.bookmarks || []),
           ];
           items.forEach((item) => {
             const id = item.uri || item.id;

@@ -638,8 +638,7 @@ func (s *AnnotationService) CreateBookmark(w http.ResponseWriter, r *http.Reques
 	var result *xrpc.CreateRecordOutput
 
 	if existing, err := s.checkDuplicateBookmark(session.DID, req.URL); err == nil && existing != nil {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"uri": existing.URI, "cid": *existing.CID})
+		http.Error(w, "Bookmark already exists", http.StatusConflict)
 		return
 	}
 

@@ -407,7 +407,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(9, 9, 11, 0.9);
+  background: var(--nav-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);

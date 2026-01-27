@@ -614,9 +614,11 @@ func (h *Handler) GetByTarget(w http.ResponseWriter, r *http.Request) {
 
 	annotations, _ := h.db.GetAnnotationsByTargetHash(urlHash, limit, offset)
 	highlights, _ := h.db.GetHighlightsByTargetHash(urlHash, limit, offset)
+	bookmarks, _ := h.db.GetBookmarksByTargetHash(urlHash, limit, offset)
 
 	enrichedAnnotations, _ := hydrateAnnotations(h.db, annotations, h.getViewerDID(r))
 	enrichedHighlights, _ := hydrateHighlights(h.db, highlights, h.getViewerDID(r))
+	enrichedBookmarks, _ := hydrateBookmarks(h.db, bookmarks, h.getViewerDID(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -625,6 +627,7 @@ func (h *Handler) GetByTarget(w http.ResponseWriter, r *http.Request) {
 		"sourceHash":  urlHash,
 		"annotations": enrichedAnnotations,
 		"highlights":  enrichedHighlights,
+		"bookmarks":   enrichedBookmarks,
 	})
 }
 

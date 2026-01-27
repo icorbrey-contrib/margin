@@ -194,3 +194,27 @@ func (db *DB) GetBookmarkURIs(authorDID string) ([]string, error) {
 	}
 	return uris, nil
 }
+
+func (db *DB) GetBookmarksByTargetHash(targetHash string, limit, offset int) ([]Bookmark, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE source_hash = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), targetHash, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}

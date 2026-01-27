@@ -62,8 +62,8 @@ function KeyIcon({ size = 16 }) {
 }
 
 export default function Profile() {
-  const { handle } = useParams();
-  const { user } = useAuth();
+  const { handle: routeHandle } = useParams();
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("annotations");
   const [profile, setProfile] = useState(null);
   const [annotations, setAnnotations] = useState([]);
@@ -78,10 +78,33 @@ export default function Profile() {
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  const handle = routeHandle || user?.did || user?.handle;
   const isOwnProfile = user && (user.did === handle || user.handle === handle);
 
+  if (authLoading) {
+    return (
+      <div className="profile-page">
+        <div className="feed">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="card">
+              <div
+                className="skeleton skeleton-text"
+                style={{ width: "40%" }}
+              />
+              <div className="skeleton skeleton-text" />
+              <div
+                className="skeleton skeleton-text"
+                style={{ width: "60%" }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!handle) {
-    return <Navigate to={user ? `/profile/${user.did}` : "/login"} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   useEffect(() => {
@@ -418,19 +441,17 @@ export default function Profile() {
               Save bookmarks from Safari&apos;s share sheet.
             </p>
             <a
-              href="#"
+              href="https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd"
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn btn-primary"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.5rem",
-                opacity: 0.5,
-                pointerEvents: "none",
-                cursor: "default",
               }}
-              onClick={(e) => e.preventDefault()}
             >
-              <AppleIcon size={16} /> Coming Soon
+              <AppleIcon size={16} /> Get Shortcut
             </a>
           </div>
         </div>

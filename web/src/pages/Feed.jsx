@@ -39,6 +39,23 @@ export default function Feed() {
     uri: null,
   });
 
+  const [showIosBanner, setShowIosBanner] = useState(false);
+
+  useEffect(() => {
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const hasDismissed = localStorage.getItem("iosBannerDismissed");
+
+    if (isIOS && !hasDismissed) {
+      setShowIosBanner(true);
+    }
+  }, []);
+
+  const dismissIosBanner = () => {
+    setShowIosBanner(false);
+    localStorage.setItem("iosBannerDismissed", "true");
+  };
+
   const { user } = useAuth();
 
   useEffect(() => {
@@ -77,21 +94,21 @@ export default function Feed() {
 
   const filteredAnnotations =
     feedType === "all" ||
-    feedType === "popular" ||
-    feedType === "semble" ||
-    feedType === "margin" ||
-    feedType === "my-feed"
+      feedType === "popular" ||
+      feedType === "semble" ||
+      feedType === "margin" ||
+      feedType === "my-feed"
       ? filter === "all"
         ? annotations
         : annotations.filter((a) => {
-            if (filter === "commenting")
-              return a.motivation === "commenting" || a.type === "Annotation";
-            if (filter === "highlighting")
-              return a.motivation === "highlighting" || a.type === "Highlight";
-            if (filter === "bookmarking")
-              return a.motivation === "bookmarking" || a.type === "Bookmark";
-            return a.motivation === filter;
-          })
+          if (filter === "commenting")
+            return a.motivation === "commenting" || a.type === "Annotation";
+          if (filter === "highlighting")
+            return a.motivation === "highlighting" || a.type === "Highlight";
+          if (filter === "bookmarking")
+            return a.motivation === "bookmarking" || a.type === "Bookmark";
+          return a.motivation === filter;
+        })
       : annotations;
 
   return (
@@ -132,7 +149,61 @@ export default function Feed() {
         )}
       </div>
 
-      {}
+      {showIosBanner && (
+        <div
+          className="ios-banner"
+          style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-md)",
+            padding: "12px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <h3
+              style={{
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                marginBottom: "4px",
+              }}
+            >
+              Get the iOS Shortcut
+            </h3>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+              Easily save links from Safari using our new shortcut.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <a
+              href="https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary btn-sm"
+              style={{ whiteSpace: "nowrap" }}
+            >
+              Get It
+            </a>
+            <button
+              className="btn btn-sm"
+              onClick={dismissIosBanner}
+              style={{
+                color: "var(--text-tertiary)",
+                padding: "4px",
+                height: "auto",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      { }
       <div
         className="feed-filters"
         style={{
