@@ -94,21 +94,21 @@ export default function Feed() {
 
   const filteredAnnotations =
     feedType === "all" ||
-      feedType === "popular" ||
-      feedType === "semble" ||
-      feedType === "margin" ||
-      feedType === "my-feed"
+    feedType === "popular" ||
+    feedType === "semble" ||
+    feedType === "margin" ||
+    feedType === "my-feed"
       ? filter === "all"
         ? annotations
         : annotations.filter((a) => {
-          if (filter === "commenting")
-            return a.motivation === "commenting" || a.type === "Annotation";
-          if (filter === "highlighting")
-            return a.motivation === "highlighting" || a.type === "Highlight";
-          if (filter === "bookmarking")
-            return a.motivation === "bookmarking" || a.type === "Bookmark";
-          return a.motivation === filter;
-        })
+            if (filter === "commenting")
+              return a.motivation === "commenting" || a.type === "Annotation";
+            if (filter === "highlighting")
+              return a.motivation === "highlighting" || a.type === "Highlight";
+            if (filter === "bookmarking")
+              return a.motivation === "bookmarking" || a.type === "Bookmark";
+            return a.motivation === filter;
+          })
       : annotations;
 
   return (
@@ -203,7 +203,7 @@ export default function Feed() {
         </div>
       )}
 
-      { }
+      {}
       <div
         className="feed-filters"
         style={{

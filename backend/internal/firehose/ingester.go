@@ -731,6 +731,27 @@ func (i *Ingester) handleSembleCard(event *FirehoseEvent) {
 		motivation := "commenting"
 		bodyValue := note.Text
 
+		var selectorJSONPtr *string
+
+		if strings.HasPrefix(bodyValue, "\"") && strings.Contains(bodyValue, "\"\n") {
+			parts := strings.SplitN(bodyValue, "\"\n", 2)
+			if len(parts) == 2 {
+				quoteText := strings.TrimPrefix(parts[0], "\"")
+				noteText := parts[1]
+
+				bodyValue = noteText
+				motivation = "highlighting"
+
+				selector := xrpc.TextQuoteSelector{
+					Type:  xrpc.SelectorTypeQuote,
+					Exact: quoteText,
+				}
+				selectorBytes, _ := json.Marshal(selector)
+				selectorStr := string(selectorBytes)
+				selectorJSONPtr = &selectorStr
+			}
+		}
+
 		annotation := &db.Annotation{
 			URI:          uri,
 			AuthorDID:    event.Repo,
@@ -738,6 +759,7 @@ func (i *Ingester) handleSembleCard(event *FirehoseEvent) {
 			BodyValue:    &bodyValue,
 			TargetSource: targetSource,
 			TargetHash:   targetHash,
+			SelectorJSON: selectorJSONPtr,
 			CreatedAt:    createdAt,
 			IndexedAt:    time.Now(),
 		}

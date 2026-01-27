@@ -276,3 +276,33 @@ func (c *Client) GetRecord(ctx context.Context, repo, collection, rkey string) (
 
 	return &output, nil
 }
+
+type ResolveHandleOutput struct {
+	Did string `json:"did"`
+}
+
+func (c *Client) ResolveHandle(ctx context.Context, handle string) (string, error) {
+	url := fmt.Sprintf("%s/xrpc/com.atproto.identity.resolveHandle?handle=%s", c.PDS, handle)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("XRPC error %d", resp.StatusCode)
+	}
+
+	var output ResolveHandleOutput
+	if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+		return "", err
+	}
+
+	return output.Did, nil
+}

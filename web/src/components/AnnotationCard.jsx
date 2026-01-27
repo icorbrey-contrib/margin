@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ReplyList from "./ReplyList";
 import { Link } from "react-router-dom";
+import RichText from "./RichText";
 import {
   normalizeAnnotation,
   normalizeHighlight,
@@ -378,7 +379,7 @@ export default function AnnotationCard({
             </div>
           </div>
         ) : (
-          data.text && <p className="annotation-text">{data.text}</p>
+          <RichText text={data.text} facets={data.facets} />
         )}
 
         {data.tags?.length > 0 && (

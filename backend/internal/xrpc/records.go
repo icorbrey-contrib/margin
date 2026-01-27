@@ -75,7 +75,24 @@ type AnnotationRecord struct {
 	Body       *AnnotationBody  `json:"body,omitempty"`
 	Target     AnnotationTarget `json:"target"`
 	Tags       []string         `json:"tags,omitempty"`
+	Facets     []Facet          `json:"facets,omitempty"`
 	CreatedAt  string           `json:"createdAt"`
+}
+
+type Facet struct {
+	Index    FacetIndex     `json:"index"`
+	Features []FacetFeature `json:"features"`
+}
+
+type FacetIndex struct {
+	ByteStart int `json:"byteStart"`
+	ByteEnd   int `json:"byteEnd"`
+}
+
+type FacetFeature struct {
+	Type string `json:"$type"`
+	Did  string `json:"did,omitempty"`
+	Uri  string `json:"uri,omitempty"`
 }
 
 type AnnotationBody struct {

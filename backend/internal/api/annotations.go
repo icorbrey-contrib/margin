@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -71,9 +72,70 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 		motivation = "tagging"
 	}
 
+	var facets []xrpc.Facet
+	var mentionedDIDs []string
+
+	mentionRegex := regexp.MustCompile(`(^|\s|@)@([a-zA-Z0-9.-]+)(\b)`)
+	matches := mentionRegex.FindAllStringSubmatchIndex(req.Text, -1)
+
+	for _, m := range matches {
+		handle := req.Text[m[4]:m[5]]
+
+		if !strings.Contains(handle, ".") {
+			continue
+		}
+
+		var did string
+		err := s.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, _ string) error {
+			var resolveErr error
+			did, resolveErr = client.ResolveHandle(r.Context(), handle)
+			return resolveErr
+		})
+
+		if err == nil && did != "" {
+			start := m[2]
+			end := m[5]
+
+			facets = append(facets, xrpc.Facet{
+				Index: xrpc.FacetIndex{
+					ByteStart: start,
+					ByteEnd:   end,
+				},
+				Features: []xrpc.FacetFeature{
+					{
+						Type: "app.bsky.richtext.facet#mention",
+						Did:  did,
+					},
+				},
+			})
+			mentionedDIDs = append(mentionedDIDs, did)
+		}
+	}
+
+	urlRegex := regexp.MustCompile(`(https?://[^\s]+)`)
+	urlMatches := urlRegex.FindAllStringIndex(req.Text, -1)
+
+	for _, m := range urlMatches {
+		facets = append(facets, xrpc.Facet{
+			Index: xrpc.FacetIndex{
+				ByteStart: m[0],
+				ByteEnd:   m[1],
+			},
+			Features: []xrpc.FacetFeature{
+				{
+					Type: "app.bsky.richtext.facet#link",
+					Uri:  req.Text[m[0]:m[1]],
+				},
+			},
+		})
+	}
+
 	record := xrpc.NewAnnotationRecordWithMotivation(req.URL, urlHash, req.Text, req.Selector, req.Title, motivation)
 	if len(req.Tags) > 0 {
 		record.Tags = req.Tags
+	}
+	if len(facets) > 0 {
+		record.Facets = facets
 	}
 
 	var result *xrpc.CreateRecordOutput
@@ -95,6 +157,18 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		http.Error(w, "Failed to create annotation: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for _, mentionedDID := range mentionedDIDs {
+		if mentionedDID != session.DID {
+			s.db.CreateNotification(&db.Notification{
+				RecipientDID: mentionedDID,
+				ActorDID:     session.DID,
+				Type:         "mention",
+				SubjectURI:   result.URI,
+				CreatedAt:    time.Now(),
+			})
+		}
 	}
 
 	bodyValue := req.Text
