@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import BookmarkCard from "../components/BookmarkCard";
 import { getLinkIconType, formatUrl } from "../utils/formatting";
@@ -79,6 +79,10 @@ export default function Profile() {
   const [showEditModal, setShowEditModal] = useState(false);
 
   const isOwnProfile = user && (user.did === handle || user.handle === handle);
+
+  if (!handle) {
+    return <Navigate to={user ? `/profile/${user.did}` : "/login"} replace />;
+  }
 
   useEffect(() => {
     async function fetchProfile() {

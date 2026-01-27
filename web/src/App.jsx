@@ -43,6 +43,7 @@ function AppContent() {
             <Route path="/bookmarks" element={<Bookmarks />} />
             <Route path="/highlights" element={<Highlights />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:handle" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/at/:did/:rkey" element={<AnnotationDetail />} />
