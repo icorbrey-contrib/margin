@@ -81,33 +81,8 @@ export default function Profile() {
   const handle = routeHandle || user?.did || user?.handle;
   const isOwnProfile = user && (user.did === handle || user.handle === handle);
 
-  if (authLoading) {
-    return (
-      <div className="profile-page">
-        <div className="feed">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "40%" }}
-              />
-              <div className="skeleton skeleton-text" />
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "60%" }}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!handle) {
-    return <Navigate to="/login" replace />;
-  }
-
   useEffect(() => {
+    if (!handle) return;
     async function fetchProfile() {
       try {
         setLoading(true);
@@ -202,6 +177,32 @@ export default function Profile() {
       alert("Failed to delete key: " + err.message);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="profile-page">
+        <div className="feed">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="card">
+              <div
+                className="skeleton skeleton-text"
+                style={{ width: "40%" }}
+              />
+              <div className="skeleton skeleton-text" />
+              <div
+                className="skeleton skeleton-text"
+                style={{ width: "60%" }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!handle) {
+    return <Navigate to="/login" replace />;
+  }
 
   const displayName = profile?.displayName || profile?.handle || handle;
   const displayHandle =
