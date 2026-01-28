@@ -17,6 +17,7 @@ import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import Landing from "./pages/Landing";
 import ScrollToTop from "./components/ScrollToTop";
 import { ThemeProvider } from "./context/ThemeContext";
 
@@ -35,7 +36,7 @@ function AppContent() {
       <TopNav />
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Feed />} />
+          <Route path="/home" element={<Feed />} />
           <Route path="/url" element={<Url />} />
           <Route path="/new" element={<New />} />
           <Route path="/bookmarks" element={<Bookmarks />} />
@@ -80,6 +81,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <Routes>
+          <Route path="/" element={<Landing />} />
           <Route path="/*" element={<AppContent />} />
         </Routes>
       </AuthProvider>

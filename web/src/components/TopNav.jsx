@@ -123,15 +123,15 @@ export default function TopNav() {
   return (
     <header className="top-nav">
       <div className="top-nav-inner">
-        <Link to="/" className="top-nav-logo">
+        <Link to="/home" className="top-nav-logo">
           <img src={logo} alt="Margin" />
           <span>Margin</span>
         </Link>
 
         <nav className="top-nav-links">
           <Link
-            to="/"
-            className={`top-nav-link ${isActive("/") ? "active" : ""}`}
+            to="/home"
+            className={`top-nav-link ${isActive("/home") ? "active" : ""}`}
           >
             Home
           </Link>
@@ -337,8 +337,8 @@ export default function TopNav() {
       {mobileMenuOpen && (
         <div className="mobile-menu">
           <Link
-            to="/"
-            className={`mobile-menu-link ${isActive("/") ? "active" : ""}`}
+            to="/home"
+            className={`mobile-menu-link ${isActive("/home") ? "active" : ""}`}
             onClick={closeMobileMenu}
           >
             <Home size={20} /> Home
