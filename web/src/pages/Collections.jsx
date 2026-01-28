@@ -38,6 +38,11 @@ export default function Collections() {
     setEditingCollection(null);
   };
 
+  const handleDelete = () => {
+    fetchCollections();
+    setEditingCollection(null);
+  };
+
   if (loading) {
     return (
       <div className="feed-page">
@@ -121,6 +126,7 @@ export default function Collections() {
           setEditingCollection(null);
         }}
         onSuccess={handleCreateSuccess}
+        onDelete={handleDelete}
         collectionToEdit={editingCollection}
       />
     </div>

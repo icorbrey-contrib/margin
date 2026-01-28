@@ -1,15 +1,15 @@
 ::highlight(margin-highlight-preview) {
-  background-color: rgba(168, 85, 247, 0.3);
+  background-color: rgba(149, 122, 134, 0.3);
   color: inherit;
 }
 
 ::highlight(margin-scroll-highlight) {
-  background-color: rgba(99, 102, 241, 0.4);
+  background-color: rgba(149, 122, 134, 0.5);
   color: inherit;
 }
 
 ::highlight(margin-page-highlights) {
-  background-color: rgba(252, 211, 77, 0.3);
+  background-color: rgba(149, 122, 134, 0.25);
   color: inherit;
 }
 

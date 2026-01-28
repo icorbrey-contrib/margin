@@ -256,47 +256,49 @@ export default function CollectionDetail() {
         </div>
       </div>
 
-      <div className="feed">
-        {items.length === 0 ? (
-          <div className="empty-state card" style={{ borderStyle: "dashed" }}>
-            <div className="empty-state-icon">
-              <Plus size={32} />
+      <div className="feed-container">
+        <div className="feed">
+          {items.length === 0 ? (
+            <div className="empty-state card" style={{ borderStyle: "dashed" }}>
+              <div className="empty-state-icon">
+                <Plus size={32} />
+              </div>
+              <h3 className="empty-state-title">Collection is empty</h3>
+              <p className="empty-state-text">
+                {isOwner
+                  ? 'Add items to this collection from your feed or bookmarks using the "Collect" button.'
+                  : "This collection has no items yet."}
+              </p>
             </div>
-            <h3 className="empty-state-title">Collection is empty</h3>
-            <p className="empty-state-text">
-              {isOwner
-                ? 'Add items to this collection from your feed or bookmarks using the "Collect" button.'
-                : "This collection has no items yet."}
-            </p>
-          </div>
-        ) : (
-          items.map((item) => (
-            <div key={item.uri} className="collection-item-wrapper">
-              {isOwner &&
-                !collection.uri.includes("network.cosmik.collection") && (
-                  <button
-                    onClick={() => handleDeleteItem(item.uri)}
-                    className="collection-item-remove"
-                    title="Remove from collection"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
+          ) : (
+            items.map((item) => (
+              <div key={item.uri} className="collection-item-wrapper">
+                {isOwner &&
+                  !collection.uri.includes("network.cosmik.collection") && (
+                    <button
+                      onClick={() => handleDeleteItem(item.uri)}
+                      className="collection-item-remove"
+                      title="Remove from collection"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
 
-              {item.annotation ? (
-                <AnnotationCard annotation={item.annotation} />
-              ) : item.highlight ? (
-                <HighlightCard highlight={item.highlight} />
-              ) : item.bookmark ? (
-                <BookmarkCard bookmark={item.bookmark} />
-              ) : (
-                <div className="card" style={{ padding: "16px" }}>
-                  <p className="text-secondary">Item could not be loaded</p>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+                {item.annotation ? (
+                  <AnnotationCard annotation={item.annotation} />
+                ) : item.highlight ? (
+                  <HighlightCard highlight={item.highlight} />
+                ) : item.bookmark ? (
+                  <BookmarkCard bookmark={item.bookmark} />
+                ) : (
+                  <div className="card" style={{ padding: "16px" }}>
+                    <p className="text-secondary">Item could not be loaded</p>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {isOwner && (

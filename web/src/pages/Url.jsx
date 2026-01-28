@@ -380,7 +380,9 @@ export default function Url() {
             </div>
           )}
 
-          <div className="feed">{renderResults()}</div>
+          <div className="feed-container">
+            <div className="feed">{renderResults()}</div>
+          </div>
         </>
       )}
     </div>

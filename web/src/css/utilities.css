@@ -539,6 +539,7 @@
 
 .share-menu-container {
   position: relative;
+  z-index: 10;
 }
 
 .share-menu {
@@ -546,13 +547,13 @@
   top: 100%;
   right: 0;
   margin-top: 8px;
-  background: var(--bg-primary);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  min-width: 180px;
-  padding: 8px 0;
-  z-index: 100;
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  padding: 8px;
+  z-index: 1000;
   animation: fadeInUp 0.15s ease;
 }
 
@@ -589,16 +590,17 @@
   padding: 10px 14px;
   background: none;
   border: none;
+  border-radius: var(--radius-md);
   width: 100%;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.1s ease;
 }
 
 .share-menu-item:hover {
-  background: var(--bg-tertiary);
+  background: var(--bg-hover);
 }
 
 .share-menu-icon {

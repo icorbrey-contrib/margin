@@ -10,6 +10,7 @@ import {
 } from "../api/client";
 import { BookmarkIcon } from "../components/Icons";
 import BookmarkCard from "../components/BookmarkCard";
+import CollectionItemCard from "../components/CollectionItemCard";
 import AddToCollectionModal from "../components/AddToCollectionModal";
 
 export default function Bookmarks() {
@@ -251,20 +252,22 @@ export default function Bookmarks() {
       )}
 
       {loadingBookmarks ? (
-        <div className="feed">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "40%" }}
-              ></div>
-              <div className="skeleton skeleton-text"></div>
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "60%" }}
-              ></div>
-            </div>
-          ))}
+        <div className="feed-container">
+          <div className="feed">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card">
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "40%" }}
+                ></div>
+                <div className="skeleton skeleton-text"></div>
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "60%" }}
+                ></div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : error ? (
         <div className="empty-state">
@@ -284,20 +287,38 @@ export default function Bookmarks() {
           </p>
         </div>
       ) : (
-        <div className="feed">
-          {bookmarks.map((bookmark) => (
-            <BookmarkCard
-              key={bookmark.id}
-              bookmark={bookmark}
-              onDelete={handleDelete}
-              onAddToCollection={() =>
-                setCollectionModalState({
-                  isOpen: true,
-                  uri: bookmark.uri || bookmark.id,
-                })
+        <div className="feed-container">
+          <div className="feed">
+            {bookmarks.map((bookmark) => {
+              if (bookmark.type === "CollectionItem") {
+                return (
+                  <CollectionItemCard
+                    key={bookmark.id}
+                    item={bookmark}
+                    onAddToCollection={(uri) =>
+                      setCollectionModalState({
+                        isOpen: true,
+                        uri: uri,
+                      })
+                    }
+                  />
+                );
               }
-            />
-          ))}
+              return (
+                <BookmarkCard
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  onDelete={handleDelete}
+                  onAddToCollection={() =>
+                    setCollectionModalState({
+                      isOpen: true,
+                      uri: bookmark.uri || bookmark.id,
+                    })
+                  }
+                />
+              );
+            })}
+          </div>
         </div>
       )}
       {collectionModalState.isOpen && (
