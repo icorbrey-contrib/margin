@@ -330,6 +330,12 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if tokenResp.Sub != pending.DID {
+		log.Printf("Security: OAuth sub mismatch, expected %s, got %s", pending.DID, tokenResp.Sub)
+		http.Error(w, "Account identity mismatch, authorization returned different account", http.StatusBadRequest)
+		return
+	}
+
 	_ = newNonce
 
 	sessionID := generateSessionID()

@@ -10,10 +10,13 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"margin.at/internal/crypto"
 	"margin.at/internal/db"
 	internal_sync "margin.at/internal/sync"
 	"margin.at/internal/xrpc"
 )
+
+var CIDVerificationEnabled = true
 
 const (
 	CollectionAnnotation       = "at.margin.annotation"
@@ -28,13 +31,20 @@ const (
 	CollectionSembleCollection = "network.cosmik.collection"
 )
 
-var RelayURL = "wss://jetstream2.us-east.bsky.network/subscribe"
+var RelayURLs = []string{
+	"wss://jetstream2.us-east.bsky.network/subscribe",
+	"wss://jetstream2.fr.hose.cam/subscribe",
+	"wss://jetstream.fire.hose.cam/subscribe",
+}
+
+var RelayURL = RelayURLs[0]
 
 type Ingester struct {
-	db       *db.DB
-	sync     *internal_sync.Service
-	cancel   context.CancelFunc
-	handlers map[string]RecordHandler
+	db              *db.DB
+	sync            *internal_sync.Service
+	cancel          context.CancelFunc
+	handlers        map[string]RecordHandler
+	currentRelayIdx int
 }
 
 type RecordHandler func(event *FirehoseEvent)
@@ -80,17 +90,30 @@ func (i *Ingester) Stop() {
 }
 
 func (i *Ingester) run(ctx context.Context) {
+	consecutiveFailures := 0
+	maxFailuresBeforeSwitch := 3
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 			if err := i.subscribe(ctx); err != nil {
-				log.Printf("Jetstream error: %v, reconnecting in 5s...", err)
+				consecutiveFailures++
+				log.Printf("Jetstream error (relay %d): %v, reconnecting in 5s...", i.currentRelayIdx, err)
+
+				if consecutiveFailures >= maxFailuresBeforeSwitch {
+					i.currentRelayIdx = (i.currentRelayIdx + 1) % len(RelayURLs)
+					log.Printf("Switching to relay %d: %s", i.currentRelayIdx, RelayURLs[i.currentRelayIdx])
+					consecutiveFailures = 0
+				}
+
 				if ctx.Err() != nil {
 					return
 				}
 				time.Sleep(5 * time.Second)
+			} else {
+				consecutiveFailures = 0
 			}
 		}
 	}
@@ -120,7 +143,8 @@ func (i *Ingester) subscribe(ctx context.Context) error {
 		collections = append(collections, collection)
 	}
 
-	url := fmt.Sprintf("%s?wantedCollections=%s", RelayURL, strings.Join(collections, "&wantedCollections="))
+	relayURL := RelayURLs[i.currentRelayIdx]
+	url := fmt.Sprintf("%s?wantedCollections=%s", relayURL, strings.Join(collections, "&wantedCollections="))
 	if cursor > 0 {
 		url = fmt.Sprintf("%s&cursor=%d", url, cursor)
 	}
@@ -171,6 +195,13 @@ func (i *Ingester) handleCommit(event JetstreamEvent) {
 	switch commit.Operation {
 	case "create", "update":
 		if len(commit.Record) > 0 {
+			if CIDVerificationEnabled && commit.Cid != "" {
+				if err := crypto.VerifyRecordCID(commit.Record, commit.Cid, uri); err != nil {
+					log.Printf("CID verification failed for %s: %v (skipping)", uri, err)
+					return
+				}
+			}
+
 			firehoseEvent := &FirehoseEvent{
 				Repo:       event.Did,
 				Collection: commit.Collection,
@@ -178,6 +209,7 @@ func (i *Ingester) handleCommit(event JetstreamEvent) {
 				Record:     commit.Record,
 				Operation:  commit.Operation,
 				Cursor:     event.Time,
+				CID:        commit.Cid,
 			}
 
 			i.dispatchToHandler(firehoseEvent)
@@ -267,6 +299,7 @@ type FirehoseEvent struct {
 	Record     json.RawMessage `json:"record"`
 	Operation  string          `json:"operation"`
 	Cursor     int64           `json:"cursor"`
+	CID        string          `json:"cid"`
 }
 
 func (i *Ingester) handleAnnotation(event *FirehoseEvent) {

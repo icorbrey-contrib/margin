@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -193,17 +192,16 @@ func (c *Client) DeleteRecord(ctx context.Context, repo, collection, rkey string
 }
 
 func (c *Client) DeleteRecordByURI(ctx context.Context, uri string) error {
-
-	if !strings.HasPrefix(uri, "at://") {
-		return fmt.Errorf("invalid AT URI format")
+	parsed, err := ParseATURI(uri)
+	if err != nil {
+		return err
 	}
 
-	parts := strings.Split(strings.TrimPrefix(uri, "at://"), "/")
-	if len(parts) != 3 {
-		return fmt.Errorf("invalid AT URI format")
+	if parsed.Collection == "" || parsed.RKey == "" {
+		return fmt.Errorf("invalid AT-URI: must include collection and rkey")
 	}
 
-	return c.DeleteRecord(ctx, parts[0], parts[1], parts[2])
+	return c.DeleteRecord(ctx, parsed.DID, parsed.Collection, parsed.RKey)
 }
 
 type PutRecordInput struct {
