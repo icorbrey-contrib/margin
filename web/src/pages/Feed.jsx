@@ -8,7 +8,7 @@ import IOSInstallBanner from "../components/IOSInstallBanner";
 import { getAnnotationFeed, deleteHighlight } from "../api/client";
 import { AlertIcon, InboxIcon } from "../components/Icons";
 import { useAuth } from "../context/AuthContext";
-import { X } from "lucide-react";
+import { X, ArrowUp } from "lucide-react";
 
 import AddToCollectionModal from "../components/AddToCollectionModal";
 
@@ -27,6 +27,8 @@ export default function Feed() {
   const [annotations, setAnnotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("feedFilter", filter);
@@ -43,45 +45,67 @@ export default function Feed() {
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    async function fetchFeed() {
-      try {
+  const fetchFeed = async (isLoadMore = false) => {
+    try {
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
         setLoading(true);
-        let creatorDid = "";
-
-        if (feedType === "my-feed") {
-          if (user?.did) {
-            creatorDid = user.did;
-          } else {
-            setAnnotations([]);
-            setLoading(false);
-            return;
-          }
-        }
-
-        const motivationMap = {
-          commenting: "commenting",
-          highlighting: "highlighting",
-          bookmarking: "bookmarking",
-        };
-        const motivation = motivationMap[filter] || "";
-
-        const data = await getAnnotationFeed(
-          50,
-          0,
-          tagFilter || "",
-          creatorDid,
-          feedType,
-          motivation,
-        );
-        setAnnotations(data.items || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
       }
+
+      let creatorDid = "";
+
+      if (feedType === "my-feed") {
+        if (user?.did) {
+          creatorDid = user.did;
+        } else {
+          setAnnotations([]);
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
+      }
+
+      const motivationMap = {
+        commenting: "commenting",
+        highlighting: "highlighting",
+        bookmarking: "bookmarking",
+      };
+      const motivation = motivationMap[filter] || "";
+      const limit = 50;
+      const offset = isLoadMore ? annotations.length : 0;
+
+      const data = await getAnnotationFeed(
+        limit,
+        offset,
+        tagFilter || "",
+        creatorDid,
+        feedType,
+        motivation,
+      );
+
+      const newItems = data.items || [];
+      if (newItems.length < limit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
+      if (isLoadMore) {
+        setAnnotations((prev) => [...prev, ...newItems]);
+      } else {
+        setAnnotations(newItems);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    fetchFeed();
+  };
+
+  useEffect(() => {
+    fetchFeed(false);
   }, [tagFilter, feedType, filter, user]);
 
   const deduplicatedAnnotations = useMemo(() => {
@@ -316,6 +340,25 @@ export default function Feed() {
                   );
                 })}
               </div>
+
+              {hasMore && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginTop: "12px",
+                    paddingBottom: "24px",
+                  }}
+                >
+                  <button
+                    onClick={() => fetchFeed(true)}
+                    disabled={loadingMore}
+                    className="feed-load-more"
+                  >
+                    {loadingMore ? "Loading..." : "View More"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -328,6 +371,42 @@ export default function Feed() {
           annotationUri={collectionModalState.uri}
         />
       )}
+
+      <BackToTopButton />
     </div>
+  );
+}
+
+function BackToTopButton() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleVisibility = () => {
+      if (window.scrollY > 300) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    window.addEventListener("scroll", toggleVisibility);
+    return () => window.removeEventListener("scroll", toggleVisibility);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <button
+      className={`back-to-top-btn ${isVisible ? "visible" : ""}`}
+      onClick={scrollToTop}
+      aria-label="Back to top"
+    >
+      <ArrowUp size={20} />
+    </button>
   );
 }

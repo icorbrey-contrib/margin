@@ -140,6 +140,7 @@ func (h *Handler) GetAnnotations(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	limit := parseIntParam(r, "limit", 50)
+	offset := parseIntParam(r, "offset", 0)
 	tag := r.URL.Query().Get("tag")
 	creator := r.URL.Query().Get("creator")
 	feedType := r.URL.Query().Get("type")
@@ -148,7 +149,7 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 
 	if viewerDID != "" && (creator == viewerDID || (creator == "" && tag == "" && feedType == "my-feed")) {
 		if creator == viewerDID {
-			h.serveUserFeedFromPDS(w, r, viewerDID, tag, limit)
+			h.serveUserFeedFromPDS(w, r, viewerDID, tag, limit, offset)
 			return
 		}
 	}
@@ -161,53 +162,55 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 
 	motivation := r.URL.Query().Get("motivation")
 
+	fetchLimit := limit + offset
+
 	if tag != "" {
 		if creator != "" {
 			if motivation == "" || motivation == "commenting" {
-				annotations, _ = h.db.GetAnnotationsByTagAndAuthor(tag, creator, limit, 0)
+				annotations, _ = h.db.GetAnnotationsByTagAndAuthor(tag, creator, fetchLimit, 0)
 			}
 			if motivation == "" || motivation == "highlighting" {
-				highlights, _ = h.db.GetHighlightsByTagAndAuthor(tag, creator, limit, 0)
+				highlights, _ = h.db.GetHighlightsByTagAndAuthor(tag, creator, fetchLimit, 0)
 			}
 			if motivation == "" || motivation == "bookmarking" {
-				bookmarks, _ = h.db.GetBookmarksByTagAndAuthor(tag, creator, limit, 0)
+				bookmarks, _ = h.db.GetBookmarksByTagAndAuthor(tag, creator, fetchLimit, 0)
 			}
 			collectionItems = []db.CollectionItem{}
 		} else {
 			if motivation == "" || motivation == "commenting" {
-				annotations, _ = h.db.GetAnnotationsByTag(tag, limit, 0)
+				annotations, _ = h.db.GetAnnotationsByTag(tag, fetchLimit, 0)
 			}
 			if motivation == "" || motivation == "highlighting" {
-				highlights, _ = h.db.GetHighlightsByTag(tag, limit, 0)
+				highlights, _ = h.db.GetHighlightsByTag(tag, fetchLimit, 0)
 			}
 			if motivation == "" || motivation == "bookmarking" {
-				bookmarks, _ = h.db.GetBookmarksByTag(tag, limit, 0)
+				bookmarks, _ = h.db.GetBookmarksByTag(tag, fetchLimit, 0)
 			}
 			collectionItems = []db.CollectionItem{}
 		}
 	} else if creator != "" {
 		if motivation == "" || motivation == "commenting" {
-			annotations, _ = h.db.GetAnnotationsByAuthor(creator, limit, 0)
+			annotations, _ = h.db.GetAnnotationsByAuthor(creator, fetchLimit, 0)
 		}
 		if motivation == "" || motivation == "highlighting" {
-			highlights, _ = h.db.GetHighlightsByAuthor(creator, limit, 0)
+			highlights, _ = h.db.GetHighlightsByAuthor(creator, fetchLimit, 0)
 		}
 		if motivation == "" || motivation == "bookmarking" {
-			bookmarks, _ = h.db.GetBookmarksByAuthor(creator, limit, 0)
+			bookmarks, _ = h.db.GetBookmarksByAuthor(creator, fetchLimit, 0)
 		}
 		collectionItems = []db.CollectionItem{}
 	} else {
 		if motivation == "" || motivation == "commenting" {
-			annotations, _ = h.db.GetRecentAnnotations(limit, 0)
+			annotations, _ = h.db.GetRecentAnnotations(fetchLimit, 0)
 		}
 		if motivation == "" || motivation == "highlighting" {
-			highlights, _ = h.db.GetRecentHighlights(limit, 0)
+			highlights, _ = h.db.GetRecentHighlights(fetchLimit, 0)
 		}
 		if motivation == "" || motivation == "bookmarking" {
-			bookmarks, _ = h.db.GetRecentBookmarks(limit, 0)
+			bookmarks, _ = h.db.GetRecentBookmarks(fetchLimit, 0)
 		}
 		if motivation == "" {
-			collectionItems, err = h.db.GetRecentCollectionItems(limit, 0)
+			collectionItems, err = h.db.GetRecentCollectionItems(fetchLimit, 0)
 			if err != nil {
 				log.Printf("Error fetching collection items: %v\n", err)
 			}
@@ -284,6 +287,12 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		sortFeed(feed)
 	}
 
+	if offset < len(feed) {
+		feed = feed[offset:]
+	} else {
+		feed = []interface{}{}
+	}
+
 	if len(feed) > limit {
 		feed = feed[:limit]
 	}
@@ -297,12 +306,12 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, did, tag string, limit int) {
+func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, did, tag string, limit, offset int) {
 	var wg sync.WaitGroup
 	var rawAnnos, rawHighs, rawBooks []interface{}
 	var errAnnos, errHighs, errBooks error
 
-	fetchLimit := limit * 2
+	fetchLimit := limit + offset
 	if fetchLimit < 50 {
 		fetchLimit = 50
 	}
@@ -414,6 +423,12 @@ func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, d
 	}
 
 	sortFeed(feed)
+
+	if offset < len(feed) {
+		feed = feed[offset:]
+	} else {
+		feed = []interface{}{}
+	}
 
 	if len(feed) > limit {
 		feed = feed[:limit]
