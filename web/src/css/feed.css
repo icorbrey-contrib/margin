@@ -1,16 +1,16 @@
 .feed-container {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-xl);
+  /* background: var(--bg-elevated); */
+  /* border: 1px solid var(--border-hover); */
+  /* border-radius: var(--radius-xl); */
   overflow: visible;
-  padding: 8px;
+  /* padding: 8px; */
   position: relative;
 }
 
 .feed {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 12px;
   width: 100%;
   overflow: visible;
   border-radius: var(--radius-lg);
@@ -18,12 +18,15 @@
 }
 
 .feed > * {
-  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   position: relative;
+  overflow: hidden;
 }
 
 .feed > *:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid var(--border);
 }
 
 .feed > *:hover {
@@ -38,6 +41,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
