@@ -8,8 +8,8 @@ import {
   getLikeCount,
   deleteBookmark,
 } from "../api/client";
-import { HeartIcon, TrashIcon, BookmarkIcon } from "./Icons";
-import { Folder } from "lucide-react";
+import { HeartIcon, TrashIcon } from "./Icons";
+import { Folder, ExternalLink } from "lucide-react";
 import ShareMenu from "./ShareMenu";
 import UserMeta from "./UserMeta";
 
@@ -28,6 +28,14 @@ export default function BookmarkCard({
   const [deleting, setDeleting] = useState(false);
 
   const isOwner = user?.did && data.author?.did === user.did;
+  const isSemble = data.uri?.includes("network.cosmik");
+
+  let domain = "";
+  try {
+    if (data.url) domain = new URL(data.url).hostname.replace("www.", "");
+  } catch {
+    /* ignore */
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -75,7 +83,6 @@ export default function BookmarkCard({
       onDelete(data.uri);
       return;
     }
-
     if (!confirm("Delete this bookmark?")) return;
     try {
       setDeleting(true);
@@ -90,12 +97,13 @@ export default function BookmarkCard({
     }
   };
 
-  let domain = "";
-  try {
-    if (data.url) domain = new URL(data.url).hostname.replace("www.", "");
-  } catch {
-    /* ignore */
-  }
+  const handleCollect = () => {
+    if (!user) {
+      login();
+      return;
+    }
+    if (onAddToCollection) onAddToCollection();
+  };
 
   return (
     <article className="card annotation-card bookmark-card">
@@ -103,44 +111,23 @@ export default function BookmarkCard({
         <div className="annotation-header-left">
           <UserMeta author={data.author} createdAt={data.createdAt} />
         </div>
-
         <div className="annotation-header-right">
-          <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-            {data.uri && data.uri.includes("network.cosmik") && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  fontSize: "0.75rem",
-                  color: "var(--text-tertiary)",
-                  marginRight: "8px",
-                }}
-                title="Added using Semble"
-              >
-                <span>via Semble</span>
-                <img
-                  src="/semble-logo.svg"
-                  alt="Semble"
-                  style={{ width: "16px", height: "16px" }}
-                />
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "4px" }}>
-              {((isOwner &&
-                !(data.uri && data.uri.includes("network.cosmik"))) ||
-                onDelete) && (
-                <button
-                  className="annotation-action action-icon-only"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  title="Delete"
-                >
-                  <TrashIcon size={16} />
-                </button>
-              )}
+          {isSemble && (
+            <div className="semble-badge" title="Added using Semble">
+              <span>via Semble</span>
+              <img src="/semble-logo.svg" alt="Semble" />
             </div>
-          </div>
+          )}
+          {((isOwner && !isSemble) || onDelete) && (
+            <button
+              className="annotation-action action-icon-only"
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Delete"
+            >
+              <TrashIcon size={16} />
+            </button>
+          )}
         </div>
       </header>
 
@@ -153,7 +140,7 @@ export default function BookmarkCard({
         >
           <div className="bookmark-preview-content">
             <div className="bookmark-preview-site">
-              <BookmarkIcon size={14} />
+              <ExternalLink size={12} />
               <span>{domain}</span>
             </div>
             <h3 className="bookmark-preview-title">{data.title || data.url}</h3>
@@ -183,6 +170,7 @@ export default function BookmarkCard({
             <HeartIcon filled={isLiked} size={16} />
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
+
           <ShareMenu
             uri={data.uri}
             text={data.title || data.description}
@@ -190,16 +178,8 @@ export default function BookmarkCard({
             type="Bookmark"
             url={data.url}
           />
-          <button
-            className="annotation-action"
-            onClick={() => {
-              if (!user) {
-                login();
-                return;
-              }
-              if (onAddToCollection) onAddToCollection();
-            }}
-          >
+
+          <button className="annotation-action" onClick={handleCollect}>
             <Folder size={16} />
             <span>Collect</span>
           </button>

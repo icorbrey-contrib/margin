@@ -875,11 +875,11 @@ func generateOGImagePNG(author, text, quote, source, avatarURL string) image.Ima
 	height := 630
 	padding := 100
 
-	bgPrimary := color.RGBA{12, 10, 20, 255}
-	accent := color.RGBA{168, 85, 247, 255}
-	textPrimary := color.RGBA{244, 240, 255, 255}
-	textSecondary := color.RGBA{168, 158, 200, 255}
-	border := color.RGBA{45, 38, 64, 255}
+	bgPrimary := color.RGBA{10, 10, 13, 255}
+	accent := color.RGBA{149, 122, 134, 255}
+	textPrimary := color.RGBA{234, 234, 238, 255}
+	textSecondary := color.RGBA{168, 164, 171, 255}
+	border := color.RGBA{42, 40, 46, 255}
 
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
@@ -1118,12 +1118,12 @@ func generateCollectionOGImagePNG(author, collectionName, description, icon, ava
 	height := 630
 	padding := 120
 
-	bgPrimary := color.RGBA{12, 10, 20, 255}
-	accent := color.RGBA{168, 85, 247, 255}
-	textPrimary := color.RGBA{244, 240, 255, 255}
-	textSecondary := color.RGBA{168, 158, 200, 255}
-	textTertiary := color.RGBA{107, 95, 138, 255}
-	border := color.RGBA{45, 38, 64, 255}
+	bgPrimary := color.RGBA{10, 10, 13, 255}
+	accent := color.RGBA{149, 122, 134, 255}
+	textPrimary := color.RGBA{234, 234, 238, 255}
+	textSecondary := color.RGBA{168, 164, 171, 255}
+	textTertiary := color.RGBA{107, 103, 112, 255}
+	border := color.RGBA{42, 40, 46, 255}
 
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
@@ -1220,11 +1220,11 @@ func generateHighlightOGImagePNG(author, pageTitle, quote, source, avatarURL str
 	height := 630
 	padding := 100
 
-	bgPrimary := color.RGBA{12, 10, 20, 255}
-	accent := color.RGBA{250, 204, 21, 255}
-	textPrimary := color.RGBA{244, 240, 255, 255}
-	textSecondary := color.RGBA{168, 158, 200, 255}
-	border := color.RGBA{45, 38, 64, 255}
+	bgPrimary := color.RGBA{10, 10, 13, 255}
+	accent := color.RGBA{149, 122, 134, 255}
+	textPrimary := color.RGBA{234, 234, 238, 255}
+	textSecondary := color.RGBA{168, 164, 171, 255}
+	border := color.RGBA{42, 40, 46, 255}
 
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 

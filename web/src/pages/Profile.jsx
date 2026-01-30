@@ -181,20 +181,22 @@ export default function Profile() {
   if (authLoading) {
     return (
       <div className="profile-page">
-        <div className="feed">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "40%" }}
-              />
-              <div className="skeleton skeleton-text" />
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "60%" }}
-              />
-            </div>
-          ))}
+        <div className="feed-container">
+          <div className="feed">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card">
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "40%" }}
+                />
+                <div className="skeleton skeleton-text" />
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "60%" }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -594,20 +596,22 @@ export default function Profile() {
       </div>
 
       {loading && (
-        <div className="feed">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "40%" }}
-              />
-              <div className="skeleton skeleton-text" />
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "60%" }}
-              />
-            </div>
-          ))}
+        <div className="feed-container">
+          <div className="feed">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card">
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "40%" }}
+                />
+                <div className="skeleton skeleton-text" />
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "60%" }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -619,7 +623,11 @@ export default function Profile() {
         </div>
       )}
 
-      {!loading && !error && <div className="feed">{renderContent()}</div>}
+      {!loading && !error && (
+        <div className="feed-container">
+          <div className="feed">{renderContent()}</div>
+        </div>
+      )}
     </div>
   );
 }

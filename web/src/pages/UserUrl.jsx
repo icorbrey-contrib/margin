@@ -163,20 +163,22 @@ export default function UserUrl() {
       </div>
 
       {loading && (
-        <div className="feed">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "40%" }}
-              />
-              <div className="skeleton skeleton-text" />
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "60%" }}
-              />
-            </div>
-          ))}
+        <div className="feed-container">
+          <div className="feed">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card">
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "40%" }}
+                />
+                <div className="skeleton skeleton-text" />
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "60%" }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -227,7 +229,9 @@ export default function UserUrl() {
               </button>
             </div>
           </div>
-          <div className="feed">{renderResults()}</div>
+          <div className="feed-container">
+            <div className="feed">{renderResults()}</div>
+          </div>
         </>
       )}
     </div>

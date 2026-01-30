@@ -41,8 +41,13 @@ import {
   Moon,
   Flame,
   Leaf,
+  Trash2,
 } from "lucide-react";
-import { createCollection, updateCollection } from "../api/client";
+import {
+  createCollection,
+  updateCollection,
+  deleteCollection,
+} from "../api/client";
 
 const EMOJI_OPTIONS = [
   "📁",
@@ -125,6 +130,7 @@ export default function CollectionModal({
   onClose,
   onSuccess,
   collectionToEdit,
+  onDelete,
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -132,6 +138,7 @@ export default function CollectionModal({
   const [customEmoji, setCustomEmoji] = useState("");
   const [activeTab, setActiveTab] = useState("emoji");
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -208,6 +215,33 @@ export default function CollectionModal({
       setError(err.message || "Failed to save collection");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (
+      !confirm(
+        "Delete this collection and all its items? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await deleteCollection(collectionToEdit.uri);
+      if (onDelete) {
+        onDelete();
+      } else {
+        onSuccess();
+      }
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to delete collection");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -327,6 +361,18 @@ export default function CollectionModal({
           </div>
 
           <div className="modal-actions">
+            {collectionToEdit && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="btn btn-danger"
+              >
+                <Trash2 size={16} />
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            )}
+            <div style={{ flex: 1 }} />
             <button type="button" onClick={onClose} className="btn btn-ghost">
               Cancel
             </button>

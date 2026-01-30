@@ -1,7 +1,7 @@
 @import "./css/layout.css";
 @import "./css/base.css";
 @import "./css/buttons.css";
-@import "./css/buttons.css";
+@import "./css/cards.css";
 @import "./css/feed.css";
 @import "./css/profile.css";
 @import "./css/login.css";
@@ -11,3 +11,4 @@
 @import "./css/notifications.css";
 @import "./css/skeleton.css";
 @import "./css/utilities.css";
+@import "./css/landing.css";

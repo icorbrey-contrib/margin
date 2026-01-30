@@ -208,6 +208,25 @@ func (c *Client) GetAuthServerMetadata(ctx context.Context, pds string) (*AuthSe
 	return &meta, nil
 }
 
+func (c *Client) GetAuthServerMetadataForSignup(ctx context.Context, url string) (*AuthServerMetadata, error) {
+	url = strings.TrimSuffix(url, "/")
+
+	metaURL := fmt.Sprintf("%s/.well-known/oauth-authorization-server", url)
+	metaResp, err := http.Get(metaURL)
+	if err == nil && metaResp.StatusCode == 200 {
+		defer metaResp.Body.Close()
+		var meta AuthServerMetadata
+		if err := json.NewDecoder(metaResp.Body).Decode(&meta); err == nil && meta.Issuer != "" {
+			return &meta, nil
+		}
+	}
+	if metaResp != nil {
+		metaResp.Body.Close()
+	}
+
+	return c.GetAuthServerMetadata(ctx, url)
+}
+
 func (c *Client) GeneratePKCE() (verifier, challenge string) {
 	b := make([]byte, 32)
 	rand.Read(b)

@@ -398,7 +398,7 @@ async function handleMessage(request, sender, sendResponse) {
         sendResponse({ success: true, data: allItems });
 
         if (sender.tab) {
-          const count = items.length;
+          const count = allItems.length;
           chrome.action
             .setBadgeText({
               text: count > 0 ? count.toString() : "",

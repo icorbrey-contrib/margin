@@ -5,13 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"margin.at/internal/crypto"
 	"margin.at/internal/db"
 	"margin.at/internal/xrpc"
 )
+
+var CIDVerificationEnabled = true
 
 type Service struct {
 	db *db.DB
@@ -82,6 +86,13 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 			}
 
 			for _, rec := range output.Records {
+				if CIDVerificationEnabled && rec.CID != "" {
+					if err := crypto.VerifyRecordCID(rec.Value, rec.CID, rec.URI); err != nil {
+						log.Printf("CID verification failed for %s: %v (skipping)", rec.URI, err)
+						continue
+					}
+				}
+
 				err := s.upsertRecord(did, collectionNSID, rec.URI, rec.CID, rec.Value)
 				if err != nil {
 					fmt.Printf("Error upserting %s: %v\n", rec.URI, err)

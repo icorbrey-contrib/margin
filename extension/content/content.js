@@ -9,35 +9,39 @@
   const OVERLAY_STYLES = `
     :host { 
       all: initial; 
-      --bg-primary: #09090b;
-      --bg-secondary: #0f0f12;
-      --bg-tertiary: #18181b;
-      --bg-card: #09090b;
-      --bg-elevated: #18181b;
-      --bg-hover: #27272a;
+      --bg-primary: #0a0a0d;
+      --bg-secondary: #121216;
+      --bg-tertiary: #1a1a1f;
+      --bg-card: #0f0f13;
+      --bg-elevated: #18181d;
+      --bg-hover: #1e1e24;
       
-      --text-primary: #e4e4e7;
-      --text-secondary: #a1a1aa;
-      --border: #27272a;
+      --text-primary: #eaeaee;
+      --text-secondary: #b7b6c5;
+      --text-tertiary: #6e6d7a;
+      --border: rgba(183, 182, 197, 0.12);
       
-      --accent: #6366f1;
-      --accent-hover: #4f46e5;
+      --accent: #957a86;
+      --accent-hover: #a98d98;
+      --accent-subtle: rgba(149, 122, 134, 0.15);
     }
     
     :host(.light) {
-      --bg-primary: #ffffff;
-      --bg-secondary: #f4f4f5;
-      --bg-tertiary: #e4e4e7;
+      --bg-primary: #f8f8fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0f0f4;
       --bg-card: #ffffff;
-      --bg-elevated: #f4f4f5;
-      --bg-hover: #e4e4e7;
+      --bg-elevated: #ffffff;
+      --bg-hover: #eeeef2;
       
-      --text-primary: #18181b;
-      --text-secondary: #52525b;
-      --border: #e4e4e7;
+      --text-primary: #18171c;
+      --text-secondary: #5c495a;
+      --text-tertiary: #8a8494;
+      --border: rgba(92, 73, 90, 0.12);
       
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
+      --accent: #7a5f6d;
+      --accent-hover: #664e5b;
+      --accent-subtle: rgba(149, 122, 134, 0.12);
     }
 
     .margin-overlay {
@@ -51,78 +55,136 @@
 
     .margin-popover {
       position: absolute;
-      width: 320px;
+      width: 300px;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       display: flex;
       flex-direction: column;
       pointer-events: auto;
       z-index: 2147483647;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
       color: var(--text-primary);
       opacity: 0;
-      transform: scale(0.95);
+      transform: translateY(-4px);
       animation: popover-in 0.15s forwards;
-      max-height: 480px;
+      max-height: 400px;
       overflow: hidden;
     }
-    @keyframes popover-in { to { opacity: 1; transform: scale(1); } }
+    @keyframes popover-in { to { opacity: 1; transform: translateY(0); } }
+    
     .popover-header {
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--bg-secondary);
+      background: var(--bg-primary);
       border-radius: 12px 12px 0 0;
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text-primary);
+      font-weight: 500;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
+    .popover-close { 
+      background: none; 
+      border: none; 
+      color: var(--text-tertiary); 
+      cursor: pointer; 
+      padding: 2px;
+      font-size: 16px;
+      line-height: 1;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+    }
+    .popover-close:hover { opacity: 1; }
+    
     .popover-scroll-area {
       overflow-y: auto;
-      max-height: 400px;
+      max-height: 340px;
     }
-    .popover-item-block {
+    
+    .comment-item {
+      padding: 12px 14px;
       border-bottom: 1px solid var(--border);
-      margin-bottom: 0;
-      animation: fade-in 0.2s;
     }
-    .popover-item-block:last-child {
+    .comment-item:last-child {
       border-bottom: none;
     }
-    .popover-item-header {
-      padding: 12px 16px 4px;
+    
+    .comment-header {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 6px;
     }
-    .popover-avatar {
-      width: 24px; height: 24px; border-radius: 50%; background: var(--bg-hover);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; color: var(--text-secondary);
+    .comment-avatar {
+      width: 22px; 
+      height: 22px; 
+      border-radius: 50%; 
+      background: var(--accent);
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      font-size: 9px; 
+      font-weight: 600;
+      color: white;
     }
-    .popover-handle { font-size: 12px; font-weight: 600; color: var(--text-primary); }
-    .popover-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
-    .popover-close:hover { color: var(--text-primary); }
-    .popover-content { padding: 4px 16px 12px; font-size: 13px; line-height: 1.5; color: var(--text-primary); }
-    .popover-quote {
-      margin-top: 8px; padding: 6px 10px; background: var(--bg-tertiary);
-      border-left: 2px solid var(--accent); border-radius: 4px;
-      font-size: 11px; color: var(--text-secondary); font-style: italic;
+    .comment-handle { 
+      font-size: 12px; 
+      font-weight: 600; 
+      color: var(--text-primary); 
     }
-    .popover-actions {
-      padding: 8px 16px;
-      display: flex; justify-content: flex-end; gap: 8px;
+    .comment-time {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-left: auto;
     }
-    .btn-action {
-      background: none; border: 1px solid var(--border); border-radius: 4px;
-      padding: 4px 8px; color: var(--text-secondary); font-size: 11px; cursor: pointer;
+    
+    .comment-text { 
+      font-size: 13px; 
+      line-height: 1.5; 
+      color: var(--text-primary);
+      margin-bottom: 8px;
     }
-    .btn-action:hover { background: var(--bg-hover); color: var(--text-primary); }
+    
+    .highlight-only-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-style: italic;
+    }
+    
+    .comment-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .highlight-only-badge {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-style: italic;
+      opacity: 0.7;
+    }
+    .comment-action-btn {
+      background: none; 
+      border: none;
+      padding: 4px 8px;
+      color: var(--text-tertiary); 
+      font-size: 11px; 
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .comment-action-btn:hover { 
+      background: var(--bg-hover); 
+      color: var(--text-secondary); 
+    }
     
     .margin-selection-popup {
       position: fixed;
@@ -132,10 +194,10 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 8px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
       z-index: 2147483647;
       pointer-events: auto;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
       animation: popover-in 0.15s forwards;
     }
     .selection-btn {
@@ -168,10 +230,10 @@
       border-radius: 12px;
       padding: 16px;
       box-sizing: border-box;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
       z-index: 2147483647;
       pointer-events: auto;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
       color: var(--text-primary);
       animation: popover-in 0.15s forwards;
       overflow: hidden;
@@ -181,8 +243,8 @@
     }
     .inline-compose-quote {
       padding: 8px 12px;
-      background: var(--bg-tertiary);
-      border-left: 3px solid var(--accent);
+      background: var(--accent-subtle);
+      border-left: 2px solid var(--accent);
       border-radius: 4px;
       font-size: 12px;
       color: var(--text-secondary);
@@ -247,13 +309,13 @@
     }
     .reply-section {
       border-top: 1px solid var(--border);
-      padding: 12px 16px;
-      background: var(--bg-secondary);
+      padding: 10px 14px;
+      background: var(--bg-primary);
       border-radius: 0 0 12px 12px;
     }
     .reply-textarea {
       width: 100%;
-      min-height: 60px;
+      min-height: 50px;
       padding: 8px 10px;
       background: var(--bg-elevated);
       border: 1px solid var(--border);
@@ -887,7 +949,7 @@
       .join(",");
     popoverEl.dataset.itemIds = ids;
 
-    const popWidth = 320;
+    const popWidth = 300;
     const screenWidth = window.innerWidth;
     let finalLeft = left;
     if (left + popWidth > screenWidth) finalLeft = screenWidth - popWidth - 20;
@@ -895,20 +957,8 @@
     popoverEl.style.top = `${top + 20}px`;
     popoverEl.style.left = `${finalLeft}px`;
 
-    const hasHighlights = items.some((item) => item.type === "Highlight");
-    const hasAnnotations = items.some((item) => item.type !== "Highlight");
-    let title;
-    if (items.length > 1) {
-      if (hasHighlights && hasAnnotations) {
-        title = `${items.length} Items`;
-      } else if (hasHighlights) {
-        title = `${items.length} Highlights`;
-      } else {
-        title = `${items.length} Annotations`;
-      }
-    } else {
-      title = items[0]?.type === "Highlight" ? "Highlight" : "Annotation";
-    }
+    const count = items.length;
+    const title = count === 1 ? "1 Comment" : `${count} Comments`;
 
     let contentHtml = items
       .map((item) => {
@@ -916,42 +966,32 @@
         const handle = author.handle || "User";
         const avatar = author.avatar;
         const text = item.body?.value || item.text || "";
-        const quote =
-          item.target?.selector?.exact || item.selector?.exact || "";
         const id = item.id || item.uri;
-
-        let avatarHtml = `<div class="popover-avatar">${handle[0]?.toUpperCase() || "U"}</div>`;
-        if (avatar) {
-          avatarHtml = `<img src="${avatar}" class="popover-avatar" style="object-fit: cover;">`;
-        }
-
         const isHighlight = item.type === "Highlight";
 
+        let avatarHtml = `<div class="comment-avatar">${handle[0]?.toUpperCase() || "U"}</div>`;
+        if (avatar) {
+          avatarHtml = `<img src="${avatar}" class="comment-avatar" style="object-fit: cover;">`;
+        }
+
         let bodyHtml = "";
-        if (isHighlight) {
-          bodyHtml = `<div class="popover-text" style="font-style: italic; color: #a1a1aa;">"${quote}"</div>`;
+        if (isHighlight && !text) {
+          bodyHtml = `<div class="highlight-only-badge">Highlighted</div>`;
         } else {
-          bodyHtml = `<div class="popover-text">${text}</div>`;
-          if (quote) {
-            bodyHtml += `<div class="popover-quote">"${quote}"</div>`;
-          }
+          bodyHtml = `<div class="comment-text">${text}</div>`;
         }
 
         return `
-        <div class="popover-item-block">
-            <div class="popover-item-header">
-                <div class="popover-author">
-                    ${avatarHtml}
-                    <span class="popover-handle">@${handle}</span>
-                </div>
-            </div>
-            <div class="popover-content">
-                ${bodyHtml}
-            </div>
-            <div class="popover-actions">
-                ${!isHighlight ? `<button class="btn-action btn-reply" data-id="${id}">Reply</button>` : ""}
-                <button class="btn-action btn-share" data-id="${id}" data-text="${text}" data-quote="${quote}">Share</button>
-            </div>
+        <div class="comment-item">
+          <div class="comment-header">
+            ${avatarHtml}
+            <span class="comment-handle">@${handle}</span>
+          </div>
+          ${bodyHtml}
+          <div class="comment-actions">
+            ${!isHighlight ? `<button class="comment-action-btn btn-reply" data-id="${id}">Reply</button>` : ""}
+            <button class="comment-action-btn btn-share" data-id="${id}" data-text="${text}">Share</button>
+          </div>
         </div>
         `;
       })
@@ -992,9 +1032,8 @@
       btn.addEventListener("click", async () => {
         const id = btn.getAttribute("data-id");
         const text = btn.getAttribute("data-text");
-        const quote = btn.getAttribute("data-quote");
         const u = `https://margin.at/annotation/${encodeURIComponent(id)}`;
-        const shareText = `${text ? text + "\n" : ""}${quote ? `"${quote}"\n` : ""}${u}`;
+        const shareText = text ? `${text}\n${u}` : u;
 
         try {
           await navigator.clipboard.writeText(shareText);

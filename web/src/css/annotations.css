@@ -1,12 +1,11 @@
 .annotation-detail-page {
-  max-width: 680px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 24px 16px;
   min-height: 100vh;
 }
 
 .annotation-detail-header {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-md);
 }
 
 .back-link {
@@ -14,7 +13,7 @@
   align-items: center;
   color: var(--text-tertiary);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   transition: color 0.15s;
 }
@@ -24,60 +23,88 @@
 }
 
 .replies-section {
-  margin-top: 32px;
+  margin-top: var(--spacing-lg);
   border-top: 1px solid var(--border);
-  padding-top: 24px;
+  padding-top: var(--spacing-md);
 }
 
 .replies-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
+  gap: 6px;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-md);
 }
 
 .annotation-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.15s ease;
+  gap: 8px;
+  padding: 16px 20px;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+  background: var(--bg-primary);
+  border: none;
+  position: relative;
 }
 
-.annotation-card:last-child {
-  border-bottom: none;
+.feed > .annotation-card,
+.feed > .card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-card) !important;
+  overflow: hidden;
 }
+
+/* 
+.feed > .annotation-card:first-child,
+.feed > .card:first-child {
+  border-top-left-radius: var(--radius-lg) !important;
+  border-top-right-radius: var(--radius-lg) !important;
+}
+
+.feed > .annotation-card:last-child,
+.feed > .card:last-child {
+  border-bottom-left-radius: var(--radius-lg) !important;
+  border-bottom-right-radius: var(--radius-lg) !important;
+}
+
+.feed > .annotation-card:only-child,
+.feed > .card:only-child {
+  border-radius: var(--radius-lg) !important;
+}
+*/
 
 .annotation-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--spacing-sm);
 }
 
 .annotation-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
 
 .annotation-avatar {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--radius-full);
   background: var(--bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   overflow: hidden;
 }
@@ -92,29 +119,31 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  line-height: 1.3;
+  line-height: 1.4;
+  min-width: 0;
+  flex: 1;
 }
 
 .annotation-avatar-link {
   text-decoration: none;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
 }
 
 .annotation-author-row {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .annotation-author {
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .annotation-handle {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-tertiary);
   text-decoration: none;
 }
@@ -131,65 +160,69 @@
 .annotation-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-left: 46px;
+  gap: 8px;
+  padding-left: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .annotation-source {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  color: var(--accent);
   text-decoration: none;
   transition: color 0.15s ease;
   max-width: 100%;
+  overflow: hidden;
+}
+
+.annotation-source:hover {
+  text-decoration: underline;
+}
+
+.annotation-source-title {
+  color: var(--text-primary);
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.annotation-source:hover {
-  color: var(--text-secondary);
-  text-decoration: underline;
-}
-
-.annotation-source-title {
-  color: var(--text-tertiary);
-  opacity: 0.7;
-}
-
 .annotation-highlight {
   display: block;
   position: relative;
-  padding-left: 12px;
-  margin: 4px 0;
+  padding: 10px 14px;
+  margin: 0;
   text-decoration: none;
-  border-left: 2px solid var(--border);
+  background: var(--bg-tertiary);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   transition: all 0.15s ease;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .annotation-highlight:hover {
-  border-left-color: var(--text-secondary);
+  background: var(--bg-hover);
 }
 
 .annotation-highlight mark {
   background: transparent;
   color: var(--text-primary);
   font-style: italic;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  line-height: 1.5;
   font-weight: 400;
-  font-family: var(--font-serif, var(--font-sans));
-  display: inline;
-  overflow-wrap: anywhere;
-  word-break: break-all;
-  padding-right: 4px;
+  display: block;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .annotation-text {
-  font-size: 0.95rem;
-  line-height: 1.6;
+  font-size: 1rem;
+  line-height: 1.7;
   color: var(--text-primary);
   white-space: pre-wrap;
 }
@@ -198,47 +231,47 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .annotation-tag {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--accent);
   text-decoration: none;
   font-weight: 500;
-  opacity: 0.9;
   transition: opacity 0.15s;
 }
 
 .annotation-tag:hover {
-  opacity: 1;
+  opacity: 0.8;
   text-decoration: underline;
 }
 
 .annotation-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 4px;
+  padding-left: 0;
   margin-top: 4px;
-  padding-left: 46px;
+  position: relative;
 }
 
 .annotation-actions-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
 .annotation-action {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: var(--text-tertiary);
   font-size: 0.8rem;
   font-weight: 500;
-  padding: 6px;
-  margin-left: -6px;
-  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
   transition: all 0.15s ease;
   background: transparent;
   cursor: pointer;
@@ -251,11 +284,11 @@
 }
 
 .annotation-action.liked {
-  color: #ef4444;
+  color: var(--error);
 }
 
 .annotation-action.liked svg {
-  fill: #ef4444;
+  fill: var(--error);
 }
 
 .annotation-action.active {
@@ -263,7 +296,7 @@
 }
 
 .action-icon-only {
-  padding: 6px;
+  padding: 4px;
 }
 
 .annotation-header-right {
@@ -276,8 +309,9 @@
 }
 
 .inline-replies {
-  margin-top: 12px;
-  padding-left: 46px;
+  margin-top: var(--spacing-sm);
+  padding-left: 0;
+  position: relative;
 }
 
 .annotation-text,
@@ -286,12 +320,6 @@
   overflow-wrap: break-word;
   word-break: break-word;
   max-width: 100%;
-}
-
-.annotation-highlight mark {
-  overflow-wrap: break-word;
-  word-break: break-word;
-  display: inline;
 }
 
 .annotation-header-left,
@@ -306,10 +334,6 @@
   max-width: 100%;
 }
 
-.annotation-source {
-  max-width: 100%;
-}
-
 @media (max-width: 768px) {
   .annotation-content,
   .annotation-actions,
@@ -320,10 +344,20 @@
   .annotation-header-right {
     opacity: 1;
   }
+
+  .annotation-card {
+    padding: 16px;
+  }
+
+  .annotation-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
 }
 
 .replies-list-threaded {
-  margin-top: 16px;
+  margin-top: var(--spacing-md);
   display: flex;
   flex-direction: column;
 }
@@ -331,20 +365,21 @@
 .reply-card-threaded {
   position: relative;
   padding-left: 0;
+  padding: var(--spacing-sm) 0;
   transition: background 0.15s;
 }
 
 .reply-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .reply-avatar {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--bg-tertiary);
   overflow: hidden;
   flex-shrink: 0;
@@ -368,14 +403,14 @@
 .reply-meta {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
 
 .reply-author {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -392,7 +427,7 @@
 }
 
 .reply-time {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-tertiary);
   white-space: nowrap;
 }
@@ -407,7 +442,7 @@
   line-height: 1.5;
   color: var(--text-primary);
   margin: 0;
-  padding-left: 38px;
+  padding-left: 36px;
 }
 
 .reply-actions {
@@ -428,7 +463,7 @@
   padding: 4px;
   color: var(--text-tertiary);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -440,16 +475,16 @@
 }
 
 .reply-action-delete:hover {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  background: rgba(255, 69, 58, 0.1);
 }
 
 .reply-form {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: var(--spacing-md);
   background: var(--bg-secondary);
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-md);
 }
 
 .replying-to-banner {
@@ -457,10 +492,10 @@
   justify-content: space-between;
   align-items: center;
   background: var(--bg-tertiary);
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
-  margin-bottom: 12px;
-  font-size: 0.85rem;
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
@@ -469,7 +504,7 @@
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1rem;
   padding: 0 4px;
   line-height: 1;
 }
@@ -483,12 +518,12 @@
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px;
+  padding: 10px 12px;
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   resize: vertical;
-  min-height: 80px;
+  min-height: 60px;
   transition: border-color 0.15s;
   display: block;
   box-sizing: border-box;
@@ -502,7 +537,7 @@
 .reply-form-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: var(--spacing-sm);
 }
 
 .rich-text-link {

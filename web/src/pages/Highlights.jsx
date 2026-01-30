@@ -82,20 +82,22 @@ export default function Highlights() {
       </div>
 
       {loadingHighlights ? (
-        <div className="feed">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "40%" }}
-              ></div>
-              <div className="skeleton skeleton-text"></div>
-              <div
-                className="skeleton skeleton-text"
-                style={{ width: "60%" }}
-              ></div>
-            </div>
-          ))}
+        <div className="feed-container">
+          <div className="feed">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card">
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "40%" }}
+                ></div>
+                <div className="skeleton skeleton-text"></div>
+                <div
+                  className="skeleton skeleton-text"
+                  style={{ width: "60%" }}
+                ></div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : error ? (
         <div className="empty-state">
@@ -114,14 +116,16 @@ export default function Highlights() {
           </p>
         </div>
       ) : (
-        <div className="feed">
-          {highlights.map((highlight) => (
-            <HighlightCard
-              key={highlight.id}
-              highlight={highlight}
-              onDelete={handleDelete}
-            />
-          ))}
+        <div className="feed-container">
+          <div className="feed">
+            {highlights.map((highlight) => (
+              <HighlightCard
+                key={highlight.id}
+                highlight={highlight}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

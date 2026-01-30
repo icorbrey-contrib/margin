@@ -5,86 +5,71 @@ import BookmarkCard from "./BookmarkCard";
 import CollectionIcon from "./CollectionIcon";
 import ShareMenu from "./ShareMenu";
 
-export default function CollectionItemCard({ item }) {
+export default function CollectionItemCard({ item, onAddToCollection }) {
   const author = item.creator;
   const collection = item.collection;
 
   if (!author || !collection) return null;
 
-  let inner = null;
-  if (item.annotation) {
-    inner = <AnnotationCard annotation={item.annotation} />;
-  } else if (item.highlight) {
-    inner = <HighlightCard highlight={item.highlight} />;
-  } else if (item.bookmark) {
-    inner = <BookmarkCard bookmark={item.bookmark} />;
-  }
+  const innerItem = item.annotation || item.highlight || item.bookmark;
+  if (!innerItem) return null;
 
-  if (!inner) return null;
+  const innerUri = innerItem.uri || innerItem.id;
 
   return (
-    <div className="collection-feed-item" style={{ marginBottom: "20px" }}>
-      <div
-        className="feed-context-header"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          marginBottom: "8px",
-          fontSize: "14px",
-          color: "var(--text-secondary)",
-        }}
-      >
-        {author.avatar && (
-          <img
-            src={author.avatar}
-            alt={author.handle}
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "50%",
-              objectFit: "cover",
-            }}
-          />
-        )}
-        <span>
-          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-            {author.displayName || author.handle}
-          </span>{" "}
-          added to{" "}
-          <Link
-            to={`/${author.handle}/collection/${collection.uri.split("/").pop()}`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              fontWeight: 500,
-              color: "var(--primary)",
-              textDecoration: "none",
-            }}
-          >
-            <CollectionIcon icon={collection.icon} size={14} />
-            {collection.name}
-          </Link>
-        </span>
-        <div style={{ marginLeft: "auto" }}>
-          <ShareMenu
-            uri={collection.uri}
-            handle={author.handle}
-            type="Collection"
-            text={`Check out this collection by ${author.displayName}: ${collection.name}`}
-          />
+    <div className="collection-feed-item">
+      <div className="collection-context-badge">
+        <div className="collection-context-inner">
+          {author.avatar && (
+            <img
+              src={author.avatar}
+              alt={author.handle}
+              className="collection-context-avatar"
+            />
+          )}
+          <span className="collection-context-text">
+            <Link
+              to={`/profile/${author.did}`}
+              className="collection-context-author"
+            >
+              {author.displayName || author.handle}
+            </Link>{" "}
+            added to{" "}
+            <Link
+              to={`/${author.handle}/collection/${collection.uri.split("/").pop()}`}
+              className="collection-context-link"
+            >
+              <CollectionIcon icon={collection.icon} size={14} />
+              {collection.name}
+            </Link>
+          </span>
         </div>
+        <ShareMenu
+          uri={collection.uri}
+          handle={author.handle}
+          type="Collection"
+          text={`Check out this collection: ${collection.name}`}
+        />
       </div>
-      <div
-        className="feed-context-body"
-        style={{
-          paddingLeft: "16px",
-          borderLeft: "2px solid var(--border-color)",
-        }}
-      >
-        {inner}
-      </div>
+
+      {item.annotation && (
+        <AnnotationCard
+          annotation={item.annotation}
+          onAddToCollection={() => onAddToCollection?.(innerUri)}
+        />
+      )}
+      {item.highlight && (
+        <HighlightCard
+          highlight={item.highlight}
+          onAddToCollection={() => onAddToCollection?.(innerUri)}
+        />
+      )}
+      {item.bookmark && (
+        <BookmarkCard
+          bookmark={item.bookmark}
+          onAddToCollection={() => onAddToCollection?.(innerUri)}
+        />
+      )}
     </div>
   );
 }

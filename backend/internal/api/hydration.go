@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,12 +11,18 @@ import (
 	"sync"
 	"time"
 
+	"margin.at/internal/constellation"
 	"margin.at/internal/db"
 )
 
 var (
-	Cache ProfileCache = NewInMemoryCache(5 * time.Minute)
+	Cache               ProfileCache          = NewInMemoryCache(5 * time.Minute)
+	ConstellationClient *constellation.Client = constellation.NewClient() // Enabled by default
 )
+
+func init() {
+	log.Printf("Constellation client initialized: %s", constellation.DefaultBaseURL)
+}
 
 type Author struct {
 	DID         string `json:"did"`
@@ -145,6 +152,43 @@ type APINotification struct {
 	ReadAt     *time.Time  `json:"readAt,omitempty"`
 }
 
+func fetchCounts(ctx context.Context, database *db.DB, uris []string, viewerDID string) (likeCounts, replyCounts map[string]int, viewerLikes map[string]bool) {
+	likeCounts = make(map[string]int)
+	replyCounts = make(map[string]int)
+	viewerLikes = make(map[string]bool)
+
+	if len(uris) == 0 {
+		return
+	}
+
+	if database != nil {
+		likeCounts, _ = database.GetLikeCounts(uris)
+		replyCounts, _ = database.GetReplyCounts(uris)
+		if viewerDID != "" {
+			viewerLikes, _ = database.GetViewerLikes(viewerDID, uris)
+		}
+	}
+
+	if ConstellationClient != nil && len(uris) <= 5 {
+		constellationCounts, err := ConstellationClient.GetCountsBatch(ctx, uris)
+		if err != nil {
+			log.Printf("Constellation fetch error (non-fatal): %v", err)
+			return
+		}
+
+		for uri, counts := range constellationCounts {
+			if counts.LikeCount > likeCounts[uri] {
+				likeCounts[uri] = counts.LikeCount
+			}
+			if counts.ReplyCount > replyCounts[uri] {
+				replyCounts[uri] = counts.ReplyCount
+			}
+		}
+	}
+
+	return
+}
+
 func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID string) ([]APIAnnotation, error) {
 	if len(annotations) == 0 {
 		return []APIAnnotation{}, nil
@@ -152,22 +196,14 @@ func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID 
 
 	profiles := fetchProfilesForDIDs(collectDIDs(annotations, func(a db.Annotation) string { return a.AuthorDID }))
 
-	var likeCounts map[string]int
-	var replyCounts map[string]int
-	var viewerLikes map[string]bool
-
-	if database != nil {
-		uris := make([]string, len(annotations))
-		for i, a := range annotations {
-			uris[i] = a.URI
-		}
-
-		likeCounts, _ = database.GetLikeCounts(uris)
-		replyCounts, _ = database.GetReplyCounts(uris)
-		if viewerDID != "" {
-			viewerLikes, _ = database.GetViewerLikes(viewerDID, uris)
-		}
+	uris := make([]string, len(annotations))
+	for i, a := range annotations {
+		uris[i] = a.URI
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	likeCounts, replyCounts, viewerLikes := fetchCounts(ctx, database, uris, viewerDID)
 
 	result := make([]APIAnnotation, len(annotations))
 	for i, a := range annotations {
@@ -228,12 +264,10 @@ func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID 
 			IndexedAt: a.IndexedAt,
 		}
 
-		if database != nil {
-			result[i].LikeCount = likeCounts[a.URI]
-			result[i].ReplyCount = replyCounts[a.URI]
-			if viewerLikes != nil && viewerLikes[a.URI] {
-				result[i].ViewerHasLiked = true
-			}
+		result[i].LikeCount = likeCounts[a.URI]
+		result[i].ReplyCount = replyCounts[a.URI]
+		if viewerLikes != nil && viewerLikes[a.URI] {
+			result[i].ViewerHasLiked = true
 		}
 	}
 
@@ -247,22 +281,14 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 
 	profiles := fetchProfilesForDIDs(collectDIDs(highlights, func(h db.Highlight) string { return h.AuthorDID }))
 
-	var likeCounts map[string]int
-	var replyCounts map[string]int
-	var viewerLikes map[string]bool
-
-	if database != nil {
-		uris := make([]string, len(highlights))
-		for i, h := range highlights {
-			uris[i] = h.URI
-		}
-
-		likeCounts, _ = database.GetLikeCounts(uris)
-		replyCounts, _ = database.GetReplyCounts(uris)
-		if viewerDID != "" {
-			viewerLikes, _ = database.GetViewerLikes(viewerDID, uris)
-		}
+	uris := make([]string, len(highlights))
+	for i, h := range highlights {
+		uris[i] = h.URI
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	likeCounts, replyCounts, viewerLikes := fetchCounts(ctx, database, uris, viewerDID)
 
 	result := make([]APIHighlight, len(highlights))
 	for i, h := range highlights {
@@ -307,12 +333,10 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 			CID:       cid,
 		}
 
-		if database != nil {
-			result[i].LikeCount = likeCounts[h.URI]
-			result[i].ReplyCount = replyCounts[h.URI]
-			if viewerLikes != nil && viewerLikes[h.URI] {
-				result[i].ViewerHasLiked = true
-			}
+		result[i].LikeCount = likeCounts[h.URI]
+		result[i].ReplyCount = replyCounts[h.URI]
+		if viewerLikes != nil && viewerLikes[h.URI] {
+			result[i].ViewerHasLiked = true
 		}
 	}
 
@@ -326,22 +350,14 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 
 	profiles := fetchProfilesForDIDs(collectDIDs(bookmarks, func(b db.Bookmark) string { return b.AuthorDID }))
 
-	var likeCounts map[string]int
-	var replyCounts map[string]int
-	var viewerLikes map[string]bool
-
-	if database != nil {
-		uris := make([]string, len(bookmarks))
-		for i, b := range bookmarks {
-			uris[i] = b.URI
-		}
-
-		likeCounts, _ = database.GetLikeCounts(uris)
-		replyCounts, _ = database.GetReplyCounts(uris)
-		if viewerDID != "" {
-			viewerLikes, _ = database.GetViewerLikes(viewerDID, uris)
-		}
+	uris := make([]string, len(bookmarks))
+	for i, b := range bookmarks {
+		uris[i] = b.URI
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	likeCounts, replyCounts, viewerLikes := fetchCounts(ctx, database, uris, viewerDID)
 
 	result := make([]APIBookmark, len(bookmarks))
 	for i, b := range bookmarks {
@@ -376,12 +392,10 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 			CreatedAt:   b.CreatedAt,
 			CID:         cid,
 		}
-		if database != nil {
-			result[i].LikeCount = likeCounts[b.URI]
-			result[i].ReplyCount = replyCounts[b.URI]
-			if viewerLikes != nil && viewerLikes[b.URI] {
-				result[i].ViewerHasLiked = true
-			}
+		result[i].LikeCount = likeCounts[b.URI]
+		result[i].ReplyCount = replyCounts[b.URI]
+		if viewerLikes != nil && viewerLikes[b.URI] {
+			result[i].ViewerHasLiked = true
 		}
 	}
 
