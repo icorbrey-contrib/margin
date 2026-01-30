@@ -467,7 +467,7 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	http.Redirect(w, r, "/?logged_in=true", http.StatusFound)
+	http.Redirect(w, r, "/home?logged_in=true", http.StatusFound)
 }
 
 func (h *Handler) cleanupOrphanedReplies(did, accessToken, dpopKeyPEM, pds string) {

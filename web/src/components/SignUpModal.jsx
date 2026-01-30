@@ -2,25 +2,16 @@ import { useState, useEffect } from "react";
 import { X, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { BlackskyIcon, NorthskyIcon, BlueskyIcon, TopphieIcon } from "./Icons";
 import { startSignup } from "../api/client";
-import logo from "../assets/logo.svg";
 
 const RECOMMENDED_PROVIDER = {
-  id: "margin",
-  name: "Margin",
-  service: "https://pds.margin.at",
-  Icon: null,
-  description: "Hosted by Margin, the easiest way to get started",
-  isMargin: true,
+  id: "bluesky",
+  name: "Bluesky",
+  service: "https://bsky.social",
+  Icon: BlueskyIcon,
+  description: "The most popular option, recommended for most people",
 };
 
 const OTHER_PROVIDERS = [
-  {
-    id: "bluesky",
-    name: "Bluesky",
-    service: "https://bsky.social",
-    Icon: BlueskyIcon,
-    description: "The main network",
-  },
   {
     id: "blacksky",
     name: "Blacksky",
@@ -137,9 +128,12 @@ export default function SignUpModal({ onClose }) {
             <h2>Custom Provider</h2>
             <form onSubmit={handleCustomSubmit}>
               <div className="form-group">
-                <label>PDS address (e.g. pds.example.com)</label>
+                <label className="form-label">
+                  PDS address (e.g. pds.example.com)
+                </label>
                 <input
                   type="text"
+                  className="form-input"
                   value={customService}
                   onChange={(e) => setCustomService(e.target.value)}
                   placeholder="pds.example.com"
@@ -157,7 +151,7 @@ export default function SignUpModal({ onClose }) {
               <div className="modal-actions">
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn btn-secondary"
                   onClick={() => {
                     setShowCustomInput(false);
                     setError(null);
@@ -167,7 +161,7 @@ export default function SignUpModal({ onClose }) {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary"
+                  className="btn btn-primary"
                   disabled={!customService.trim()}
                 >
                   Continue
@@ -179,7 +173,7 @@ export default function SignUpModal({ onClose }) {
           <div className="signup-step">
             <h2>Create your account</h2>
             <p className="signup-subtitle">
-              Margin uses the AT Protocol — the same decentralized network that
+              Margin uses the AT Protocol, the same decentralized network that
               powers Bluesky. Your account will be hosted on a server of your
               choice.
             </p>
@@ -198,11 +192,7 @@ export default function SignUpModal({ onClose }) {
                 onClick={() => handleProviderSelect(RECOMMENDED_PROVIDER)}
               >
                 <div className="provider-icon">
-                  <img
-                    src={logo}
-                    alt="Margin"
-                    style={{ width: 24, height: 24 }}
-                  />
+                  <RECOMMENDED_PROVIDER.Icon size={24} />
                 </div>
                 <div className="provider-info">
                   <h3>{RECOMMENDED_PROVIDER.name}</h3>

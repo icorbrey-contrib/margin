@@ -6,6 +6,8 @@
   min-height: 80vh;
   padding: 40px 20px;
   width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
 }
 
 .login-header-group {
