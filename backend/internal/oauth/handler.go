@@ -283,6 +283,86 @@ func (h *Handler) HandleStart(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) HandleSignup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		PdsURL string `json:"pds_url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.PdsURL == "" {
+		http.Error(w, "PDS URL is required", http.StatusBadRequest)
+		return
+	}
+
+	client := h.getDynamicClient(r)
+	ctx := r.Context()
+
+	meta, err := client.GetAuthServerMetadataForSignup(ctx, req.PdsURL)
+	if err != nil {
+		log.Printf("Failed to get auth metadata for signup from %s: %v", req.PdsURL, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to connect to PDS"})
+		return
+	}
+
+	dpopKey, err := client.GenerateDPoPKey()
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Internal error"})
+		return
+	}
+
+	pkceVerifier, pkceChallenge := client.GeneratePKCE()
+	scope := "atproto offline_access blob:* include:at.margin.authFull"
+
+	parResp, state, dpopNonce, err := client.SendPAR(meta, "", scope, dpopKey, pkceChallenge)
+	if err != nil {
+		log.Printf("PAR request failed for signup: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to initiate signup"})
+		return
+	}
+
+	pending := &PendingAuth{
+		State:        state,
+		DID:          "",
+		Handle:       "",
+		PDS:          req.PdsURL,
+		AuthServer:   meta.TokenEndpoint,
+		Issuer:       meta.Issuer,
+		PKCEVerifier: pkceVerifier,
+		DPoPKey:      dpopKey,
+		DPoPNonce:    dpopNonce,
+		CreatedAt:    time.Now(),
+	}
+
+	h.pendingMu.Lock()
+	h.pending[state] = pending
+	h.pendingMu.Unlock()
+
+	authURL, _ := url.Parse(meta.AuthorizationEndpoint)
+	q := authURL.Query()
+	q.Set("client_id", client.ClientID)
+	q.Set("request_uri", parResp.RequestURI)
+	authURL.RawQuery = q.Encode()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"authorizationUrl": authURL.String(),
+	})
+}
+
 func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	client := h.getDynamicClient(r)
 
@@ -318,8 +398,9 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	meta, err := client.GetAuthServerMetadata(ctx, pending.PDS)
+	meta, err := client.GetAuthServerMetadataForSignup(ctx, pending.PDS)
 	if err != nil {
+		log.Printf("Failed to get auth metadata in callback for %s: %v", pending.PDS, err)
 		http.Error(w, fmt.Sprintf("Failed to get auth metadata: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -330,7 +411,7 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tokenResp.Sub != pending.DID {
+	if pending.DID != "" && tokenResp.Sub != pending.DID {
 		log.Printf("Security: OAuth sub mismatch, expected %s, got %s", pending.DID, tokenResp.Sub)
 		http.Error(w, "Account identity mismatch, authorization returned different account", http.StatusBadRequest)
 		return

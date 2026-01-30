@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import BookmarkCard from "../components/BookmarkCard";
@@ -45,68 +45,71 @@ export default function Feed() {
 
   const { user } = useAuth();
 
-  const fetchFeed = async (isLoadMore = false) => {
-    try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
-
-      let creatorDid = "";
-
-      if (feedType === "my-feed") {
-        if (user?.did) {
-          creatorDid = user.did;
+  const fetchFeed = useCallback(
+    async (isLoadMore = false) => {
+      try {
+        if (isLoadMore) {
+          setLoadingMore(true);
         } else {
-          setAnnotations([]);
-          setLoading(false);
-          setLoadingMore(false);
-          return;
+          setLoading(true);
         }
+
+        let creatorDid = "";
+
+        if (feedType === "my-feed") {
+          if (user?.did) {
+            creatorDid = user.did;
+          } else {
+            setAnnotations([]);
+            setLoading(false);
+            setLoadingMore(false);
+            return;
+          }
+        }
+
+        const motivationMap = {
+          commenting: "commenting",
+          highlighting: "highlighting",
+          bookmarking: "bookmarking",
+        };
+        const motivation = motivationMap[filter] || "";
+        const limit = 50;
+        const offset = isLoadMore ? annotations.length : 0;
+
+        const data = await getAnnotationFeed(
+          limit,
+          offset,
+          tagFilter || "",
+          creatorDid,
+          feedType,
+          motivation,
+        );
+
+        const newItems = data.items || [];
+        if (newItems.length < limit) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+
+        if (isLoadMore) {
+          setAnnotations((prev) => [...prev, ...newItems]);
+        } else {
+          setAnnotations(newItems);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-
-      const motivationMap = {
-        commenting: "commenting",
-        highlighting: "highlighting",
-        bookmarking: "bookmarking",
-      };
-      const motivation = motivationMap[filter] || "";
-      const limit = 50;
-      const offset = isLoadMore ? annotations.length : 0;
-
-      const data = await getAnnotationFeed(
-        limit,
-        offset,
-        tagFilter || "",
-        creatorDid,
-        feedType,
-        motivation,
-      );
-
-      const newItems = data.items || [];
-      if (newItems.length < limit) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
-
-      if (isLoadMore) {
-        setAnnotations((prev) => [...prev, ...newItems]);
-      } else {
-        setAnnotations(newItems);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
+    },
+    [tagFilter, feedType, filter, user, annotations.length],
+  );
 
   useEffect(() => {
     fetchFeed(false);
-  }, [tagFilter, feedType, filter, user]);
+  }, [fetchFeed]);
 
   const deduplicatedAnnotations = useMemo(() => {
     const inCollectionUris = new Set();

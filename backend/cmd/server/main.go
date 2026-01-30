@@ -94,6 +94,7 @@ func main() {
 
 	r.Get("/auth/login", oauthHandler.HandleLogin)
 	r.Post("/auth/start", oauthHandler.HandleStart)
+	r.Post("/auth/signup", oauthHandler.HandleSignup)
 	r.Get("/auth/callback", oauthHandler.HandleCallback)
 	r.Post("/auth/logout", oauthHandler.HandleLogout)
 	r.Get("/auth/session", oauthHandler.HandleSession)

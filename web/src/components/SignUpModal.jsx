@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react";
 import { X, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { BlackskyIcon, NorthskyIcon, BlueskyIcon, TopphieIcon } from "./Icons";
-import { describeServer, createAccount, startLogin } from "../api/client";
+import { startSignup } from "../api/client";
+import logo from "../assets/logo.svg";
 
-const PROVIDERS = [
+const RECOMMENDED_PROVIDER = {
+  id: "margin",
+  name: "Margin",
+  service: "https://pds.margin.at",
+  Icon: null,
+  description: "Hosted by Margin, the easiest way to get started",
+  isMargin: true,
+};
+
+const OTHER_PROVIDERS = [
   {
     id: "bluesky",
     name: "Bluesky",
@@ -24,7 +34,6 @@ const PROVIDERS = [
     service: "https://northsky.social",
     Icon: NorthskyIcon,
     description: "A Canadian-based worker-owned cooperative",
-    inviteUrl: "https://northskysocial.com/join",
   },
   {
     id: "topphie",
@@ -41,28 +50,21 @@ const PROVIDERS = [
     description: "An independent, self-hosted PDS instance",
   },
   {
-    id: "selfhosted",
-    name: "Self-Hosted",
+    id: "custom",
+    name: "Custom",
     service: "",
     custom: true,
     Icon: null,
-    description: "Connect to your own Personal Data Server",
+    description: "Connect to your own or another custom PDS",
   },
 ];
 
 export default function SignUpModal({ onClose }) {
-  const [step, setStep] = useState(1);
-  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [showOtherProviders, setShowOtherProviders] = useState(false);
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const [customService, setCustomService] = useState("");
-  const [formData, setFormData] = useState({
-    handle: "",
-    email: "",
-    password: "",
-    inviteCode: "",
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [serverInfo, setServerInfo] = useState(null);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -71,79 +73,47 @@ export default function SignUpModal({ onClose }) {
     };
   }, []);
 
-  const handleProviderSelect = (provider) => {
-    setSelectedProvider(provider);
-    if (!provider.custom) {
-      checkServer(provider.service);
-    } else {
-      setStep(1.5);
+  const handleProviderSelect = async (provider) => {
+    if (provider.custom) {
+      setShowCustomInput(true);
+      return;
     }
-  };
 
-  const checkServer = async (url) => {
     setLoading(true);
     setError(null);
+
     try {
-      let serviceUrl = url.trim();
-      if (!serviceUrl.startsWith("http")) {
-        serviceUrl = `https://${serviceUrl}`;
+      const result = await startSignup(provider.service);
+      if (result.authorizationUrl) {
+        window.location.href = result.authorizationUrl;
       }
-
-      const info = await describeServer(serviceUrl);
-      setServerInfo({
-        ...info,
-        service: serviceUrl,
-        inviteCodeRequired: info.inviteCodeRequired ?? true,
-      });
-
-      if (selectedProvider?.custom) {
-        setSelectedProvider({ ...selectedProvider, service: serviceUrl });
-      }
-
-      setStep(2);
     } catch (err) {
       console.error(err);
-      setError("Could not connect to this PDS. Please check the URL.");
-    } finally {
+      setError("Could not connect to this provider. Please try again.");
       setLoading(false);
     }
   };
 
-  const handleCreateAccount = async (e) => {
+  const handleCustomSubmit = async (e) => {
     e.preventDefault();
-    if (!serverInfo) return;
+    if (!customService.trim()) return;
 
     setLoading(true);
     setError(null);
 
-    let domain =
-      serverInfo.selectedDomain || serverInfo.availableUserDomains[0];
-    if (!domain.startsWith(".")) {
-      domain = "." + domain;
+    let serviceUrl = customService.trim();
+    if (!serviceUrl.startsWith("http")) {
+      serviceUrl = `https://${serviceUrl}`;
     }
 
-    const cleanHandle = formData.handle.trim().replace(/^@/, "");
-    const fullHandle = cleanHandle.endsWith(domain)
-      ? cleanHandle
-      : `${cleanHandle}${domain}`;
-
     try {
-      await createAccount(serverInfo.service, {
-        handle: fullHandle,
-        email: formData.email,
-        password: formData.password,
-        inviteCode: formData.inviteCode,
-      });
-
-      const result = await startLogin(fullHandle);
+      const result = await startSignup(serviceUrl);
       if (result.authorizationUrl) {
         window.location.href = result.authorizationUrl;
-      } else {
-        onClose();
-        alert("Account created! Please sign in.");
       }
     } catch (err) {
-      setError(err.message || "Failed to create account");
+      console.error(err);
+      setError("Could not connect to this PDS. Please check the URL.");
       setLoading(false);
     }
   };
@@ -155,237 +125,129 @@ export default function SignUpModal({ onClose }) {
           <X size={20} />
         </button>
 
-        {step === 1 && (
-          <div className="signup-step">
-            <h2>Choose a Provider</h2>
-            <p className="signup-subtitle">
-              Where would you like to host your account?
+        {loading ? (
+          <div className="signup-step" style={{ textAlign: "center" }}>
+            <Loader2 size={32} className="spinner" />
+            <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>
+              Connecting to provider...
             </p>
-            <div className="provider-grid">
-              {PROVIDERS.map((p) => (
-                <button
-                  key={p.id}
-                  className="provider-card"
-                  onClick={() => handleProviderSelect(p)}
-                >
-                  <div className={`provider-icon ${p.wide ? "wide" : ""}`}>
-                    {p.Icon ? (
-                      <p.Icon size={p.wide ? 32 : 32} />
-                    ) : (
-                      <span className="provider-initial">{p.name[0]}</span>
-                    )}
-                  </div>
-                  <div className="provider-info">
-                    <h3>{p.name}</h3>
-                    <span>{p.description}</span>
-                  </div>
-                  <ChevronRight size={16} className="provider-arrow" />
-                </button>
-              ))}
-            </div>
           </div>
-        )}
-
-        {step === 1.5 && (
+        ) : showCustomInput ? (
           <div className="signup-step">
             <h2>Custom Provider</h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                checkServer(customService);
-              }}
-            >
+            <form onSubmit={handleCustomSubmit}>
               <div className="form-group">
                 <label>PDS address (e.g. pds.example.com)</label>
                 <input
                   type="text"
-                  className="login-input"
                   value={customService}
                   onChange={(e) => setCustomService(e.target.value)}
-                  placeholder="example.com"
+                  placeholder="pds.example.com"
                   autoFocus
                 />
               </div>
+
               {error && (
                 <div className="error-message">
-                  <AlertCircle size={14} /> {error}
+                  <AlertCircle size={16} />
+                  {error}
                 </div>
               )}
+
               <div className="modal-actions">
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setStep(1)}
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowCustomInput(false);
+                    setError(null);
+                  }}
                 >
                   Back
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
-                  disabled={!customService || loading}
+                  className="btn-primary"
+                  disabled={!customService.trim()}
                 >
-                  {loading ? <Loader2 className="animate-spin" /> : "Next"}
+                  Continue
                 </button>
               </div>
             </form>
           </div>
-        )}
-
-        {step === 2 && serverInfo && (
+        ) : (
           <div className="signup-step">
-            <div className="step-header">
-              <button className="btn-back" onClick={() => setStep(1)}>
-                ← Back
+            <h2>Create your account</h2>
+            <p className="signup-subtitle">
+              Margin uses the AT Protocol — the same decentralized network that
+              powers Bluesky. Your account will be hosted on a server of your
+              choice.
+            </p>
+
+            {error && (
+              <div className="error-message" style={{ marginBottom: "1rem" }}>
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
+
+            <div className="signup-recommended">
+              <div className="signup-recommended-badge">Recommended</div>
+              <button
+                className="provider-card provider-card-featured"
+                onClick={() => handleProviderSelect(RECOMMENDED_PROVIDER)}
+              >
+                <div className="provider-icon">
+                  <img
+                    src={logo}
+                    alt="Margin"
+                    style={{ width: 24, height: 24 }}
+                  />
+                </div>
+                <div className="provider-info">
+                  <h3>{RECOMMENDED_PROVIDER.name}</h3>
+                  <span>{RECOMMENDED_PROVIDER.description}</span>
+                </div>
+                <ChevronRight size={16} className="provider-arrow" />
               </button>
-              <h2>
-                Create Account on {selectedProvider?.name || "Custom PDS"}
-              </h2>
             </div>
 
-            <form onSubmit={handleCreateAccount} className="signup-form">
-              {serverInfo.inviteCodeRequired && (
-                <div className="form-group">
-                  <label>Invite Code *</label>
-                  <input
-                    type="text"
-                    className="login-input"
-                    value={formData.inviteCode}
-                    onChange={(e) =>
-                      setFormData({ ...formData, inviteCode: e.target.value })
-                    }
-                    placeholder="bsky-social-xxxxx"
-                    required
-                  />
-                  {selectedProvider?.inviteUrl && (
-                    <p
-                      className="legal-text"
-                      style={{ textAlign: "left", marginTop: "4px" }}
-                    >
-                      Need an invite code?{" "}
-                      <a
-                        href={selectedProvider.inviteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "var(--accent)" }}
-                      >
-                        Get one here
-                      </a>
-                    </p>
-                  )}
-                </div>
-              )}
+            <button
+              type="button"
+              className="signup-toggle-others"
+              onClick={() => setShowOtherProviders(!showOtherProviders)}
+            >
+              {showOtherProviders ? "Hide other options" : "More options"}
+              <ChevronRight
+                size={14}
+                className={`toggle-chevron ${showOtherProviders ? "open" : ""}`}
+              />
+            </button>
 
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  className="login-input"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  className="login-input"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Handle</label>
-                <div className="handle-input-group">
-                  <input
-                    type="text"
-                    className="login-input"
-                    value={formData.handle}
-                    onChange={(e) =>
-                      setFormData({ ...formData, handle: e.target.value })
-                    }
-                    placeholder="username"
-                    required
-                    style={{ flex: 1 }}
-                  />
-                  {serverInfo.availableUserDomains &&
-                  serverInfo.availableUserDomains.length > 1 ? (
-                    <select
-                      className="login-input"
-                      style={{
-                        width: "auto",
-                        flex: "0 0 auto",
-                        paddingRight: "24px",
-                      }}
-                      onChange={(e) => {
-                        setServerInfo({
-                          ...serverInfo,
-                          selectedDomain: e.target.value,
-                        });
-                      }}
-                      value={
-                        serverInfo.selectedDomain ||
-                        serverInfo.availableUserDomains[0]
-                      }
-                    >
-                      {serverInfo.availableUserDomains.map((d) => (
-                        <option key={d} value={d}>
-                          .{d.startsWith(".") ? d.substring(1) : d}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="handle-suffix">
-                      {(() => {
-                        const d =
-                          serverInfo.availableUserDomains?.[0] || "bsky.social";
-                        return d.startsWith(".") ? d : `.${d}`;
-                      })()}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {error && (
-                <div className="error-message">
-                  <AlertCircle size={14} /> {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="btn btn-primary full-width"
-                disabled={loading}
-              >
-                {loading ? "Creating Account..." : "Create Account"}
-              </button>
-
-              <p className="legal-text">
-                By creating an account, you agree to {selectedProvider?.name}
-                &apos;s{" "}
-                {serverInfo.links?.termsOfService ? (
-                  <a
-                    href={serverInfo.links.termsOfService}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "var(--accent)" }}
+            {showOtherProviders && (
+              <div className="provider-grid">
+                {OTHER_PROVIDERS.map((p) => (
+                  <button
+                    key={p.id}
+                    className="provider-card"
+                    onClick={() => handleProviderSelect(p)}
                   >
-                    Terms of Service
-                  </a>
-                ) : (
-                  "Terms of Service"
-                )}
-                .
-              </p>
-            </form>
+                    <div className={`provider-icon ${p.wide ? "wide" : ""}`}>
+                      {p.Icon ? (
+                        <p.Icon size={32} />
+                      ) : (
+                        <span className="provider-initial">{p.name[0]}</span>
+                      )}
+                    </div>
+                    <div className="provider-info">
+                      <h3>{p.name}</h3>
+                      <span>{p.description}</span>
+                    </div>
+                    <ChevronRight size={16} className="provider-arrow" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

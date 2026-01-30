@@ -452,6 +452,13 @@ export async function startLogin(handle, inviteCode) {
     body: JSON.stringify({ handle, invite_code: inviteCode }),
   });
 }
+
+export async function startSignup(pdsUrl) {
+  return request(`${AUTH_BASE}/signup`, {
+    method: "POST",
+    body: JSON.stringify({ pds_url: pdsUrl }),
+  });
+}
 export async function getTrendingTags(limit = 10) {
   return request(`${API_BASE}/tags/trending?limit=${limit}`);
 }
