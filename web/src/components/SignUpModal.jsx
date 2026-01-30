@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, ChevronRight, Loader2, AlertCircle } from "lucide-react";
-import { BlackskyIcon, NorthskyIcon, BlueskyIcon, TopphieIcon } from "./Icons";
+import { BlackskyIcon, NorthskyIcon, BlueskyIcon, TophhieIcon } from "./Icons";
 import { startSignup } from "../api/client";
 
 const RECOMMENDED_PROVIDER = {
@@ -27,10 +27,10 @@ const OTHER_PROVIDERS = [
     description: "A Canadian-based worker-owned cooperative",
   },
   {
-    id: "topphie",
-    name: "Topphie",
+    id: "tophhie",
+    name: "Tophhie",
     service: "https://tophhie.social",
-    Icon: TopphieIcon,
+    Icon: TophhieIcon,
     description: "A welcoming and friendly community",
   },
   {

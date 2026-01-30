@@ -30,7 +30,7 @@ export default function Login() {
     "Tangled",
     "Northsky",
     "witchcraft.systems",
-    "topphie.social",
+    "tophhie.social",
     "altq.net",
   ];
 

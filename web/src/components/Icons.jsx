@@ -447,7 +447,7 @@ export function NorthskyIcon({ size = 18 }) {
   );
 }
 
-export function TopphieIcon({ size = 18 }) {
+export function TophhieIcon({ size = 18 }) {
   return (
     <svg
       width={size}
