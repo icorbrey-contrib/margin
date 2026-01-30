@@ -539,7 +539,7 @@
 
 .share-menu-container {
   position: relative;
-  z-index: 10;
+  z-index: 50;
 }
 
 .share-menu {
