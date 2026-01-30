@@ -11,7 +11,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
-import { SiFirefox, SiGooglechrome, SiBluesky } from "react-icons/si";
+import { SiFirefox, SiGooglechrome, SiBluesky, SiApple } from "react-icons/si";
 import { FaEdge } from "react-icons/fa";
 import logo from "../assets/logo.svg";
 
@@ -19,8 +19,24 @@ const isFirefox =
   typeof navigator !== "undefined" && /Firefox/i.test(navigator.userAgent);
 const isEdge =
   typeof navigator !== "undefined" && /Edg/i.test(navigator.userAgent);
+const isIOS =
+  typeof navigator !== "undefined" &&
+  /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isSafari =
+  typeof navigator !== "undefined" &&
+  /Safari/.test(navigator.userAgent) &&
+  !/Chrome/.test(navigator.userAgent);
+const isIOSSafari = isIOS && isSafari;
 
 function getExtensionInfo() {
+  if (isIOSSafari) {
+    return {
+      url: "https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd",
+      Icon: SiApple,
+      label: "iOS",
+      isShortcut: true,
+    };
+  }
   if (isFirefox) {
     return {
       url: "https://addons.mozilla.org/en-US/firefox/addon/margin/",
@@ -451,8 +467,8 @@ export default function Landing() {
               rel="noreferrer"
               className="btn btn-primary btn-lg"
             >
-              <ext.Icon size={18} />
-              Install for {ext.label}
+              {ext.Icon && <ext.Icon size={18} />}
+              {ext.isShortcut ? "Get iOS Shortcut" : `Install for ${ext.label}`}
             </a>
             {user ? (
               <Link to="/home" className="btn btn-secondary btn-lg">
@@ -466,64 +482,66 @@ export default function Landing() {
               </Link>
             )}
           </div>
-          <p className="landing-browsers">
-            Also available for{" "}
-            {isFirefox ? (
-              <>
-                <a
-                  href="https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Edge
-                </a>{" "}
-                and{" "}
-                <a
-                  href="https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Chrome
-                </a>
-              </>
-            ) : isEdge ? (
-              <>
-                <a
-                  href="https://addons.mozilla.org/en-US/firefox/addon/margin/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Firefox
-                </a>{" "}
-                and{" "}
-                <a
-                  href="https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Chrome
-                </a>
-              </>
-            ) : (
-              <>
-                <a
-                  href="https://addons.mozilla.org/en-US/firefox/addon/margin/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Firefox
-                </a>{" "}
-                and{" "}
-                <a
-                  href="https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Edge
-                </a>
-              </>
-            )}
-          </p>
+          {!isIOSSafari && (
+            <p className="landing-browsers">
+              Also available for{" "}
+              {isFirefox ? (
+                <>
+                  <a
+                    href="https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Edge
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href="https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Chrome
+                  </a>
+                </>
+              ) : isEdge ? (
+                <>
+                  <a
+                    href="https://addons.mozilla.org/en-US/firefox/addon/margin/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Firefox
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href="https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Chrome
+                  </a>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="https://addons.mozilla.org/en-US/firefox/addon/margin/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Firefox
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href="https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Edge
+                  </a>
+                </>
+              )}
+            </p>
+          )}
         </div>
       </section>
 
@@ -675,8 +693,8 @@ export default function Landing() {
             rel="noreferrer"
             className="btn btn-primary btn-lg"
           >
-            <ext.Icon size={18} />
-            Get the Extension
+            {ext.Icon && <ext.Icon size={18} />}
+            {ext.isShortcut ? "Get iOS Shortcut" : "Get the Extension"}
           </a>
         </div>
       </section>
