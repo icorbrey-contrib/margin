@@ -59,7 +59,7 @@ export default function New() {
   }
 
   const handleSuccess = () => {
-    navigate("/");
+    navigate("/home");
   };
 
   return (

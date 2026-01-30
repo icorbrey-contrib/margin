@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function Privacy() {
   return (
     <div className="feed-page">
-      <Link to="/" className="back-link">
+      <Link to="/home" className="back-link">
         <ArrowLeft size={18} />
         <span>Home</span>
       </Link>

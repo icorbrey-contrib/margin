@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import AnnotationCard, { HighlightCard } from "../components/AnnotationCard";
 import BookmarkCard from "../components/BookmarkCard";
 import ReplyList from "../components/ReplyList";
@@ -17,6 +17,7 @@ import { MessageSquare } from "lucide-react";
 export default function AnnotationDetail() {
   const { uri, did, rkey, handle, type } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [annotation, setAnnotation] = useState(null);
   const [replies, setReplies] = useState([]);
@@ -157,7 +158,7 @@ export default function AnnotationDetail() {
             {error || "This annotation may have been deleted."}
           </p>
           <Link
-            to="/"
+            to="/home"
             className="btn btn-primary"
             style={{ marginTop: "16px" }}
           >
@@ -171,7 +172,7 @@ export default function AnnotationDetail() {
   return (
     <div className="annotation-detail-page">
       <div className="annotation-detail-header">
-        <Link to="/" className="back-link">
+        <Link to="/home" className="back-link">
           ← Back to Feed
         </Link>
       </div>
@@ -179,12 +180,12 @@ export default function AnnotationDetail() {
       {annotation.type === "Highlight" ? (
         <HighlightCard
           highlight={annotation}
-          onDelete={() => (window.location.href = "/")}
+          onDelete={() => navigate("/home")}
         />
       ) : annotation.type === "Bookmark" ? (
         <BookmarkCard
           bookmark={annotation}
-          onDelete={() => (window.location.href = "/")}
+          onDelete={() => navigate("/home")}
         />
       ) : (
         <AnnotationCard annotation={annotation} />

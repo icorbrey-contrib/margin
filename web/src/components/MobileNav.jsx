@@ -14,8 +14,8 @@ export default function MobileNav() {
   return (
     <nav className="mobile-bottom-nav">
       <Link
-        to="/"
-        className={`mobile-bottom-nav-item ${isActive("/") ? "active" : ""}`}
+        to="/home"
+        className={`mobile-bottom-nav-item ${isActive("/home") ? "active" : ""}`}
       >
         <Home size={22} />
         <span>Home</span>
