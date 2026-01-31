@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -461,15 +462,11 @@ func containsTag(tagsJSON *string, tag string) bool {
 }
 
 func sortFeed(feed []interface{}) {
-	for i := 0; i < len(feed); i++ {
-		for j := i + 1; j < len(feed); j++ {
-			t1 := getCreatedAt(feed[i])
-			t2 := getCreatedAt(feed[j])
-			if t1.Before(t2) {
-				feed[i], feed[j] = feed[j], feed[i]
-			}
-		}
-	}
+	sort.Slice(feed, func(i, j int) bool {
+		t1 := getCreatedAt(feed[i])
+		t2 := getCreatedAt(feed[j])
+		return t1.After(t2)
+	})
 }
 
 func getCreatedAt(item interface{}) time.Time {
@@ -488,15 +485,11 @@ func getCreatedAt(item interface{}) time.Time {
 }
 
 func sortFeedByPopularity(feed []interface{}) {
-	for i := 0; i < len(feed); i++ {
-		for j := i + 1; j < len(feed); j++ {
-			p1 := getPopularity(feed[i])
-			p2 := getPopularity(feed[j])
-			if p1 < p2 {
-				feed[i], feed[j] = feed[j], feed[i]
-			}
-		}
-	}
+	sort.Slice(feed, func(i, j int) bool {
+		p1 := getPopularity(feed[i])
+		p2 := getPopularity(feed[j])
+		return p1 > p2
+	})
 }
 
 func getPopularity(item interface{}) int {

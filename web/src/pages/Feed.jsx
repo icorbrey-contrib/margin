@@ -46,8 +46,9 @@ export default function Feed() {
   const { user } = useAuth();
 
   const fetchFeed = useCallback(
-    async (isLoadMore = false) => {
+    async (offset = 0) => {
       try {
+        const isLoadMore = offset > 0;
         if (isLoadMore) {
           setLoadingMore(true);
         } else {
@@ -74,7 +75,6 @@ export default function Feed() {
         };
         const motivation = motivationMap[filter] || "";
         const limit = 50;
-        const offset = isLoadMore ? annotations.length : 0;
 
         const data = await getAnnotationFeed(
           limit,
@@ -104,11 +104,11 @@ export default function Feed() {
         setLoadingMore(false);
       }
     },
-    [tagFilter, feedType, filter, user, annotations.length],
+    [tagFilter, feedType, filter, user],
   );
 
   useEffect(() => {
-    fetchFeed(false);
+    fetchFeed(0);
   }, [fetchFeed]);
 
   const deduplicatedAnnotations = useMemo(() => {
@@ -354,7 +354,7 @@ export default function Feed() {
                   }}
                 >
                   <button
-                    onClick={() => fetchFeed(true)}
+                    onClick={() => fetchFeed(annotations.length)}
                     disabled={loadingMore}
                     className="feed-load-more"
                   >
