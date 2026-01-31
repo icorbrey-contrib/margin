@@ -1,23 +1,44 @@
 import { useState, useEffect } from "react";
 import { X, ChevronRight, Loader2, AlertCircle } from "lucide-react";
-import { BlackskyIcon, NorthskyIcon, BlueskyIcon, TophhieIcon } from "./Icons";
+import {
+  BlackskyIcon,
+  NorthskyIcon,
+  BlueskyIcon,
+  TophhieIcon,
+  MarginIcon,
+} from "./Icons";
 import { startSignup } from "../api/client";
 
 const RECOMMENDED_PROVIDER = {
-  id: "bluesky",
-  name: "Bluesky",
-  service: "https://bsky.social",
-  Icon: BlueskyIcon,
-  description: "The most popular option, recommended for most people",
+  id: "margin",
+  name: "Margin",
+  service: "https://margin.cafe",
+  Icon: MarginIcon,
+  description: "Hosted by Margin, the easiest way to get started",
 };
 
 const OTHER_PROVIDERS = [
+  {
+    id: "bluesky",
+    name: "Bluesky",
+    service: "https://bsky.social",
+    Icon: BlueskyIcon,
+    description: "The most popular option on the AT Protocol",
+  },
   {
     id: "blacksky",
     name: "Blacksky",
     service: "https://blacksky.app",
     Icon: BlackskyIcon,
     description: "For the Culture. A safe space for Black users and allies",
+  },
+  {
+    id: "selfhosted.social",
+    name: "selfhosted.social",
+    service: "https://selfhosted.social",
+    Icon: null,
+    description:
+      "For hackers, designers, developers, ATProto enthusiasts, scrobblers, tinkerers, friends, and curious minds.",
   },
   {
     id: "northsky",

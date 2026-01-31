@@ -25,6 +25,7 @@ export default function Login() {
   const [morphClass, setMorphClass] = useState("morph-in");
   const providers = [
     "AT Protocol",
+    "Margin",
     "Bluesky",
     "Blacksky",
     "Tangled",

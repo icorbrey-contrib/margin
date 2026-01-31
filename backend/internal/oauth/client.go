@@ -311,16 +311,20 @@ func (c *Client) CreateClientAssertion(issuer string) (string, error) {
 }
 
 func (c *Client) SendPAR(meta *AuthServerMetadata, loginHint, scope string, dpopKey *ecdsa.PrivateKey, pkceChallenge string) (*PARResponse, string, string, error) {
+	return c.SendPARWithPrompt(meta, loginHint, scope, dpopKey, pkceChallenge, "")
+}
+
+func (c *Client) SendPARWithPrompt(meta *AuthServerMetadata, loginHint, scope string, dpopKey *ecdsa.PrivateKey, pkceChallenge, prompt string) (*PARResponse, string, string, error) {
 	stateBytes := make([]byte, 16)
 	rand.Read(stateBytes)
 	state := base64.RawURLEncoding.EncodeToString(stateBytes)
 
-	parResp, dpopNonce, err := c.sendPARRequest(meta, loginHint, scope, dpopKey, pkceChallenge, state, "")
+	parResp, dpopNonce, err := c.sendPARRequest(meta, loginHint, scope, dpopKey, pkceChallenge, state, "", prompt)
 	if err != nil {
 
 		if strings.Contains(err.Error(), "use_dpop_nonce") && dpopNonce != "" {
 
-			parResp, dpopNonce, err = c.sendPARRequest(meta, loginHint, scope, dpopKey, pkceChallenge, state, dpopNonce)
+			parResp, dpopNonce, err = c.sendPARRequest(meta, loginHint, scope, dpopKey, pkceChallenge, state, dpopNonce, prompt)
 			if err != nil {
 				return nil, "", "", err
 			}
@@ -332,7 +336,7 @@ func (c *Client) SendPAR(meta *AuthServerMetadata, loginHint, scope string, dpop
 	return parResp, state, dpopNonce, nil
 }
 
-func (c *Client) sendPARRequest(meta *AuthServerMetadata, loginHint, scope string, dpopKey *ecdsa.PrivateKey, pkceChallenge, state, dpopNonce string) (*PARResponse, string, error) {
+func (c *Client) sendPARRequest(meta *AuthServerMetadata, loginHint, scope string, dpopKey *ecdsa.PrivateKey, pkceChallenge, state, dpopNonce, prompt string) (*PARResponse, string, error) {
 	dpopProof, err := c.CreateDPoPProof(dpopKey, "POST", meta.PushedAuthorizationRequestEndpoint, dpopNonce, "")
 	if err != nil {
 		return nil, "", err
@@ -355,6 +359,9 @@ func (c *Client) sendPARRequest(meta *AuthServerMetadata, loginHint, scope strin
 	data.Set("client_assertion", clientAssertion)
 	if loginHint != "" {
 		data.Set("login_hint", loginHint)
+	}
+	if prompt != "" {
+		data.Set("prompt", prompt)
 	}
 
 	req, err := http.NewRequest("POST", meta.PushedAuthorizationRequestEndpoint, strings.NewReader(data.Encode()))

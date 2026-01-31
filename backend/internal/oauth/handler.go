@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -325,13 +326,20 @@ func (h *Handler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	pkceVerifier, pkceChallenge := client.GeneratePKCE()
 	scope := "atproto offline_access blob:* include:at.margin.authFull"
 
-	parResp, state, dpopNonce, err := client.SendPAR(meta, "", scope, dpopKey, pkceChallenge)
+	parResp, state, dpopNonce, err := client.SendPARWithPrompt(meta, "", scope, dpopKey, pkceChallenge, "create")
 	if err != nil {
-		log.Printf("PAR request failed for signup: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to initiate signup"})
-		return
+		if strings.Contains(err.Error(), "prompt") || strings.Contains(err.Error(), "invalid_request") {
+			log.Printf("prompt=create not supported, falling back to standard flow")
+			pkceVerifier, pkceChallenge = client.GeneratePKCE()
+			parResp, state, dpopNonce, err = client.SendPAR(meta, "", scope, dpopKey, pkceChallenge)
+		}
+		if err != nil {
+			log.Printf("PAR request failed for signup: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to initiate signup"})
+			return
+		}
 	}
 
 	pending := &PendingAuth{
