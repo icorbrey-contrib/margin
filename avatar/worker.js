@@ -56,14 +56,32 @@ You can't use this directly unfortunately since all requests are signed and may 
     }
 
     try {
-      const profileResponse = await fetch(
-        `https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${decodedActor}`,
-      );
-
       let avatarUrl = null;
-      if (profileResponse.ok) {
-        const profile = await profileResponse.json();
-        avatarUrl = profile.avatar;
+      const marginApiUrl = env.MARGIN_API_URL || "https://margin.at";
+
+      try {
+        const marginResponse = await fetch(
+          `${marginApiUrl}/api/profile/${decodedActor}`,
+        );
+        if (marginResponse.ok) {
+          const marginProfile = await marginResponse.json();
+          if (marginProfile.avatar) {
+            if (typeof marginProfile.avatar === "string") {
+              avatarUrl = marginProfile.avatar;
+            }
+          }
+        }
+      } catch (e) {}
+
+      if (!avatarUrl) {
+        const profileResponse = await fetch(
+          `https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${decodedActor}`,
+        );
+
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json();
+          avatarUrl = profile.avatar;
+        }
       }
 
       if (!avatarUrl) {

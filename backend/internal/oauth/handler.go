@@ -144,7 +144,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	pkceVerifier, pkceChallenge := client.GeneratePKCE()
 
-	scope := "atproto offline_access blob:* include:at.margin.authFull"
+	scope := "atproto offline_access blob:* blob:image/jpeg blob:image/png include:at.margin.authFull"
 
 	parResp, state, dpopNonce, err := client.SendPAR(meta, handle, scope, dpopKey, pkceChallenge)
 	if err != nil {
@@ -244,7 +244,7 @@ func (h *Handler) HandleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pkceVerifier, pkceChallenge := client.GeneratePKCE()
-	scope := "atproto offline_access blob:* include:at.margin.authFull"
+	scope := "atproto offline_access blob:* blob:image/jpeg blob:image/png include:at.margin.authFull"
 
 	parResp, state, dpopNonce, err := client.SendPAR(meta, req.Handle, scope, dpopKey, pkceChallenge)
 	if err != nil {
@@ -324,7 +324,7 @@ func (h *Handler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pkceVerifier, pkceChallenge := client.GeneratePKCE()
-	scope := "atproto offline_access blob:* include:at.margin.authFull"
+	scope := "atproto offline_access blob:* blob:image/jpeg blob:image/png include:at.margin.authFull"
 
 	parResp, state, dpopNonce, err := client.SendPARWithPrompt(meta, "", scope, dpopKey, pkceChallenge, "create")
 	if err != nil {
@@ -600,7 +600,7 @@ func (h *Handler) HandleClientMetadata(w http.ResponseWriter, r *http.Request) {
 		"redirect_uris":                   []string{client.RedirectURI},
 		"grant_types":                     []string{"authorization_code", "refresh_token"},
 		"response_types":                  []string{"code"},
-		"scope":                           "atproto offline_access blob:* include:at.margin.authFull",
+		"scope":                           "atproto offline_access blob:* blob:image/jpeg blob:image/png include:at.margin.authFull",
 		"token_endpoint_auth_method":      "private_key_jwt",
 		"token_endpoint_auth_signing_alg": "ES256",
 		"dpop_bound_access_tokens":        true,

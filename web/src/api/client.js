@@ -176,11 +176,35 @@ export async function updateCollection(uri, name, description, icon) {
   });
 }
 
-export async function updateProfile({ bio, website, links }) {
+export async function updateProfile({
+  displayName,
+  avatar,
+  bio,
+  website,
+  links,
+}) {
   return request(`${API_BASE}/profile`, {
     method: "PUT",
-    body: JSON.stringify({ bio, website, links }),
+    body: JSON.stringify({ displayName, avatar, bio, website, links }),
   });
+}
+
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const response = await fetch(`${API_BASE}/profile/avatar`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || `HTTP ${response.status}`);
+  }
+
+  return response.json();
 }
 
 export async function createCollection(name, description, icon) {

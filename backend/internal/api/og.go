@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
+	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
 
 	"margin.at/internal/db"
@@ -30,13 +31,17 @@ var interRegularTTF []byte
 //go:embed fonts/Inter-Bold.ttf
 var interBoldTTF []byte
 
+//go:embed fonts/DroidSansFallback.ttf
+var droidSansFallbackTTF []byte
+
 //go:embed assets/logo.png
 var logoPNG []byte
 
 var (
-	fontRegular *opentype.Font
-	fontBold    *opentype.Font
-	logoImage   image.Image
+	fontRegular  *opentype.Font
+	fontBold     *opentype.Font
+	fontFallback *opentype.Font
+	logoImage    image.Image
 )
 
 func init() {
@@ -49,6 +54,10 @@ func init() {
 	if err != nil {
 		log.Printf("Warning: failed to parse Inter-Bold font: %v", err)
 	}
+	fontFallback, err = opentype.Parse(droidSansFallbackTTF)
+	if err != nil {
+		log.Printf("Warning: failed to parse DroidSansFallback font: %v", err)
+	}
 
 	if len(logoPNG) > 0 {
 		img, _, err := image.Decode(bytes.NewReader(logoPNG))
@@ -56,6 +65,70 @@ func init() {
 			log.Printf("Warning: failed to decode logo PNG: %v", err)
 		} else {
 			logoImage = img
+		}
+	}
+}
+
+func drawText(img *image.RGBA, text string, x, y int, c color.Color, size float64, bold bool) {
+	if fontRegular == nil || fontBold == nil {
+		return
+	}
+
+	primaryFont := fontRegular
+	if bold {
+		primaryFont = fontBold
+	}
+
+	opts := &opentype.FaceOptions{
+		Size:    size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	}
+
+	facePrimary, _ := opentype.NewFace(primaryFont, opts)
+	defer facePrimary.Close()
+
+	var faceFallback font.Face
+	if fontFallback != nil {
+		faceFallback, _ = opentype.NewFace(fontFallback, opts)
+		defer faceFallback.Close()
+	}
+
+	dPrimary := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(c),
+		Face: facePrimary,
+		Dot:  fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)},
+	}
+
+	var dFallback *font.Drawer
+	if faceFallback != nil {
+		dFallback = &font.Drawer{
+			Dst:  img,
+			Src:  image.NewUniform(c),
+			Face: faceFallback,
+			Dot:  fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)},
+		}
+	}
+
+	var buf sfnt.Buffer
+	for _, r := range text {
+		useFallback := false
+		if fontFallback != nil {
+			idx, err := primaryFont.GlyphIndex(&buf, r)
+			if err != nil || idx == 0 {
+				useFallback = true
+			}
+		}
+
+		if useFallback {
+			dFallback.Dot = dPrimary.Dot
+
+			dFallback.DrawString(string(r))
+
+			dPrimary.Dot = dFallback.Dot
+		} else {
+			dPrimary.DrawString(string(r))
 		}
 	}
 }
@@ -353,7 +426,7 @@ func (h *OGHandler) serveBookmarkOG(w http.ResponseWriter, bookmark *db.Bookmark
 	}
 
 	authorHandle := bookmark.AuthorDID
-	profiles := fetchProfilesForDIDs([]string{bookmark.AuthorDID})
+	profiles := fetchProfilesForDIDs(h.db, []string{bookmark.AuthorDID})
 	if profile, ok := profiles[bookmark.AuthorDID]; ok && profile.Handle != "" {
 		authorHandle = "@" + profile.Handle
 	}
@@ -444,7 +517,7 @@ func (h *OGHandler) serveHighlightOG(w http.ResponseWriter, highlight *db.Highli
 	}
 
 	authorHandle := highlight.AuthorDID
-	profiles := fetchProfilesForDIDs([]string{highlight.AuthorDID})
+	profiles := fetchProfilesForDIDs(h.db, []string{highlight.AuthorDID})
 	if profile, ok := profiles[highlight.AuthorDID]; ok && profile.Handle != "" {
 		authorHandle = "@" + profile.Handle
 	}
@@ -528,7 +601,7 @@ func (h *OGHandler) serveCollectionOG(w http.ResponseWriter, collection *db.Coll
 
 	authorHandle := collection.AuthorDID
 	var avatarURL string
-	profiles := fetchProfilesForDIDs([]string{collection.AuthorDID})
+	profiles := fetchProfilesForDIDs(h.db, []string{collection.AuthorDID})
 	if profile, ok := profiles[collection.AuthorDID]; ok {
 		if profile.Handle != "" {
 			authorHandle = "@" + profile.Handle
@@ -627,7 +700,7 @@ func (h *OGHandler) serveAnnotationOG(w http.ResponseWriter, annotation *db.Anno
 	}
 
 	authorHandle := annotation.AuthorDID
-	profiles := fetchProfilesForDIDs([]string{annotation.AuthorDID})
+	profiles := fetchProfilesForDIDs(h.db, []string{annotation.AuthorDID})
 	if profile, ok := profiles[annotation.AuthorDID]; ok && profile.Handle != "" {
 		authorHandle = "@" + profile.Handle
 	}
@@ -730,7 +803,7 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 	annotation, err := h.db.GetAnnotationByURI(uri)
 	if err == nil && annotation != nil {
 		authorHandle = annotation.AuthorDID
-		profiles := fetchProfilesForDIDs([]string{annotation.AuthorDID})
+		profiles := fetchProfilesForDIDs(h.db, []string{annotation.AuthorDID})
 		if profile, ok := profiles[annotation.AuthorDID]; ok {
 			if profile.Handle != "" {
 				authorHandle = "@" + profile.Handle
@@ -762,7 +835,7 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 		bookmark, err := h.db.GetBookmarkByURI(uri)
 		if err == nil && bookmark != nil {
 			authorHandle = bookmark.AuthorDID
-			profiles := fetchProfilesForDIDs([]string{bookmark.AuthorDID})
+			profiles := fetchProfilesForDIDs(h.db, []string{bookmark.AuthorDID})
 			if profile, ok := profiles[bookmark.AuthorDID]; ok {
 				if profile.Handle != "" {
 					authorHandle = "@" + profile.Handle
@@ -789,7 +862,7 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 			highlight, err := h.db.GetHighlightByURI(uri)
 			if err == nil && highlight != nil {
 				authorHandle = highlight.AuthorDID
-				profiles := fetchProfilesForDIDs([]string{highlight.AuthorDID})
+				profiles := fetchProfilesForDIDs(h.db, []string{highlight.AuthorDID})
 				if profile, ok := profiles[highlight.AuthorDID]; ok {
 					if profile.Handle != "" {
 						authorHandle = "@" + profile.Handle
@@ -829,7 +902,7 @@ func (h *OGHandler) HandleOGImage(w http.ResponseWriter, r *http.Request) {
 				collection, err := h.db.GetCollectionByURI(uri)
 				if err == nil && collection != nil {
 					authorHandle = collection.AuthorDID
-					profiles := fetchProfilesForDIDs([]string{collection.AuthorDID})
+					profiles := fetchProfilesForDIDs(h.db, []string{collection.AuthorDID})
 					if profile, ok := profiles[collection.AuthorDID]; ok {
 						if profile.Handle != "" {
 							authorHandle = "@" + profile.Handle
@@ -1048,42 +1121,6 @@ func drawDefaultAvatar(dst *image.RGBA, author string, x, y, size int, accentCol
 		}
 	}
 	drawText(dst, initial, x+size/2-10, y+size/2+12, color.RGBA{255, 255, 255, 255}, 32, true)
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func drawText(img *image.RGBA, text string, x, y int, c color.Color, size float64, bold bool) {
-	if fontRegular == nil || fontBold == nil {
-		return
-	}
-
-	selectedFont := fontRegular
-	if bold {
-		selectedFont = fontBold
-	}
-
-	face, err := opentype.NewFace(selectedFont, &opentype.FaceOptions{
-		Size:    size,
-		DPI:     72,
-		Hinting: font.HintingFull,
-	})
-	if err != nil {
-		return
-	}
-	defer face.Close()
-
-	d := &font.Drawer{
-		Dst:  img,
-		Src:  image.NewUniform(c),
-		Face: face,
-		Dot:  fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)},
-	}
-	d.DrawString(text)
 }
 
 func wrapTextToWidth(text string, maxWidth int, fontSize int) []string {

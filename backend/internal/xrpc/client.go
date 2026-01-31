@@ -304,3 +304,56 @@ func (c *Client) ResolveHandle(ctx context.Context, handle string) (string, erro
 
 	return output.Did, nil
 }
+
+type UploadBlobOutput struct {
+	Blob BlobRef `json:"blob"`
+}
+
+func (c *Client) UploadBlob(ctx context.Context, data []byte, contentType string) (*BlobRef, error) {
+	url := fmt.Sprintf("%s/xrpc/com.atproto.repo.uploadBlob", c.PDS)
+
+	maxRetries := 2
+	for i := 0; i < maxRetries; i++ {
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Content-Type", contentType)
+
+		dpopProof, err := c.createDPoPProof("POST", url)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create DPoP proof: %w", err)
+		}
+
+		req.Header.Set("Authorization", "DPoP "+c.AccessToken)
+		req.Header.Set("DPoP", dpopProof)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		if nonce := resp.Header.Get("DPoP-Nonce"); nonce != "" {
+			c.DPoPNonce = nonce
+		}
+
+		if resp.StatusCode < 400 {
+			var output UploadBlobOutput
+			if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+				return nil, err
+			}
+			return &output.Blob, nil
+		}
+
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == 401 && (bytes.Contains(bodyBytes, []byte("use_dpop_nonce")) || bytes.Contains(bodyBytes, []byte("UseDpopNonce"))) {
+			continue
+		}
+
+		return nil, fmt.Errorf("XRPC error %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil, fmt.Errorf("upload blob failed after retries")
+}

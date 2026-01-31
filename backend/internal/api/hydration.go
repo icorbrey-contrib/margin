@@ -194,7 +194,7 @@ func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID 
 		return []APIAnnotation{}, nil
 	}
 
-	profiles := fetchProfilesForDIDs(collectDIDs(annotations, func(a db.Annotation) string { return a.AuthorDID }))
+	profiles := fetchProfilesForDIDs(database, collectDIDs(annotations, func(a db.Annotation) string { return a.AuthorDID }))
 
 	uris := make([]string, len(annotations))
 	for i, a := range annotations {
@@ -279,7 +279,7 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 		return []APIHighlight{}, nil
 	}
 
-	profiles := fetchProfilesForDIDs(collectDIDs(highlights, func(h db.Highlight) string { return h.AuthorDID }))
+	profiles := fetchProfilesForDIDs(database, collectDIDs(highlights, func(h db.Highlight) string { return h.AuthorDID }))
 
 	uris := make([]string, len(highlights))
 	for i, h := range highlights {
@@ -348,7 +348,7 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 		return []APIBookmark{}, nil
 	}
 
-	profiles := fetchProfilesForDIDs(collectDIDs(bookmarks, func(b db.Bookmark) string { return b.AuthorDID }))
+	profiles := fetchProfilesForDIDs(database, collectDIDs(bookmarks, func(b db.Bookmark) string { return b.AuthorDID }))
 
 	uris := make([]string, len(bookmarks))
 	for i, b := range bookmarks {
@@ -402,12 +402,12 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 	return result, nil
 }
 
-func hydrateReplies(replies []db.Reply) ([]APIReply, error) {
+func hydrateReplies(database *db.DB, replies []db.Reply) ([]APIReply, error) {
 	if len(replies) == 0 {
 		return []APIReply{}, nil
 	}
 
-	profiles := fetchProfilesForDIDs(collectDIDs(replies, func(r db.Reply) string { return r.AuthorDID }))
+	profiles := fetchProfilesForDIDs(database, collectDIDs(replies, func(r db.Reply) string { return r.AuthorDID }))
 
 	result := make([]APIReply, len(replies))
 	for i, r := range replies {
@@ -449,7 +449,7 @@ func collectDIDs[T any](items []T, getDID func(T) string) []string {
 	return dids
 }
 
-func fetchProfilesForDIDs(dids []string) map[string]Author {
+func fetchProfilesForDIDs(database *db.DB, dids []string) map[string]Author {
 	profiles := make(map[string]Author)
 	missingDIDs := make([]string, 0)
 
@@ -461,36 +461,57 @@ func fetchProfilesForDIDs(dids []string) map[string]Author {
 		}
 	}
 
-	if len(missingDIDs) == 0 {
-		return profiles
-	}
+	if len(missingDIDs) > 0 {
+		batchSize := 25
+		var wg sync.WaitGroup
+		var mu sync.Mutex
 
-	batchSize := 25
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-
-	for i := 0; i < len(missingDIDs); i += batchSize {
-		end := i + batchSize
-		if end > len(missingDIDs) {
-			end = len(missingDIDs)
-		}
-		batch := missingDIDs[i:end]
-
-		wg.Add(1)
-		go func(actors []string) {
-			defer wg.Done()
-			fetched, err := fetchProfiles(actors)
-			if err == nil {
-				mu.Lock()
-				defer mu.Unlock()
-				for k, v := range fetched {
-					profiles[k] = v
-					Cache.Set(k, v)
-				}
+		for i := 0; i < len(missingDIDs); i += batchSize {
+			end := i + batchSize
+			if end > len(missingDIDs) {
+				end = len(missingDIDs)
 			}
-		}(batch)
+			batch := missingDIDs[i:end]
+
+			wg.Add(1)
+			go func(actors []string) {
+				defer wg.Done()
+				fetched, err := fetchProfiles(actors)
+				if err == nil {
+					mu.Lock()
+					defer mu.Unlock()
+					for k, v := range fetched {
+						profiles[k] = v
+					}
+				}
+			}(batch)
+		}
+		wg.Wait()
 	}
-	wg.Wait()
+
+	if database != nil && len(dids) > 0 {
+		marginProfiles, err := database.GetProfilesByDIDs(dids)
+		if err == nil {
+			for did, mp := range marginProfiles {
+				author, exists := profiles[did]
+				if !exists {
+					author = Author{
+						DID: did,
+					}
+				}
+
+				if mp.DisplayName != nil && *mp.DisplayName != "" {
+					author.DisplayName = *mp.DisplayName
+				}
+				if mp.Avatar != nil && *mp.Avatar != "" {
+					author.Avatar = getProxiedAvatarURL(did, *mp.Avatar)
+				}
+				profiles[did] = author
+
+				Cache.Set(did, author)
+			}
+		}
+	}
 
 	return profiles
 }
@@ -548,7 +569,7 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 		return []APICollectionItem{}, nil
 	}
 
-	profiles := fetchProfilesForDIDs(collectDIDs(items, func(i db.CollectionItem) string { return i.AuthorDID }))
+	profiles := fetchProfilesForDIDs(database, collectDIDs(items, func(i db.CollectionItem) string { return i.AuthorDID }))
 
 	var collectionURIs []string
 	var annotationURIs []string
@@ -573,7 +594,7 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 	if len(collectionURIs) > 0 {
 		colls, err := database.GetCollectionsByURIs(collectionURIs)
 		if err == nil {
-			collProfiles := fetchProfilesForDIDs(collectDIDs(colls, func(c db.Collection) string { return c.AuthorDID }))
+			collProfiles := fetchProfilesForDIDs(database, collectDIDs(colls, func(c db.Collection) string { return c.AuthorDID }))
 			for _, coll := range colls {
 				icon := ""
 				if coll.Icon != nil {
@@ -686,7 +707,7 @@ func hydrateNotifications(database *db.DB, notifications []db.Notification) ([]A
 		}
 	}
 
-	profiles := fetchProfilesForDIDs(dids)
+	profiles := fetchProfilesForDIDs(database, dids)
 
 	replyURIs := make([]string, 0)
 	for _, n := range notifications {
@@ -699,7 +720,7 @@ func hydrateNotifications(database *db.DB, notifications []db.Notification) ([]A
 	if len(replyURIs) > 0 {
 		replies, err := database.GetRepliesByURIs(replyURIs)
 		if err == nil {
-			hydratedReplies, _ := hydrateReplies(replies)
+			hydratedReplies, _ := hydrateReplies(database, replies)
 			for _, r := range hydratedReplies {
 				replyMap[r.ID] = r
 			}

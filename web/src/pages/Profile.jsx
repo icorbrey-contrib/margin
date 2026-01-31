@@ -121,11 +121,19 @@ export default function Profile() {
 
           const bskyData = await bskyPromise;
           if (bskyData || marginData) {
-            setProfile((prev) => ({
+            const merged = {
               ...(bskyData || {}),
-              ...prev,
-              ...(marginData || {}),
-            }));
+            };
+            if (marginData) {
+              merged.did = marginData.did || merged.did;
+              if (marginData.displayName)
+                merged.displayName = marginData.displayName;
+              if (marginData.avatar) merged.avatar = marginData.avatar;
+              if (marginData.bio) merged.bio = marginData.bio;
+              if (marginData.website) merged.website = marginData.website;
+              if (marginData.links?.length) merged.links = marginData.links;
+            }
+            setProfile(merged);
           }
         }
       } catch (err) {

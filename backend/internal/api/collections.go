@@ -225,7 +225,7 @@ func (s *CollectionService) GetCollections(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	profiles := fetchProfilesForDIDs([]string{authorDID})
+	profiles := fetchProfilesForDIDs(s.db, []string{authorDID})
 	creator := profiles[authorDID]
 
 	apiCollections := make([]APICollection, len(collections))
@@ -469,7 +469,7 @@ func (s *CollectionService) GetCollection(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	profiles := fetchProfilesForDIDs([]string{collection.AuthorDID})
+	profiles := fetchProfilesForDIDs(s.db, []string{collection.AuthorDID})
 	creator := profiles[collection.AuthorDID]
 
 	icon := ""

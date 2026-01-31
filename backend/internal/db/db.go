@@ -130,14 +130,16 @@ type APIKey struct {
 }
 
 type Profile struct {
-	URI       string    `json:"uri"`
-	AuthorDID string    `json:"authorDid"`
-	Bio       *string   `json:"bio,omitempty"`
-	Website   *string   `json:"website,omitempty"`
-	LinksJSON *string   `json:"links,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
-	IndexedAt time.Time `json:"indexedAt"`
-	CID       *string   `json:"cid,omitempty"`
+	URI         string    `json:"uri"`
+	AuthorDID   string    `json:"authorDid"`
+	DisplayName *string   `json:"displayName,omitempty"`
+	Avatar      *string   `json:"avatar,omitempty"`
+	Bio         *string   `json:"bio,omitempty"`
+	Website     *string   `json:"website,omitempty"`
+	LinksJSON   *string   `json:"links,omitempty"`
+	CreatedAt   time.Time `json:"createdAt"`
+	IndexedAt   time.Time `json:"indexedAt"`
+	CID         *string   `json:"cid,omitempty"`
 }
 
 func New(dsn string) (*DB, error) {
@@ -342,6 +344,8 @@ func (db *DB) Migrate() error {
 	db.Exec(`CREATE TABLE IF NOT EXISTS profiles (
 		uri TEXT PRIMARY KEY,
 		author_did TEXT NOT NULL,
+		display_name TEXT,
+		avatar TEXT,
 		bio TEXT,
 		website TEXT,
 		links_json TEXT,
@@ -362,6 +366,50 @@ func (db *DB) Migrate() error {
 	db.runMigrations()
 
 	return nil
+}
+
+func (db *DB) GetProfilesByDIDs(dids []string) (map[string]*Profile, error) {
+	if len(dids) == 0 {
+		return nil, nil
+	}
+
+	query := `SELECT uri, author_did, display_name, bio, avatar, website, links_json, created_at, indexed_at FROM profiles WHERE author_did IN (`
+	args := make([]interface{}, len(dids))
+	placeholders := make([]string, len(dids))
+
+	for i, did := range dids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = did
+	}
+
+	query += strings.Join(placeholders, ",") + ")"
+
+	if db.driver == "sqlite3" {
+		query = strings.ReplaceAll(query, "$", "?")
+
+		placeholders = make([]string, len(dids))
+		for i := range dids {
+			placeholders[i] = "?"
+		}
+		query = `SELECT uri, author_did, display_name, bio, avatar, website, links_json, created_at, indexed_at FROM profiles WHERE author_did IN (` + strings.Join(placeholders, ",") + ")"
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	profiles := make(map[string]*Profile)
+	for rows.Next() {
+		var p Profile
+		if err := rows.Scan(&p.URI, &p.AuthorDID, &p.DisplayName, &p.Bio, &p.Avatar, &p.Website, &p.LinksJSON, &p.CreatedAt, &p.IndexedAt); err != nil {
+			continue
+		}
+		profiles[p.AuthorDID] = &p
+	}
+
+	return profiles, nil
 }
 
 func (db *DB) GetCursor(id string) (int64, error) {
@@ -390,8 +438,8 @@ func (db *DB) SetCursor(id string, cursor int64) error {
 
 func (db *DB) GetProfile(did string) (*Profile, error) {
 	var p Profile
-	err := db.QueryRow("SELECT uri, author_did, bio, website, links_json, created_at, indexed_at FROM profiles WHERE author_did = $1", did).Scan(
-		&p.URI, &p.AuthorDID, &p.Bio, &p.Website, &p.LinksJSON, &p.CreatedAt, &p.IndexedAt,
+	err := db.QueryRow("SELECT uri, author_did, display_name, avatar, bio, website, links_json, created_at, indexed_at FROM profiles WHERE author_did = $1", did).Scan(
+		&p.URI, &p.AuthorDID, &p.DisplayName, &p.Avatar, &p.Bio, &p.Website, &p.LinksJSON, &p.CreatedAt, &p.IndexedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -404,15 +452,17 @@ func (db *DB) GetProfile(did string) (*Profile, error) {
 
 func (db *DB) UpsertProfile(p *Profile) error {
 	query := `
-		INSERT INTO profiles (uri, author_did, bio, website, links_json, created_at, indexed_at) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7) 
+		INSERT INTO profiles (uri, author_did, display_name, avatar, bio, website, links_json, created_at, indexed_at) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
 		ON CONFLICT(uri) DO UPDATE SET 
+			display_name = EXCLUDED.display_name,
+			avatar = EXCLUDED.avatar,
 			bio = EXCLUDED.bio, 
 			website = EXCLUDED.website,
 			links_json = EXCLUDED.links_json,
 			indexed_at = EXCLUDED.indexed_at
 	`
-	_, err := db.Exec(db.Rebind(query), p.URI, p.AuthorDID, p.Bio, p.Website, p.LinksJSON, p.CreatedAt, p.IndexedAt)
+	_, err := db.Exec(db.Rebind(query), p.URI, p.AuthorDID, p.DisplayName, p.Avatar, p.Bio, p.Website, p.LinksJSON, p.CreatedAt, p.IndexedAt)
 	return err
 }
 
@@ -443,6 +493,8 @@ func (db *DB) runMigrations() {
 	db.Exec(`UPDATE annotations SET motivation = 'commenting' WHERE motivation IS NULL`)
 
 	db.Exec(`ALTER TABLE profiles ADD COLUMN website TEXT`)
+	db.Exec(`ALTER TABLE profiles ADD COLUMN display_name TEXT`)
+	db.Exec(`ALTER TABLE profiles ADD COLUMN avatar TEXT`)
 
 	if db.driver == "postgres" {
 		db.Exec(`ALTER TABLE cursors ALTER COLUMN last_cursor TYPE BIGINT`)

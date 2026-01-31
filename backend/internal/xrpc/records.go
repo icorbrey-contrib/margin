@@ -382,14 +382,30 @@ func NewCollectionItemRecord(collection, annotation string, position int) *Colle
 }
 
 type MarginProfileRecord struct {
-	Type      string   `json:"$type"`
-	Bio       string   `json:"bio,omitempty"`
-	Website   string   `json:"website,omitempty"`
-	Links     []string `json:"links,omitempty"`
-	CreatedAt string   `json:"createdAt"`
+	Type        string   `json:"$type"`
+	DisplayName string   `json:"displayName,omitempty"`
+	Avatar      *BlobRef `json:"avatar,omitempty"`
+	Bio         string   `json:"bio,omitempty"`
+	Website     string   `json:"website,omitempty"`
+	Links       []string `json:"links,omitempty"`
+	CreatedAt   string   `json:"createdAt"`
+}
+
+type BlobRef struct {
+	Type     string `json:"$type"`
+	Ref      RefObj `json:"ref"`
+	MimeType string `json:"mimeType"`
+	Size     int64  `json:"size"`
+}
+
+type RefObj struct {
+	Link string `json:"$link"`
 }
 
 func (r *MarginProfileRecord) Validate() error {
+	if len(r.DisplayName) > 640 {
+		return fmt.Errorf("displayName too long")
+	}
 	if len(r.Bio) > 5000 {
 		return fmt.Errorf("bio too long")
 	}

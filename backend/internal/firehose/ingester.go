@@ -687,10 +687,11 @@ func (i *Ingester) handleProfile(event *FirehoseEvent) {
 	}
 
 	var record struct {
-		Bio       string   `json:"bio"`
-		Website   string   `json:"website"`
-		Links     []string `json:"links"`
-		CreatedAt string   `json:"createdAt"`
+		DisplayName string   `json:"displayName"`
+		Bio         string   `json:"bio"`
+		Website     string   `json:"website"`
+		Links       []string `json:"links"`
+		CreatedAt   string   `json:"createdAt"`
 	}
 
 	if err := json.Unmarshal(event.Record, &record); err != nil {
@@ -704,7 +705,10 @@ func (i *Ingester) handleProfile(event *FirehoseEvent) {
 		createdAt = time.Now()
 	}
 
-	var bioPtr, websitePtr, linksJSONPtr *string
+	var displayNamePtr, bioPtr, websitePtr, linksJSONPtr *string
+	if record.DisplayName != "" {
+		displayNamePtr = &record.DisplayName
+	}
 	if record.Bio != "" {
 		bioPtr = &record.Bio
 	}
@@ -718,13 +722,14 @@ func (i *Ingester) handleProfile(event *FirehoseEvent) {
 	}
 
 	profile := &db.Profile{
-		URI:       uri,
-		AuthorDID: event.Repo,
-		Bio:       bioPtr,
-		Website:   websitePtr,
-		LinksJSON: linksJSONPtr,
-		CreatedAt: createdAt,
-		IndexedAt: time.Now(),
+		URI:         uri,
+		AuthorDID:   event.Repo,
+		DisplayName: displayNamePtr,
+		Bio:         bioPtr,
+		Website:     websitePtr,
+		LinksJSON:   linksJSONPtr,
+		CreatedAt:   createdAt,
+		IndexedAt:   time.Now(),
 	}
 
 	if err := i.db.UpsertProfile(profile); err != nil {

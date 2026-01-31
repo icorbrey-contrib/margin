@@ -982,7 +982,7 @@ func (h *Handler) GetReplies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enriched, _ := hydrateReplies(replies)
+	enriched, _ := hydrateReplies(h.db, replies)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
