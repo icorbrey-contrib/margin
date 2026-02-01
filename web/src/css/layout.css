@@ -573,6 +573,10 @@
     padding: 16px 12px 100px;
   }
 
+  .main-content > * {
+    padding: 0;
+  }
+
   .feed-container {
     border-radius: var(--radius-md);
     padding: 4px;
