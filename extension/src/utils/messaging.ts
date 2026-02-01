@@ -1,0 +1,61 @@
+import { defineExtensionMessaging } from '@webext-core/messaging';
+import type {
+  MarginSession,
+  Annotation,
+  Bookmark,
+  Highlight,
+  Collection,
+  TextSelector,
+} from './types';
+
+interface ProtocolMap {
+  checkSession(): MarginSession;
+
+  getAnnotations(data: { url: string }): Annotation[];
+  createAnnotation(data: { url: string; text: string; title?: string; selector?: TextSelector }): {
+    success: boolean;
+    data?: Annotation;
+    error?: string;
+  };
+
+  createBookmark(data: { url: string; title?: string }): {
+    success: boolean;
+    data?: Bookmark;
+    error?: string;
+  };
+  getUserBookmarks(data: { did: string }): Bookmark[];
+
+  createHighlight(data: { url: string; title?: string; selector: TextSelector; color?: string }): {
+    success: boolean;
+    data?: Highlight;
+    error?: string;
+  };
+  getUserHighlights(data: { did: string }): Highlight[];
+
+  getUserCollections(data: { did: string }): Collection[];
+  addToCollection(data: { collectionUri: string; annotationUri: string }): {
+    success: boolean;
+    error?: string;
+  };
+  getItemCollections(data: { annotationUri: string }): string[];
+
+  getReplies(data: { uri: string }): Annotation[];
+  createReply(data: {
+    parentUri: string;
+    parentCid: string;
+    rootUri: string;
+    rootCid: string;
+    text: string;
+  }): { success: boolean; error?: string };
+
+  getOverlayEnabled(): boolean;
+
+  openAppUrl(data: { path: string }): void;
+
+  updateBadge(data: { count: number; tabId?: number }): void;
+
+  cacheAnnotations(data: { url: string; annotations: Annotation[] }): void;
+  getCachedAnnotations(data: { url: string }): Annotation[] | null;
+}
+
+export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();

@@ -1,14 +1,41 @@
 {
   "name": "margin-extension",
-  "version": "0.1.0",
+  "description": "Annotate and highlight any webpage, with your notes saved to the decentralized AT Protocol.",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "lint": "eslint ."
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "@webext-core/messaging": "^1.4.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@wxt-dev/module-react": "^1.1.1",
+    "autoprefixer": "^10.4.20",
     "eslint": "^9.39.2",
-    "globals": "^17.0.0"
+    "eslint-config-prettier": "^10.1.8",
+    "postcss": "^8.4.49",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.54.0",
+    "wxt": "^0.19.13"
   }
 }

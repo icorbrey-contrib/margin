@@ -15,34 +15,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update Manifest Version
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd extension
+          npm ci
+
+      - name: Update Version
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          echo "Updating manifests to version $VERSION"
-
+          echo "Updating to version $VERSION"
           cd extension
-          for manifest in manifest.json manifest.chrome.json manifest.firefox.json; do
-            if [ -f "$manifest" ]; then
-              tmp=$(mktemp)
-              jq --arg v "$VERSION" '.version = $v' "$manifest" > "$tmp" && mv "$tmp" "$manifest"
-              echo "Updated $manifest"
-            fi
-          done
-          cd ..
+          tmp=$(mktemp)
+          jq --arg v "$VERSION" '.version = $v' package.json > "$tmp" && mv "$tmp" package.json
 
-      - name: Build Extension (Chrome)
+      - name: Build Chrome Extension
         run: |
           cd extension
-          cp manifest.chrome.json manifest.json
-          zip -r ../margin-extension-chrome.zip . -x "*.DS_Store" -x "*.git*" -x "manifest.*.json"
-          cd ..
+          npm run zip
+          cp .output/margin-extension-*.zip ../margin-extension-chrome.zip
 
-      - name: Build Extension (Firefox)
+      - name: Build Firefox Extension
         run: |
           cd extension
-          cp manifest.firefox.json manifest.json
-          zip -r ../margin-extension-firefox.xpi . -x "*.DS_Store" -x "*.git*" -x "manifest.*.json"
-          cd ..
+          npm run zip:firefox
+          cp .output/margin-extension-*-firefox.zip ../margin-extension-firefox.xpi
+          cp .output/margin-extension-*-sources.zip ../margin-extension-sources.zip
 
       - name: Publish to Chrome Web Store
         continue-on-error: true
@@ -83,12 +87,12 @@ jobs:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
-          cd extension
+          cd extension/.output/firefox-mv3
           COMMIT_MSG=$(git log -1 --pretty=%s)
           echo "{\"release_notes\": {\"en-US\": \"$COMMIT_MSG\"}, \"notes\": \"Thank you!\"}" > amo-metadata.json
-          npx web-ext sign --channel=listed --api-key=$AMO_JWT_ISSUER --api-secret=$AMO_JWT_SECRET --source-dir=. --artifacts-dir=../web-ext-artifacts --approval-timeout=300000 --amo-metadata=amo-metadata.json || echo "Web-ext sign timed out (expected), continuing..."
+          npx web-ext sign --channel=listed --api-key=$AMO_JWT_ISSUER --api-secret=$AMO_JWT_SECRET --source-dir=. --artifacts-dir=../../../web-ext-artifacts --approval-timeout=300000 --amo-metadata=amo-metadata.json || echo "Web-ext sign timed out (expected), continuing..."
           rm amo-metadata.json
-          cd ..
+          cd ../../..
 
       - name: Prepare signed Firefox XPI
         run: |
@@ -106,6 +110,7 @@ jobs:
           files: |
             margin-extension-chrome.zip
             margin-extension-firefox.xpi
+            margin-extension-sources.zip
           generate_release_notes: true
           draft: false
           prerelease: false

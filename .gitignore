@@ -8,6 +8,10 @@ main
 margin-backend
 backend/server
 
+# WXT
+extension/.output/
+extension/.wxt/
+
 # Environment
 .env
 .env.local

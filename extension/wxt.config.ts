@@ -1,0 +1,87 @@
+import { defineConfig } from 'wxt';
+import { cp } from 'fs/promises';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+
+export default defineConfig({
+  srcDir: 'src',
+  modules: ['@wxt-dev/module-react'],
+  manifestVersion: 3,
+  hooks: {
+    'build:done': async (wxt) => {
+      const publicDir = resolve(__dirname, 'public');
+      const outDir = wxt.config.outDir;
+
+      if (existsSync(publicDir)) {
+        await cp(publicDir, outDir, { recursive: true });
+      }
+    },
+  },
+  manifest: ({ browser }) => {
+    const basePermissions = ['storage', 'activeTab', 'tabs', 'cookies', 'contextMenus'];
+    const chromePermissions = [...basePermissions, 'sidePanel'];
+
+    return {
+      name: 'Margin',
+      description: 'Annotate and highlight any webpage, with your notes saved to the decentralized AT Protocol.',
+      permissions: browser === 'firefox' ? basePermissions : chromePermissions,
+      host_permissions: ['https://margin.at/*', '*://*/*'],
+      icons: {
+        16: '/icons/icon-16.png',
+        32: '/icons/icon-32.png',
+        48: '/icons/icon-48.png',
+        128: '/icons/icon-128.png',
+      },
+      commands: {
+        'open-sidebar': {
+          suggested_key: {
+            default: 'Alt+M',
+            mac: 'Alt+M',
+          },
+          description: 'Open Margin sidebar',
+        },
+        'annotate-selection': {
+          suggested_key: {
+            default: 'Alt+A',
+            mac: 'Alt+A',
+          },
+          description: 'Annotate selected text',
+        },
+        'highlight-selection': {
+          suggested_key: {
+            default: 'Alt+H',
+            mac: 'Alt+H',
+          },
+          description: 'Highlight selected text',
+        },
+        'bookmark-page': {
+          suggested_key: {
+            default: 'Alt+B',
+            mac: 'Alt+B',
+          },
+          description: 'Bookmark current page',
+        },
+      },
+      action: {
+        default_title: 'Margin',
+        default_popup: 'popup.html',
+        default_icon: {
+          16: '/icons/icon-16.png',
+          32: '/icons/icon-32.png',
+          48: '/icons/icon-48.png',
+          128: '/icons/icon-128.png',
+        },
+      },
+      ...(browser === 'chrome' ? {
+        side_panel: {
+          default_path: 'sidepanel.html',
+        },
+      } : {
+        sidebar_action: {
+          default_title: 'Margin',
+          default_panel: 'sidepanel.html',
+        },
+      }),
+    };
+  },
+});

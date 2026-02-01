@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a0a0d;
+  --bg-secondary: #121216;
+  --bg-tertiary: #1a1a1f;
+  --bg-card: #0f0f13;
+  --bg-elevated: #18181d;
+  --bg-hover: #1e1e24;
+  --text-primary: #eaeaee;
+  --text-secondary: #b7b6c5;
+  --text-tertiary: #6e6d7a;
+  --border: rgba(183, 182, 197, 0.12);
+  --border-strong: rgba(183, 182, 197, 0.2);
+  --accent: #957a86;
+  --accent-hover: #a98d98;
+  --accent-subtle: rgba(149, 122, 134, 0.15);
+  --success: #34d399;
+  --warning: #fbbf24;
+}
+
+.light {
+  --bg-primary: #f8f8fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f0f4;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #eeeef2;
+  --text-primary: #18171c;
+  --text-secondary: #5c495a;
+  --text-tertiary: #8a8494;
+  --border: rgba(92, 73, 90, 0.12);
+  --border-strong: rgba(92, 73, 90, 0.2);
+  --accent: #7a5f6d;
+  --accent-hover: #664e5b;
+  --accent-subtle: rgba(149, 122, 134, 0.12);
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family:
+    'IBM Plex Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  max-width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html.popup body {
+  width: 380px;
+  height: 520px;
+  min-height: 520px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+button,
+a,
+input,
+textarea {
+  transition: all 0.15s ease;
+}
+
+input:focus,
+textarea:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--accent-subtle),
+    0 0 0 4px var(--accent);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.25s ease forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.2s ease forwards;
+}
+
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
