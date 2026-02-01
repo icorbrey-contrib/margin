@@ -84,8 +84,10 @@ export default defineConfig({
         browser_specific_settings: {
           gecko: {
             id: 'hello@margin.at',
-            strict_min_version: '109.0',
-            data_collection_permissions: false,
+            strict_min_version: '140.0',
+            data_collection_permissions: {
+              required: ['none'],
+            },
           },
         },
       }),
