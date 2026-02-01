@@ -86,7 +86,7 @@ export default function Settings() {
       <h1 className="page-title">Settings</h1>
       <p className="page-description">Manage your preferences and API keys.</p>
 
-      <div className="settings-section">
+      <div className="settings-section layout-settings-section">
         <h2>Layout</h2>
         <div className="layout-options">
           <button
@@ -331,6 +331,11 @@ export default function Settings() {
                 @media (max-width: 600px) {
                     .layout-options {
                         grid-template-columns: 1fr;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .layout-settings-section {
+                        display: none;
                     }
                 }
             `}</style>
