@@ -724,9 +724,10 @@ export default defineContentScript({
         CSS.highlights.clear();
       }
       activeItems = [];
+      cachedMatcher = null;
       sendMessage('updateBadge', { count: 0 });
       if (overlayEnabled) {
-        fetchAnnotations();
+        setTimeout(() => fetchAnnotations(), 300);
       }
     }
 
@@ -745,7 +746,29 @@ export default defineContentScript({
       checkUrlChange();
     };
 
-    setInterval(checkUrlChange, 1000);
+    setInterval(checkUrlChange, 500);
+
+    let domChangeTimeout: ReturnType<typeof setTimeout> | null = null;
+    const observer = new MutationObserver((mutations) => {
+      const hasSignificantChange = mutations.some(
+        (m) => m.type === 'childList' && (m.addedNodes.length > 3 || m.removedNodes.length > 3)
+      );
+      if (hasSignificantChange && overlayEnabled && activeItems.length === 0) {
+        if (domChangeTimeout) clearTimeout(domChangeTimeout);
+        domChangeTimeout = setTimeout(() => {
+          cachedMatcher = null;
+          fetchAnnotations();
+        }, 500);
+      }
+    });
+    observer.observe(document.body || document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+
+    ctx.onInvalidated(() => {
+      observer.disconnect();
+    });
 
     window.addEventListener('load', () => {
       setTimeout(() => fetchAnnotations(), 500);
