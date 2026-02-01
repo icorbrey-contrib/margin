@@ -85,6 +85,7 @@ export default defineConfig({
           gecko: {
             id: 'hello@margin.at',
             strict_min_version: '109.0',
+            data_collection_permissions: false,
           },
         },
       }),
