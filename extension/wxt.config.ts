@@ -81,6 +81,12 @@ export default defineConfig({
           default_title: 'Margin',
           default_panel: 'sidepanel.html',
         },
+        browser_specific_settings: {
+          gecko: {
+            id: 'hello@margin.at',
+            strict_min_version: '109.0',
+          },
+        },
       }),
     };
   },
