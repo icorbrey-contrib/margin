@@ -3,11 +3,16 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ThemeContext = createContext({
   theme: "system",
   setTheme: () => null,
+  layout: "sidebar",
+  setLayout: () => null,
 });
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("theme") || "system";
+  });
+  const [layout, setLayout] = useState(() => {
+    return localStorage.getItem("layout_preference") || "sidebar";
   });
 
   useEffect(() => {
@@ -54,10 +59,18 @@ export function ThemeProvider({ children }) {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme]);
 
+  useEffect(() => {
+    localStorage.setItem("layout_preference", layout);
+  }, [layout]);
+
   const value = {
     theme,
     setTheme: (newTheme) => {
       setTheme(newTheme);
+    },
+    layout,
+    setLayout: (newLayout) => {
+      setLayout(newLayout);
     },
   };
 

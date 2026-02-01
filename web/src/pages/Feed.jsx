@@ -8,6 +8,7 @@ import IOSInstallBanner from "../components/IOSInstallBanner";
 import { getAnnotationFeed, deleteHighlight } from "../api/client";
 import { AlertIcon, InboxIcon } from "../components/Icons";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { X, ArrowUp } from "lucide-react";
 
 import AddToCollectionModal from "../components/AddToCollectionModal";
@@ -382,30 +383,41 @@ export default function Feed() {
 
 function BackToTopButton() {
   const [isVisible, setIsVisible] = useState(false);
+  const { layout } = useTheme();
 
   useEffect(() => {
+    let scrollContainer = window;
+    if (layout !== "topnav") {
+      const mainContent = document.querySelector(".main-content");
+      if (mainContent) scrollContainer = mainContent;
+    }
+
     const toggleVisibility = () => {
-      if (window.scrollY > 300) {
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
-      }
+      const scrolled =
+        scrollContainer instanceof Window
+          ? scrollContainer.scrollY
+          : scrollContainer.scrollTop;
+
+      setIsVisible(scrolled > 300);
     };
 
-    window.addEventListener("scroll", toggleVisibility);
-    return () => window.removeEventListener("scroll", toggleVisibility);
-  }, []);
+    scrollContainer.addEventListener("scroll", toggleVisibility);
+    return () =>
+      scrollContainer.removeEventListener("scroll", toggleVisibility);
+  }, [layout]);
 
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    if (layout === "topnav") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      const mainContent = document.querySelector(".main-content");
+      if (mainContent) mainContent.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   return (
     <button
-      className={`back-to-top-btn ${isVisible ? "visible" : ""}`}
+      className={`back-to-top-btn ${isVisible ? "visible" : ""} ${layout !== "topnav" ? "has-sidebar" : ""}`}
       onClick={scrollToTop}
       aria-label="Back to top"
     >

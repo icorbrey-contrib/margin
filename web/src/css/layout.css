@@ -3,7 +3,30 @@
   background: var(--bg-primary);
 }
 
+.app-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 280px;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .app-layout {
+    grid-template-columns: 240px 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+}
+
 .top-nav {
+  display: none;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -11,6 +34,34 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  .top-nav {
+    display: block;
+  }
+}
+
+.layout-mode-topnav .app-layout {
+  grid-template-columns: 1fr;
+  max-width: 1600px;
+  margin: 0 auto;
+  height: auto;
+  overflow: visible;
+}
+
+.layout-mode-topnav .top-nav {
+  display: block;
+}
+
+.layout-mode-topnav .main-content {
+  height: auto;
+  overflow: visible;
+}
+
+.layout-mode-topnav .main-content > * {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .top-nav-inner {
@@ -34,9 +85,15 @@
   flex-shrink: 0;
 }
 
-.top-nav-logo img {
+.top-nav-logo svg {
   width: 26px;
   height: 26px;
+  transition: color 0.2s;
+  color: var(--accent);
+}
+
+.top-nav-logo:hover svg {
+  color: var(--accent);
 }
 
 .top-nav-links {
@@ -275,9 +332,35 @@
 }
 
 .main-content {
-  max-width: 1300px;
+  width: 100%;
+  padding: 0;
+  overflow-y: auto;
+  height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-hover) transparent;
+}
+
+.main-content > * {
+  max-width: 800px;
   margin: 0 auto;
-  padding: 32px 56px 80px;
+  padding: 32px 32px 80px;
+}
+
+.main-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: var(--radius-full);
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 .mobile-menu {

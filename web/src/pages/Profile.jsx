@@ -9,9 +9,6 @@ import {
   getUserBookmarks,
   getCollections,
   getProfile,
-  getAPIKeys,
-  createAPIKey,
-  deleteAPIKey,
 } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import EditProfileModal from "../components/EditProfileModal";
@@ -70,10 +67,7 @@ export default function Profile() {
   const [highlights, setHighlights] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
   const [collections, setCollections] = useState([]);
-  const [apiKeys, setApiKeys] = useState([]);
-  const [newKeyName, setNewKeyName] = useState("");
-  const [newKey, setNewKey] = useState(null);
-  const [keysLoading, setKeysLoading] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -145,46 +139,6 @@ export default function Profile() {
     }
     fetchProfile();
   }, [handle]);
-
-  useEffect(() => {
-    if (isOwnProfile && activeTab === "apikeys") {
-      loadAPIKeys();
-    }
-  }, [isOwnProfile, activeTab]);
-
-  const loadAPIKeys = async () => {
-    setKeysLoading(true);
-    try {
-      const data = await getAPIKeys();
-      setApiKeys(data.keys || []);
-    } catch {
-      setApiKeys([]);
-    } finally {
-      setKeysLoading(false);
-    }
-  };
-
-  const handleCreateKey = async () => {
-    if (!newKeyName.trim()) return;
-    try {
-      const data = await createAPIKey(newKeyName.trim());
-      setNewKey(data.key);
-      setNewKeyName("");
-      loadAPIKeys();
-    } catch (err) {
-      alert("Failed to create key: " + err.message);
-    }
-  };
-
-  const handleDeleteKey = async (id) => {
-    if (!confirm("Delete this API key? This cannot be undone.")) return;
-    try {
-      await deleteAPIKey(id);
-      loadAPIKeys();
-    } catch (err) {
-      alert("Failed to delete key: " + err.message);
-    }
-  };
 
   if (authLoading) {
     return (
@@ -306,165 +260,6 @@ export default function Profile() {
           {collections.map((c) => (
             <CollectionRow key={c.uri} collection={c} />
           ))}
-        </div>
-      );
-    }
-
-    if (activeTab === "apikeys" && isOwnProfile) {
-      return (
-        <div className="api-keys-section">
-          <div className="card" style={{ marginBottom: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>Create API Key</h3>
-            <p
-              style={{
-                color: "var(--text-muted)",
-                marginBottom: "1rem",
-                fontSize: "0.875rem",
-              }}
-            >
-              Use API keys to create bookmarks from iOS Shortcuts or other
-              tools.
-            </p>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <input
-                type="text"
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="Key name (e.g., iOS Shortcut)"
-                className="input"
-                style={{ flex: 1 }}
-              />
-              <button className="btn btn-primary" onClick={handleCreateKey}>
-                Generate
-              </button>
-            </div>
-            {newKey && (
-              <div
-                style={{
-                  marginTop: "1rem",
-                  padding: "1rem",
-                  background: "var(--bg-secondary)",
-                  borderRadius: "8px",
-                }}
-              >
-                <p
-                  style={{
-                    color: "var(--text-success)",
-                    fontWeight: 500,
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  ✓ Key created! Copy it now, you won&apos;t see it again.
-                </p>
-                <code
-                  style={{
-                    display: "block",
-                    padding: "0.75rem",
-                    background: "var(--bg-tertiary)",
-                    borderRadius: "4px",
-                    wordBreak: "break-all",
-                    fontSize: "0.8rem",
-                  }}
-                >
-                  {newKey}
-                </code>
-                <button
-                  className="btn btn-secondary"
-                  style={{ marginTop: "0.5rem" }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(newKey);
-                    alert("Copied!");
-                  }}
-                >
-                  Copy to clipboard
-                </button>
-              </div>
-            )}
-          </div>
-
-          {keysLoading ? (
-            <div className="card">
-              <div className="skeleton skeleton-text" />
-            </div>
-          ) : apiKeys.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">
-                <KeyIcon size={32} />
-              </div>
-              <h3 className="empty-state-title">No API keys</h3>
-              <p className="empty-state-text">
-                Create a key to use with iOS Shortcuts.
-              </p>
-            </div>
-          ) : (
-            <div className="card">
-              <h3 style={{ marginBottom: "1rem" }}>Your API Keys</h3>
-              {apiKeys.map((key) => (
-                <div
-                  key={key.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "0.75rem 0",
-                    borderBottom: "1px solid var(--border-color)",
-                  }}
-                >
-                  <div>
-                    <strong>{key.name}</strong>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      Created {new Date(key.createdAt).toLocaleDateString()}
-                      {key.lastUsedAt &&
-                        ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
-                    </div>
-                  </div>
-                  <button
-                    className="btn btn-sm"
-                    style={{
-                      fontSize: "0.75rem",
-                      padding: "0.25rem 0.5rem",
-                      color: "#ef4444",
-                      border: "1px solid #ef4444",
-                    }}
-                    onClick={() => handleDeleteKey(key.id)}
-                  >
-                    Revoke
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="card" style={{ marginTop: "1rem" }}>
-            <h3 style={{ marginBottom: "0.5rem" }}>iOS Shortcut</h3>
-            <p
-              style={{
-                color: "var(--text-muted)",
-                marginBottom: "1rem",
-                fontSize: "0.875rem",
-              }}
-            >
-              Save bookmarks from Safari&apos;s share sheet.
-            </p>
-            <a
-              href="https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              <AppleIcon size={16} /> Get Shortcut
-            </a>
-          </div>
         </div>
       );
     }
@@ -592,15 +387,6 @@ export default function Profile() {
         >
           Collections ({collections.length})
         </button>
-
-        {isOwnProfile && (
-          <button
-            className={`profile-tab ${activeTab === "apikeys" ? "active" : ""}`}
-            onClick={() => setActiveTab("apikeys")}
-          >
-            <KeyIcon size={14} /> API Keys
-          </button>
-        )}
       </div>
 
       {loading && (

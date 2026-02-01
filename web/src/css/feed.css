@@ -412,10 +412,20 @@
   cursor: pointer;
   box-shadow: var(--shadow-md);
   transition: all 0.2s ease;
-  z-index: 100;
+  z-index: 9999;
   opacity: 0;
   visibility: hidden;
   transform: translateY(10px);
+}
+
+.back-to-top-btn.has-sidebar {
+  right: 24px;
+}
+
+@media (min-width: 1025px) {
+  .back-to-top-btn.has-sidebar {
+    right: 320px;
+  }
 }
 
 .back-to-top-btn.visible {

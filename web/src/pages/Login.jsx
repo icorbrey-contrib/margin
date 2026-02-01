@@ -174,7 +174,16 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-header-group">
-        <img src={logo} alt="Margin Logo" className="login-logo-img" />
+        <svg
+          viewBox="0 0 265 231"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          className="login-logo-img"
+          style={{ color: "var(--accent)" }}
+        >
+          <path d="M0 230 V0 H199 V65.7156 H149.5 V115.216 H182.5 L199 131.716 V230 Z" />
+          <path d="M215 214.224 V230 H264.5 V0 H215.07 V16.2242 H248.5 V214.224 H215 Z" />
+        </svg>
         <span className="login-x">X</span>
         <div className="login-atproto-icon">
           <AtSign size={64} strokeWidth={2.4} />

@@ -318,8 +318,20 @@ function DemoAnnotation() {
         <div className="demo-sidebar">
           <div className="demo-sidebar-header">
             <div className="demo-logo-section">
-              <span className="demo-logo-icon">
-                <img src={logo} alt="" style={{ width: 16, height: 16 }} />
+              <span
+                className="demo-logo-icon"
+                style={{ color: "var(--accent)" }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 265 231"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M0 230 V0 H199 V65.7156 H149.5 V115.216 H182.5 L199 131.716 V230 Z" />
+                  <path d="M215 214.224 V230 H264.5 V0 H215.07 V16.2242 H248.5 V214.224 H215 Z" />
+                </svg>
               </span>
               <span className="demo-logo-text">Margin</span>
             </div>
@@ -406,8 +418,21 @@ export default function Landing() {
   return (
     <div className="landing-page">
       <nav className="landing-nav">
-        <Link to="/" className="landing-logo">
-          <img src={logo} alt="Margin" />
+        <Link
+          to="/"
+          className="landing-logo"
+          style={{ color: "var(--accent)" }}
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 265 231"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M0 230 V0 H199 V65.7156 H149.5 V115.216 H182.5 L199 131.716 V230 Z" />
+            <path d="M215 214.224 V230 H264.5 V0 H215.07 V16.2242 H248.5 V214.224 H215 Z" />
+          </svg>
           <span>Margin</span>
         </Link>
         <div className="landing-nav-links">
@@ -703,7 +728,16 @@ export default function Landing() {
         <div className="landing-footer-grid">
           <div className="landing-footer-brand">
             <Link to="/" className="landing-logo">
-              <img src={logo} alt="Margin" />
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 265 231"
+                fill="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M0 230 V0 H199 V65.7156 H149.5 V115.216 H182.5 L199 131.716 V230 Z" />
+                <path d="M215 214.224 V230 H264.5 V0 H215.07 V16.2242 H248.5 V214.224 H215 Z" />
+              </svg>
               <span>Margin</span>
             </Link>
             <p>Write in the margins of the web.</p>
