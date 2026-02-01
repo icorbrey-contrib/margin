@@ -36,6 +36,7 @@
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.54.0",
+    "web-ext": "^9.2.0",
     "wxt": "^0.19.13"
   }
 }
