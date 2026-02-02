@@ -13,7 +13,7 @@
 
 @media (max-width: 1024px) {
   .app-layout {
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 220px 1fr;
   }
 }
 
@@ -44,8 +44,7 @@
 
 .layout-mode-topnav .app-layout {
   grid-template-columns: 1fr;
-  max-width: 1600px;
-  margin: 0 auto;
+  max-width: 100%;
   height: auto;
   overflow: visible;
 }
@@ -60,8 +59,43 @@
 }
 
 .layout-mode-topnav .main-content > * {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
+  padding: 32px 32px 80px;
+}
+
+@media (min-width: 1400px) {
+  .layout-mode-topnav .main-content > * {
+    max-width: 1300px;
+  }
+}
+
+@media (min-width: 1700px) {
+  .layout-mode-topnav .main-content > * {
+    max-width: 1500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-mode-topnav .app-layout {
+    grid-template-columns: 1fr;
+    max-width: none;
+    height: auto;
+    overflow: visible;
+  }
+
+  .layout-mode-topnav .top-nav {
+    display: none;
+  }
+
+  .layout-mode-topnav .main-content {
+    padding: 16px 12px 100px;
+  }
+
+  .layout-mode-topnav .main-content > * {
+    max-width: 100%;
+    padding: 0 4px;
+  }
 }
 
 .top-nav-inner {
@@ -237,7 +271,7 @@
   border-radius: var(--radius-lg);
   padding: 6px;
   box-shadow: var(--shadow-lg);
-  z-index: 200;
+  z-index: 100;
 }
 
 .dropdown-right {
@@ -335,15 +369,16 @@
   width: 100%;
   padding: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
   scrollbar-width: thin;
   scrollbar-color: var(--bg-hover) transparent;
 }
 
 .main-content > * {
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 32px 32px 80px;
+  padding: 32px 40px 80px;
 }
 
 .main-content::-webkit-scrollbar {
@@ -424,11 +459,7 @@
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-  z-index: 100;
-}
-
-.mobile-bottom-nav {
-  display: none;
+  z-index: 200;
   justify-content: space-around;
   align-items: center;
 }
@@ -574,12 +605,13 @@
   }
 
   .main-content > * {
-    padding: 0;
+    padding: 0 4px;
+    max-width: 100%;
   }
 
   .feed-container {
     border-radius: var(--radius-md);
-    padding: 4px;
+    padding: 0;
   }
 }
 
@@ -601,7 +633,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 150;
+  z-index: 300;
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   animation: fadeIn 0.15s ease-out;
@@ -616,7 +648,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 6px;
-  z-index: 151;
+  z-index: 301;
   box-shadow: var(--shadow-2xl);
   animation: mobileMenuSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;

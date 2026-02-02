@@ -101,7 +101,40 @@ export default function ShareMenu({ uri, text, customUrl, handle, type, url }) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedAturi, setCopiedAturi] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  const calculatePosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const menuWidth = 220;
+    const menuHeight = 300;
+    const padding = 16;
+
+    let left = rect.left + rect.width / 2 - menuWidth / 2;
+    let top = rect.bottom + 8;
+
+    if (left < padding) {
+      left = padding;
+    } else if (left + menuWidth > window.innerWidth - padding) {
+      left = window.innerWidth - menuWidth - padding;
+    }
+
+    if (top + menuHeight > window.innerHeight - padding) {
+      top = rect.top - menuHeight - 8;
+      if (top < padding) top = padding;
+    }
+
+    setMenuPosition({ top, left });
+  };
+
+  const handleToggle = () => {
+    if (!isOpen) {
+      calculatePosition();
+    }
+    setIsOpen(!isOpen);
+  };
 
   const getShareUrl = () => {
     if (customUrl) return customUrl;
@@ -126,24 +159,40 @@ export default function ShareMenu({ uri, text, customUrl, handle, type, url }) {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target)
+      ) {
         setIsOpen(false);
       }
     };
 
-    const card = menuRef.current?.closest(".card");
+    const card = buttonRef.current?.closest(
+      ".card, .annotation-card, .bookmark-card",
+    );
     if (card) {
       if (isOpen) {
-        card.style.zIndex = "50";
+        card.classList.add("has-open-menu");
       } else {
-        card.style.zIndex = "";
+        card.classList.remove("has-open-menu");
       }
     }
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      window.addEventListener("scroll", calculatePosition, true);
+      window.addEventListener("resize", calculatePosition);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", calculatePosition, true);
+      window.removeEventListener("resize", calculatePosition);
+      if (card) {
+        card.classList.remove("has-open-menu");
+      }
+    };
   }, [isOpen]);
 
   const handleShareToFork = (domain) => {
@@ -231,10 +280,11 @@ export default function ShareMenu({ uri, text, customUrl, handle, type, url }) {
   };
 
   return (
-    <div className="share-menu-container" ref={menuRef}>
+    <div className="share-menu-container">
       <button
+        ref={buttonRef}
         className="annotation-action"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         title="Share"
       >
         <svg
@@ -256,7 +306,17 @@ export default function ShareMenu({ uri, text, customUrl, handle, type, url }) {
       </button>
 
       {isOpen && (
-        <div className="share-menu">
+        <div
+          className="share-menu"
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: menuPosition.top,
+            left: menuPosition.left,
+            right: "auto",
+            transform: "none",
+          }}
+        >
           {isSemble ? (
             <>
               <div className="share-menu-section">

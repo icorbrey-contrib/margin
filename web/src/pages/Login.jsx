@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { searchActors, startLogin } from "../api/client";
 import { AtSign } from "lucide-react";
-import logo from "../assets/logo.svg";
 import SignUpModal from "../components/SignUpModal";
 
 export default function Login() {

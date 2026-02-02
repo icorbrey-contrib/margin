@@ -3,7 +3,7 @@ import { getAPIKeys, createAPIKey, deleteAPIKey } from "../api/client";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Monitor, Columns, Layout } from "lucide-react";
+import { Columns, Layout } from "lucide-react";
 
 function KeyIcon({ size = 16 }) {
   return (

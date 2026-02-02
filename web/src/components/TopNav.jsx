@@ -31,7 +31,6 @@ import {
 import { FaEdge } from "react-icons/fa";
 import tangledLogo from "../assets/tangled.svg";
 import { getUnreadNotificationCount } from "../api/client";
-import logo from "../assets/logo.svg";
 
 const isFirefox =
   typeof navigator !== "undefined" && /Firefox/i.test(navigator.userAgent);

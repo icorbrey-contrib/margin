@@ -14,7 +14,6 @@ import {
   Settings,
   ChevronUp,
 } from "lucide-react";
-import logo from "../assets/logo.svg";
 import { getUnreadNotificationCount } from "../api/client";
 
 export default function LeftSidebar() {
