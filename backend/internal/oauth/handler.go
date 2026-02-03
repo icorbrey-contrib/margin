@@ -184,8 +184,7 @@ func (h *Handler) HandleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Handle     string `json:"handle"`
-		InviteCode string `json:"invite_code"`
+		Handle string `json:"handle"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -194,17 +193,6 @@ func (h *Handler) HandleStart(w http.ResponseWriter, r *http.Request) {
 
 	if req.Handle == "" {
 		http.Error(w, "Handle is required", http.StatusBadRequest)
-		return
-	}
-
-	requiredCode := os.Getenv("INVITE_CODE")
-	if requiredCode != "" && req.InviteCode != requiredCode {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invite code required",
-			"code":  "invite_required",
-		})
 		return
 	}
 
@@ -457,7 +445,7 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   86400 * 7,
 	})
 
@@ -536,7 +524,7 @@ func splitBySlash(s string) []string {
 func deleteFromPDS(pds, accessToken string, dpopKey *ecdsa.PrivateKey, collection, did, rkey string) {
 
 	client := xrpc.NewClient(pds, accessToken, dpopKey)
-	err := client.DeleteRecord(context.Background(), collection, did, rkey)
+	err := client.DeleteRecord(context.Background(), did, collection, rkey)
 	if err != nil {
 		log.Printf("Failed to delete orphaned reply from PDS: %v", err)
 	} else {

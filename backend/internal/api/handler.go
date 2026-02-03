@@ -168,47 +168,131 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	if tag != "" {
 		if creator != "" {
 			if motivation == "" || motivation == "commenting" {
-				annotations, _ = h.db.GetAnnotationsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				switch feedType {
+				case "margin":
+					annotations, _ = h.db.GetMarginAnnotationsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				case "semble":
+					annotations, _ = h.db.GetSembleAnnotationsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				default:
+					annotations, _ = h.db.GetAnnotationsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				}
 			}
 			if motivation == "" || motivation == "highlighting" {
-				highlights, _ = h.db.GetHighlightsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				switch feedType {
+				case "margin":
+					highlights, _ = h.db.GetMarginHighlightsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				case "semble":
+					highlights, _ = h.db.GetSembleHighlightsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				default:
+					highlights, _ = h.db.GetHighlightsByTagAndAuthor(tag, creator, fetchLimit, 0)
+				}
 			}
 			if motivation == "" || motivation == "bookmarking" {
-				bookmarks, _ = h.db.GetBookmarksByTagAndAuthor(tag, creator, fetchLimit, 0)
+				switch feedType {
+				case "margin":
+					bookmarks, _ = h.db.GetMarginBookmarksByTagAndAuthor(tag, creator, fetchLimit, 0)
+				case "semble":
+					bookmarks, _ = h.db.GetSembleBookmarksByTagAndAuthor(tag, creator, fetchLimit, 0)
+				default:
+					bookmarks, _ = h.db.GetBookmarksByTagAndAuthor(tag, creator, fetchLimit, 0)
+				}
 			}
 			collectionItems = []db.CollectionItem{}
 		} else {
 			if motivation == "" || motivation == "commenting" {
-				annotations, _ = h.db.GetAnnotationsByTag(tag, fetchLimit, 0)
+				switch feedType {
+				case "margin":
+					annotations, _ = h.db.GetMarginAnnotationsByTag(tag, fetchLimit, 0)
+				case "semble":
+					annotations, _ = h.db.GetSembleAnnotationsByTag(tag, fetchLimit, 0)
+				default:
+					annotations, _ = h.db.GetAnnotationsByTag(tag, fetchLimit, 0)
+				}
 			}
 			if motivation == "" || motivation == "highlighting" {
-				highlights, _ = h.db.GetHighlightsByTag(tag, fetchLimit, 0)
+				switch feedType {
+				case "margin":
+					highlights, _ = h.db.GetMarginHighlightsByTag(tag, fetchLimit, 0)
+				case "semble":
+					highlights, _ = h.db.GetSembleHighlightsByTag(tag, fetchLimit, 0)
+				default:
+					highlights, _ = h.db.GetHighlightsByTag(tag, fetchLimit, 0)
+				}
 			}
 			if motivation == "" || motivation == "bookmarking" {
-				bookmarks, _ = h.db.GetBookmarksByTag(tag, fetchLimit, 0)
+				switch feedType {
+				case "margin":
+					bookmarks, _ = h.db.GetMarginBookmarksByTag(tag, fetchLimit, 0)
+				case "semble":
+					bookmarks, _ = h.db.GetSembleBookmarksByTag(tag, fetchLimit, 0)
+				default:
+					bookmarks, _ = h.db.GetBookmarksByTag(tag, fetchLimit, 0)
+				}
 			}
 			collectionItems = []db.CollectionItem{}
 		}
 	} else if creator != "" {
 		if motivation == "" || motivation == "commenting" {
-			annotations, _ = h.db.GetAnnotationsByAuthor(creator, fetchLimit, 0)
+			switch feedType {
+			case "margin":
+				annotations, _ = h.db.GetMarginAnnotationsByAuthor(creator, fetchLimit, 0)
+			case "semble":
+				annotations, _ = h.db.GetSembleAnnotationsByAuthor(creator, fetchLimit, 0)
+			default:
+				annotations, _ = h.db.GetAnnotationsByAuthor(creator, fetchLimit, 0)
+			}
 		}
 		if motivation == "" || motivation == "highlighting" {
-			highlights, _ = h.db.GetHighlightsByAuthor(creator, fetchLimit, 0)
+			switch feedType {
+			case "margin":
+				highlights, _ = h.db.GetMarginHighlightsByAuthor(creator, fetchLimit, 0)
+			case "semble":
+				highlights, _ = h.db.GetSembleHighlightsByAuthor(creator, fetchLimit, 0)
+			default:
+				highlights, _ = h.db.GetHighlightsByAuthor(creator, fetchLimit, 0)
+			}
 		}
 		if motivation == "" || motivation == "bookmarking" {
-			bookmarks, _ = h.db.GetBookmarksByAuthor(creator, fetchLimit, 0)
+			switch feedType {
+			case "margin":
+				bookmarks, _ = h.db.GetMarginBookmarksByAuthor(creator, fetchLimit, 0)
+			case "semble":
+				bookmarks, _ = h.db.GetSembleBookmarksByAuthor(creator, fetchLimit, 0)
+			default:
+				bookmarks, _ = h.db.GetBookmarksByAuthor(creator, fetchLimit, 0)
+			}
 		}
 		collectionItems = []db.CollectionItem{}
 	} else {
 		if motivation == "" || motivation == "commenting" {
-			annotations, _ = h.db.GetRecentAnnotations(fetchLimit, 0)
+			switch feedType {
+			case "margin":
+				annotations, _ = h.db.GetMarginAnnotations(fetchLimit, 0)
+			case "semble":
+				annotations, _ = h.db.GetSembleAnnotations(fetchLimit, 0)
+			default:
+				annotations, _ = h.db.GetRecentAnnotations(fetchLimit, 0)
+			}
 		}
 		if motivation == "" || motivation == "highlighting" {
-			highlights, _ = h.db.GetRecentHighlights(fetchLimit, 0)
+			switch feedType {
+			case "margin":
+				highlights, _ = h.db.GetMarginHighlights(fetchLimit, 0)
+			case "semble":
+				highlights, _ = h.db.GetSembleHighlights(fetchLimit, 0)
+			default:
+				highlights, _ = h.db.GetRecentHighlights(fetchLimit, 0)
+			}
 		}
 		if motivation == "" || motivation == "bookmarking" {
-			bookmarks, _ = h.db.GetRecentBookmarks(fetchLimit, 0)
+			switch feedType {
+			case "margin":
+				bookmarks, _ = h.db.GetMarginBookmarks(fetchLimit, 0)
+			case "semble":
+				bookmarks, _ = h.db.GetSembleBookmarks(fetchLimit, 0)
+			default:
+				bookmarks, _ = h.db.GetRecentBookmarks(fetchLimit, 0)
+			}
 		}
 		if motivation == "" {
 			collectionItems, err = h.db.GetRecentCollectionItems(fetchLimit, 0)

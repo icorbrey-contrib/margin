@@ -92,12 +92,15 @@ func main() {
 	r.Put("/api/bookmarks", annotationSvc.UpdateBookmark)
 	r.Delete("/api/bookmarks", annotationSvc.DeleteBookmark)
 
-	r.Get("/auth/login", oauthHandler.HandleLogin)
-	r.Post("/auth/start", oauthHandler.HandleStart)
-	r.Post("/auth/signup", oauthHandler.HandleSignup)
-	r.Get("/auth/callback", oauthHandler.HandleCallback)
-	r.Post("/auth/logout", oauthHandler.HandleLogout)
-	r.Get("/auth/session", oauthHandler.HandleSession)
+	r.Route("/auth", func(r chi.Router) {
+		r.Use(middleware.Throttle(10))
+		r.Get("/login", oauthHandler.HandleLogin)
+		r.Post("/start", oauthHandler.HandleStart)
+		r.Post("/signup", oauthHandler.HandleSignup)
+		r.Get("/callback", oauthHandler.HandleCallback)
+		r.Post("/logout", oauthHandler.HandleLogout)
+		r.Get("/session", oauthHandler.HandleSession)
+	})
 	r.Get("/client-metadata.json", oauthHandler.HandleClientMetadata)
 	r.Get("/jwks.json", oauthHandler.HandleJWKS)
 

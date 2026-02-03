@@ -150,7 +150,7 @@ func New(dsn string) (*DB, error) {
 
 	db, err := sql.Open(driver, dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
 	if driver == "sqlite3" {
@@ -172,7 +172,7 @@ func New(dsn string) (*DB, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	return &DB{DB: db, driver: driver}, nil

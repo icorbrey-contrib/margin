@@ -391,6 +391,11 @@ func (s *AnnotationService) LikeAnnotation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if req.SubjectURI == "" || req.SubjectCID == "" {
+		http.Error(w, "subjectUri and subjectCid are required", http.StatusBadRequest)
+		return
+	}
+
 	existingLike, _ := s.db.GetLikeByUserAndSubject(session.DID, req.SubjectURI)
 	if existingLike != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -494,6 +499,19 @@ func (s *AnnotationService) CreateReply(w http.ResponseWriter, r *http.Request) 
 	var req CreateReplyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.ParentURI == "" || req.ParentCID == "" {
+		http.Error(w, "parentUri and parentCid are required", http.StatusBadRequest)
+		return
+	}
+	if req.RootURI == "" || req.RootCID == "" {
+		http.Error(w, "rootUri and rootCid are required", http.StatusBadRequest)
+		return
+	}
+	if req.Text == "" {
+		http.Error(w, "text is required", http.StatusBadRequest)
 		return
 	}
 

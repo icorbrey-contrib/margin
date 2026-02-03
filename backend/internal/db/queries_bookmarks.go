@@ -54,12 +54,110 @@ func (db *DB) GetRecentBookmarks(limit, offset int) ([]Bookmark, error) {
 	return bookmarks, nil
 }
 
+func (db *DB) GetMarginBookmarks(limit, offset int) ([]Bookmark, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetSembleBookmarks(limit, offset int) ([]Bookmark, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE uri LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
 func (db *DB) GetBookmarksByTag(tag string, limit, offset int) ([]Bookmark, error) {
 	pattern := "%\"" + tag + "\"%"
 	rows, err := db.Query(db.Rebind(`
 		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
 		FROM bookmarks
 		WHERE tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetMarginBookmarksByTag(tag string, limit, offset int) ([]Bookmark, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE tags_json LIKE ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetSembleBookmarksByTag(tag string, limit, offset int) ([]Bookmark, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE tags_json LIKE ? AND uri LIKE '%network.cosmik%'
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), pattern, limit, offset)
@@ -104,11 +202,109 @@ func (db *DB) GetBookmarksByTagAndAuthor(tag, authorDID string, limit, offset in
 	return bookmarks, nil
 }
 
+func (db *DB) GetMarginBookmarksByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Bookmark, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE author_did = ? AND tags_json LIKE ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetSembleBookmarksByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Bookmark, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE author_did = ? AND tags_json LIKE ? AND uri LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
 func (db *DB) GetBookmarksByAuthor(authorDID string, limit, offset int) ([]Bookmark, error) {
 	rows, err := db.Query(db.Rebind(`
 		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
 		FROM bookmarks
 		WHERE author_did = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetMarginBookmarksByAuthor(authorDID string, limit, offset int) ([]Bookmark, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE author_did = ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetSembleBookmarksByAuthor(authorDID string, limit, offset int) ([]Bookmark, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE author_did = ? AND uri LIKE '%network.cosmik%'
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), authorDID, limit, offset)

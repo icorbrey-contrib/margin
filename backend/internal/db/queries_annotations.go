@@ -67,6 +67,38 @@ func (db *DB) GetAnnotationsByAuthor(authorDID string, limit, offset int) ([]Ann
 	return scanAnnotations(rows)
 }
 
+func (db *DB) GetMarginAnnotationsByAuthor(authorDID string, limit, offset int) ([]Annotation, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE author_did = ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetSembleAnnotationsByAuthor(authorDID string, limit, offset int) ([]Annotation, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE author_did = ? AND uri LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
 func (db *DB) GetAnnotationsByMotivation(motivation string, limit, offset int) ([]Annotation, error) {
 	rows, err := db.Query(db.Rebind(`
 		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
@@ -98,12 +130,78 @@ func (db *DB) GetRecentAnnotations(limit, offset int) ([]Annotation, error) {
 	return scanAnnotations(rows)
 }
 
+func (db *DB) GetMarginAnnotations(limit, offset int) ([]Annotation, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetSembleAnnotations(limit, offset int) ([]Annotation, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE uri LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
 func (db *DB) GetAnnotationsByTag(tag string, limit, offset int) ([]Annotation, error) {
 	pattern := "%\"" + tag + "\"%"
 	rows, err := db.Query(db.Rebind(`
 		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
 		FROM annotations
 		WHERE tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetMarginAnnotationsByTag(tag string, limit, offset int) ([]Annotation, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE tags_json LIKE ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetSembleAnnotationsByTag(tag string, limit, offset int) ([]Annotation, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE tags_json LIKE ? AND uri LIKE '%network.cosmik%'
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), pattern, limit, offset)
@@ -135,6 +233,40 @@ func (db *DB) GetAnnotationsByTagAndAuthor(tag, authorDID string, limit, offset 
 		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
 		FROM annotations
 		WHERE author_did = ? AND tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetMarginAnnotationsByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Annotation, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE author_did = ? AND tags_json LIKE ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetSembleAnnotationsByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Annotation, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE author_did = ? AND tags_json LIKE ? AND uri LIKE '%network.cosmik%'
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), authorDID, pattern, limit, offset)

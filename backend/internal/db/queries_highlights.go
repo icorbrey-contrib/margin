@@ -55,6 +55,54 @@ func (db *DB) GetRecentHighlights(limit, offset int) ([]Highlight, error) {
 	return highlights, nil
 }
 
+func (db *DB) GetMarginHighlights(limit, offset int) ([]Highlight, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetSembleHighlights(limit, offset int) ([]Highlight, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE uri LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
 func (db *DB) GetHighlightsByTag(tag string, limit, offset int) ([]Highlight, error) {
 	pattern := "%\"" + tag + "\"%"
 	rows, err := db.Query(db.Rebind(`
@@ -80,12 +128,112 @@ func (db *DB) GetHighlightsByTag(tag string, limit, offset int) ([]Highlight, er
 	return highlights, nil
 }
 
+func (db *DB) GetMarginHighlightsByTag(tag string, limit, offset int) ([]Highlight, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE tags_json LIKE ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetSembleHighlightsByTag(tag string, limit, offset int) ([]Highlight, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE tags_json LIKE ? AND uri LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
 func (db *DB) GetHighlightsByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Highlight, error) {
 	pattern := "%\"" + tag + "\"%"
 	rows, err := db.Query(db.Rebind(`
 		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
 		FROM highlights
 		WHERE author_did = ? AND tags_json LIKE ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetMarginHighlightsByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Highlight, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE author_did = ? AND tags_json LIKE ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, pattern, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetSembleHighlightsByTagAndAuthor(tag, authorDID string, limit, offset int) ([]Highlight, error) {
+	pattern := "%\"" + tag + "\"%"
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE author_did = ? AND tags_json LIKE ? AND uri LIKE '%network.cosmik%'
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), authorDID, pattern, limit, offset)
@@ -134,6 +282,54 @@ func (db *DB) GetHighlightsByAuthor(authorDID string, limit, offset int) ([]High
 		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
 		FROM highlights
 		WHERE author_did = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetMarginHighlightsByAuthor(authorDID string, limit, offset int) ([]Highlight, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE author_did = ? AND uri NOT LIKE '%network.cosmik%'
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`), authorDID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetSembleHighlightsByAuthor(authorDID string, limit, offset int) ([]Highlight, error) {
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE author_did = ? AND uri LIKE '%network.cosmik%'
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), authorDID, limit, offset)

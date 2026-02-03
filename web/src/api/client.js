@@ -470,10 +470,10 @@ export async function resolveHandle(handle) {
   return data.did;
 }
 
-export async function startLogin(handle, inviteCode) {
+export async function startLogin(handle) {
   return request(`${AUTH_BASE}/start`, {
     method: "POST",
-    body: JSON.stringify({ handle, invite_code: inviteCode }),
+    body: JSON.stringify({ handle }),
   });
 }
 
@@ -502,32 +502,4 @@ export async function deleteAPIKey(id) {
   return request(`${API_BASE}/keys/${id}`, { method: "DELETE" });
 }
 
-export async function describeServer(service) {
-  const res = await fetch(`${service}/xrpc/com.atproto.server.describeServer`);
-  if (!res.ok) throw new Error("Failed to describe server");
-  return res.json();
-}
 
-export async function createAccount(
-  service,
-  { handle, email, password, inviteCode },
-) {
-  const res = await fetch(`${service}/xrpc/com.atproto.server.createAccount`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      handle,
-      email,
-      password,
-      inviteCode,
-    }),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || data.error || "Failed to create account");
-  }
-  return data;
-}

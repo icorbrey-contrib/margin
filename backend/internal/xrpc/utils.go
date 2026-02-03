@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"margin.at/internal/config"
 	"margin.at/internal/slingshot"
 )
 
@@ -100,7 +101,7 @@ func ResolveDIDToPDS(did string) (string, error) {
 func resolveDIDToPDSDirect(did string) (string, error) {
 	var docURL string
 	if strings.HasPrefix(did, "did:plc:") {
-		docURL = fmt.Sprintf("https://plc.directory/%s", did)
+		docURL = config.Get().PLCResolveURL(did)
 	} else if strings.HasPrefix(did, "did:web:") {
 		domain := strings.TrimPrefix(did, "did:web:")
 		docURL = fmt.Sprintf("https://%s/.well-known/did.json", domain)
@@ -161,7 +162,7 @@ func ResolveHandle(handle string) (string, error) {
 }
 
 func resolveHandleDirect(handle string) (string, error) {
-	url := fmt.Sprintf("https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=%s", handle)
+	url := config.Get().BskyResolveHandleURL(handle)
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}

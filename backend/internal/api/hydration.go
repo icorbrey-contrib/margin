@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"margin.at/internal/config"
 	"margin.at/internal/constellation"
 	"margin.at/internal/db"
 )
@@ -526,7 +527,7 @@ func fetchProfiles(dids []string) (map[string]Author, error) {
 		q.Add("actors", did)
 	}
 
-	resp, err := http.Get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles?" + q.Encode())
+	resp, err := http.Get(config.Get().BskyGetProfilesURL() + "?" + q.Encode())
 	if err != nil {
 		log.Printf("Hydration fetch error: %v\n", err)
 		return nil, err

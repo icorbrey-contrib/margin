@@ -242,6 +242,12 @@ type ReplyRecord struct {
 }
 
 func (r *ReplyRecord) Validate() error {
+	if r.Parent.URI == "" || r.Parent.CID == "" {
+		return fmt.Errorf("parent uri and cid are required")
+	}
+	if r.Root.URI == "" || r.Root.CID == "" {
+		return fmt.Errorf("root uri and cid are required")
+	}
 	if r.Text == "" {
 		return fmt.Errorf("text is required")
 	}

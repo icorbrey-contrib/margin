@@ -18,6 +18,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"margin.at/internal/config"
 )
 
 type Client struct {
@@ -86,7 +87,7 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 }
 
 func (c *Client) ResolveHandle(ctx context.Context, handle string) (string, error) {
-	did, err := c.resolveHandleAt(ctx, handle, "https://public.api.bsky.app")
+	did, err := c.resolveHandleAt(ctx, handle, config.Get().BskyPublicAPI)
 	if err == nil {
 		return did, nil
 	}
@@ -140,7 +141,7 @@ func (c *Client) resolveHandleAt(ctx context.Context, handle, service string) (s
 func (c *Client) ResolveDIDToPDS(ctx context.Context, did string) (string, error) {
 	var docURL string
 	if strings.HasPrefix(did, "did:plc:") {
-		docURL = fmt.Sprintf("https://plc.directory/%s", did)
+		docURL = config.Get().PLCResolveURL(did)
 	} else if strings.HasPrefix(did, "did:web:") {
 		domain := strings.TrimPrefix(did, "did:web:")
 		docURL = fmt.Sprintf("https://%s/.well-known/did.json", domain)

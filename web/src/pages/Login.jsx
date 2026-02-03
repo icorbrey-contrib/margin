@@ -9,15 +9,12 @@ export default function Login() {
   const { isAuthenticated, user, logout } = useAuth();
   const [showSignUp, setShowSignUp] = useState(false);
   const [handle, setHandle] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [showInviteInput, setShowInviteInput] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef(null);
-  const inviteRef = useRef(null);
   const suggestionsRef = useRef(null);
 
   const [providerIndex, setProviderIndex] = useState(0);
@@ -143,29 +140,18 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!handle.trim()) return;
-    if (showInviteInput && !inviteCode.trim()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const result = await startLogin(handle.trim(), inviteCode.trim());
+      const result = await startLogin(handle.trim());
       if (result.authorizationUrl) {
         window.location.href = result.authorizationUrl;
       }
     } catch (err) {
       console.error("Login error:", err);
-      if (
-        err.message &&
-        (err.message.includes("invite_required") ||
-          err.message.includes("Invite code required"))
-      ) {
-        setShowInviteInput(true);
-        setError("Please enter an invite code to continue.");
-        setTimeout(() => inviteRef.current?.focus(), 100);
-      } else {
-        setError(err.message || "Failed to start login");
-      }
+      setError(err.message || "Failed to start login");
       setLoading(false);
     }
   };
@@ -261,24 +247,7 @@ export default function Login() {
           )}
         </div>
 
-        {showInviteInput && (
-          <div
-            className="login-input-wrapper"
-            style={{ marginTop: "12px", animation: "fadeIn 0.3s ease" }}
-          >
-            <input
-              ref={inviteRef}
-              type="text"
-              className="login-input"
-              placeholder="Enter invite code"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              autoComplete="off"
-              disabled={loading}
-              style={{ borderColor: "var(--accent)" }}
-            />
-          </div>
-        )}
+
 
         {error && <p className="login-error">{error}</p>}
 
@@ -286,14 +255,12 @@ export default function Login() {
           type="submit"
           className="btn btn-primary login-submit"
           disabled={
-            loading || !handle.trim() || (showInviteInput && !inviteCode.trim())
+            loading || !handle.trim()
           }
         >
           {loading
             ? "Connecting..."
-            : showInviteInput
-              ? "Submit Code"
-              : "Continue"}
+            : "Continue"}
         </button>
 
         <p className="login-legal">
