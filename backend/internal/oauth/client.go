@@ -19,6 +19,7 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"margin.at/internal/config"
+	"margin.at/internal/slingshot"
 )
 
 type Client struct {
@@ -87,6 +88,11 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 }
 
 func (c *Client) ResolveHandle(ctx context.Context, handle string) (string, error) {
+	slingshotClient := slingshot.NewClient()
+	if identity, err := slingshotClient.ResolveIdentity(ctx, handle); err == nil && identity.DID != "" {
+		return identity.DID, nil
+	}
+
 	did, err := c.resolveHandleAt(ctx, handle, config.Get().BskyPublicAPI)
 	if err == nil {
 		return did, nil
