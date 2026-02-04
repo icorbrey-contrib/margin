@@ -149,6 +149,7 @@ export default function Feed() {
     feedType === "popular" ||
     feedType === "semble" ||
     feedType === "margin" ||
+    feedType === "shelved" ||
     feedType === "my-feed"
       ? filter === "all"
         ? deduplicatedAnnotations
@@ -203,6 +204,7 @@ export default function Feed() {
           {[
             { key: "all", label: "All" },
             { key: "popular", label: "Popular" },
+            { key: "shelved", label: "Shelved" },
             { key: "margin", label: "Margin" },
             { key: "semble", label: "Semble" },
             ...(user ? [{ key: "my-feed", label: "Mine" }] : []),

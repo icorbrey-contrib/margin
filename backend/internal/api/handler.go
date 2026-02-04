@@ -355,20 +355,32 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				isSemble = true
 			}
 
-			if feedType == "semble" && isSemble {
+			switch feedType {
+			case "semble":
+				if isSemble {
+					filtered = append(filtered, item)
+				}
+			case "margin":
+				if !isSemble {
+					filtered = append(filtered, item)
+				}
+			case "popular":
 				filtered = append(filtered, item)
-			} else if feedType == "margin" && !isSemble {
-				filtered = append(filtered, item)
-			} else if feedType == "popular" {
-				filtered = append(filtered, item)
+			case "shelved":
+				createdAt := getCreatedAt(item)
+				popularity := getPopularity(item)
+				if time.Since(createdAt) > 24*time.Hour && popularity == 0 {
+					filtered = append(filtered, item)
+				}
 			}
 		}
 		feed = filtered
 	}
 
-	if feedType == "popular" {
+	switch feedType {
+	case "popular":
 		sortFeedByPopularity(feed)
-	} else {
+	default:
 		sortFeed(feed)
 	}
 
