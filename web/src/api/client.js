@@ -501,5 +501,3 @@ export async function createAPIKey(name) {
 export async function deleteAPIKey(id) {
   return request(`${API_BASE}/keys/${id}`, { method: "DELETE" });
 }
-
-

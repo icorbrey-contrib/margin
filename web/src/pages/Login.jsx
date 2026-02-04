@@ -247,20 +247,14 @@ export default function Login() {
           )}
         </div>
 
-
-
         {error && <p className="login-error">{error}</p>}
 
         <button
           type="submit"
           className="btn btn-primary login-submit"
-          disabled={
-            loading || !handle.trim()
-          }
+          disabled={loading || !handle.trim()}
         >
-          {loading
-            ? "Connecting..."
-            : "Continue"}
+          {loading ? "Connecting..." : "Continue"}
         </button>
 
         <p className="login-legal">

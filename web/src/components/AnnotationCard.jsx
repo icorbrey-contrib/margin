@@ -382,7 +382,7 @@ export default function AnnotationCard({
             {data.tags.map((tag, i) => (
               <Link
                 key={i}
-                to={`/?tag=${encodeURIComponent(tag)}`}
+                to={`/home?tag=${encodeURIComponent(tag)}`}
                 className="annotation-tag"
               >
                 #{tag}
@@ -637,7 +637,7 @@ export function HighlightCard({
             {data.tags.map((tag, i) => (
               <Link
                 key={i}
-                to={`/?tag=${encodeURIComponent(tag)}`}
+                to={`/home?tag=${encodeURIComponent(tag)}`}
                 className="annotation-tag"
               >
                 #{tag}

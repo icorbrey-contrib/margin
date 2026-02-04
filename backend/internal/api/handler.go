@@ -619,6 +619,28 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if annotation, err := h.db.GetAnnotationByURI(uri); err == nil {
+		if annotation.CID == nil || *annotation.CID == "" {
+			parts := parseATURI(uri)
+			if len(parts) >= 3 {
+				did := parts[0]
+				collection := parts[1]
+				rkey := parts[2]
+
+				session, err := h.refresher.GetSessionWithAutoRefresh(r)
+				if err == nil {
+					_ = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, _ string) error {
+						record, getErr := client.GetRecord(r.Context(), did, collection, rkey)
+						if getErr == nil {
+							h.db.UpdateAnnotation(uri, *annotation.BodyValue, *annotation.TagsJSON, record.CID)
+							cid := record.CID
+							annotation.CID = &cid
+						}
+						return nil
+					})
+				}
+			}
+		}
+
 		if enriched, _ := hydrateAnnotations(h.db, []db.Annotation{*annotation}, h.getViewerDID(r)); len(enriched) > 0 {
 			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 			return
@@ -626,6 +648,36 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if highlight, err := h.db.GetHighlightByURI(uri); err == nil {
+		if highlight.CID == nil || *highlight.CID == "" {
+			parts := parseATURI(uri)
+			if len(parts) >= 3 {
+				did := parts[0]
+				collection := parts[1]
+				rkey := parts[2]
+
+				session, err := h.refresher.GetSessionWithAutoRefresh(r)
+				if err == nil {
+					_ = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, _ string) error {
+						record, getErr := client.GetRecord(r.Context(), did, collection, rkey)
+						if getErr == nil {
+							tagsJSON := ""
+							if highlight.TagsJSON != nil {
+								tagsJSON = *highlight.TagsJSON
+							}
+							color := ""
+							if highlight.Color != nil {
+								color = *highlight.Color
+							}
+							h.db.UpdateHighlight(uri, color, tagsJSON, record.CID)
+							cid := record.CID
+							highlight.CID = &cid
+						}
+						return nil
+					})
+				}
+			}
+		}
+
 		if enriched, _ := hydrateHighlights(h.db, []db.Highlight{*highlight}, h.getViewerDID(r)); len(enriched) > 0 {
 			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 			return
@@ -670,6 +722,40 @@ func (h *Handler) GetAnnotation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bookmark, err := h.db.GetBookmarkByURI(uri); err == nil {
+		if bookmark.CID == nil || *bookmark.CID == "" {
+			parts := parseATURI(uri)
+			if len(parts) >= 3 {
+				did := parts[0]
+				collection := parts[1]
+				rkey := parts[2]
+
+				session, err := h.refresher.GetSessionWithAutoRefresh(r)
+				if err == nil {
+					_ = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, _ string) error {
+						record, getErr := client.GetRecord(r.Context(), did, collection, rkey)
+						if getErr == nil {
+							tagsJSON := ""
+							if bookmark.TagsJSON != nil {
+								tagsJSON = *bookmark.TagsJSON
+							}
+							title := ""
+							if bookmark.Title != nil {
+								title = *bookmark.Title
+							}
+							desc := ""
+							if bookmark.Description != nil {
+								desc = *bookmark.Description
+							}
+							h.db.UpdateBookmark(uri, title, desc, tagsJSON, record.CID)
+							cid := record.CID
+							bookmark.CID = &cid
+						}
+						return nil
+					})
+				}
+			}
+		}
+
 		if enriched, _ := hydrateBookmarks(h.db, []db.Bookmark{*bookmark}, h.getViewerDID(r)); len(enriched) > 0 {
 			serveResponse(enriched[0], "http://www.w3.org/ns/anno.jsonld")
 			return
