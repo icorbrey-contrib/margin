@@ -132,13 +132,10 @@ export async function createAnnotation(data: {
     const res = await apiRequest('/annotations', {
       method: 'POST',
       body: JSON.stringify({
-        target: {
-          source: data.url,
-          selector: data.selector,
-        },
-        body: { type: 'TextualBody', value: data.text, format: 'text/plain' },
-        motivation: 'commenting',
+        url: data.url,
+        text: data.text,
         title: data.title,
+        selector: data.selector,
       }),
     });
 

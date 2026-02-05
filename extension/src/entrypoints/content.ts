@@ -200,12 +200,16 @@ export default defineContentScript({
         submitBtn.textContent = 'Posting...';
 
         try {
-          await sendMessage('createAnnotation', {
+          const res = await sendMessage('createAnnotation', {
             url: window.location.href,
             title: document.title,
             text,
             selector: { type: 'TextQuoteSelector', exact: quoteText },
           });
+
+          if (!res.success) {
+            throw new Error(res.error || 'Unknown error');
+          }
 
           showToast('Annotation created!', 'success');
           composeModal?.remove();
