@@ -16,6 +16,8 @@ const (
 	CollectionCollection     = "at.margin.collection"
 	CollectionCollectionItem = "at.margin.collectionItem"
 	CollectionProfile        = "at.margin.profile"
+	CollectionPreferences    = "at.margin.preferences"
+	CollectionAPIKey         = "at.margin.apikey"
 )
 
 const (
@@ -419,4 +421,56 @@ func (r *MarginProfileRecord) Validate() error {
 		return fmt.Errorf("too many links")
 	}
 	return nil
+}
+
+type PreferencesRecord struct {
+	Type                         string   `json:"$type"`
+	ExternalLinkSkippedHostnames []string `json:"externalLinkSkippedHostnames,omitempty"`
+	CreatedAt                    string   `json:"createdAt"`
+}
+
+func (r *PreferencesRecord) Validate() error {
+	if len(r.ExternalLinkSkippedHostnames) > 100 {
+		return fmt.Errorf("too many skipped hostnames")
+	}
+	for _, host := range r.ExternalLinkSkippedHostnames {
+		if len(host) > 255 {
+			return fmt.Errorf("hostname too long: %s", host)
+		}
+	}
+	return nil
+}
+
+func NewPreferencesRecord(skippedHostnames []string) *PreferencesRecord {
+	return &PreferencesRecord{
+		Type:                         CollectionPreferences,
+		ExternalLinkSkippedHostnames: skippedHostnames,
+		CreatedAt:                    time.Now().UTC().Format(time.RFC3339),
+	}
+}
+
+type APIKeyRecord struct {
+	Type      string `json:"$type"`
+	Name      string `json:"name"`
+	KeyHash   string `json:"keyHash"`
+	CreatedAt string `json:"createdAt"`
+}
+
+func (r *APIKeyRecord) Validate() error {
+	if len(r.Name) > 64 {
+		return fmt.Errorf("name too long")
+	}
+	if len(r.KeyHash) == 0 {
+		return fmt.Errorf("key hash missing")
+	}
+	return nil
+}
+
+func NewAPIKeyRecord(name, keyHash string) *APIKeyRecord {
+	return &APIKeyRecord{
+		Type:      CollectionAPIKey,
+		Name:      name,
+		KeyHash:   keyHash,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+	}
 }

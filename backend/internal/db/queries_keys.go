@@ -6,9 +6,9 @@ import (
 
 func (db *DB) CreateAPIKey(key *APIKey) error {
 	_, err := db.Exec(db.Rebind(`
-		INSERT INTO api_keys (id, owner_did, name, key_hash, created_at)
-		VALUES (?, ?, ?, ?, ?)
-	`), key.ID, key.OwnerDID, key.Name, key.KeyHash, key.CreatedAt)
+		INSERT INTO api_keys (id, owner_did, name, key_hash, created_at, uri, cid, indexed_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`), key.ID, key.OwnerDID, key.Name, key.KeyHash, key.CreatedAt, key.URI, key.CID, key.IndexedAt)
 	return err
 }
 
@@ -46,11 +46,6 @@ func (db *DB) GetAPIKeyByHash(keyHash string) (*APIKey, error) {
 		return nil, err
 	}
 	return &k, nil
-}
-
-func (db *DB) DeleteAPIKey(id, ownerDID string) error {
-	_, err := db.Exec(db.Rebind(`DELETE FROM api_keys WHERE id = ? AND owner_did = ?`), id, ownerDID)
-	return err
 }
 
 func (db *DB) UpdateAPIKeyLastUsed(id string) error {

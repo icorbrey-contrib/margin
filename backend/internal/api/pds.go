@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"margin.at/internal/db"
@@ -50,6 +51,17 @@ func (h *Handler) FetchLatestUserRecords(r *http.Request, did string, collection
 		for _, rec := range output.Records {
 			parsed, err := parseRecord(did, collection, rec.URI, rec.CID, rec.Value)
 			if err == nil && parsed != nil {
+				switch v := parsed.(type) {
+				case *db.Annotation:
+					h.db.CreateAnnotation(v)
+				case *db.Highlight:
+					h.db.CreateHighlight(v)
+				case *db.Bookmark:
+					h.db.CreateBookmark(v)
+				case *db.APIKey:
+					h.db.CreateAPIKey(v)
+				case *db.Preferences:
+				}
 				results = append(results, parsed)
 			}
 		}
@@ -165,7 +177,6 @@ func parseRecord(did, collection, uri, cid string, value json.RawMessage) (inter
 			tagsStr := string(tagsBytes)
 			tagsJSONPtr = &tagsStr
 		}
-
 		return &db.Highlight{
 			URI:          uri,
 			AuthorDID:    did,
@@ -179,6 +190,26 @@ func parseRecord(did, collection, uri, cid string, value json.RawMessage) (inter
 			IndexedAt:    time.Now(),
 			CID:          cidPtr,
 		}, nil
+	case xrpc.CollectionAPIKey:
+		var record xrpc.APIKeyRecord
+		if err := json.Unmarshal(value, &record); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal api key record: %v", err)
+		}
+
+		createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
+
+		apiKey := &db.APIKey{
+			ID:        strings.Split(uri, "/")[len(strings.Split(uri, "/"))-1],
+			OwnerDID:  did,
+			Name:      record.Name,
+			KeyHash:   record.KeyHash,
+			CreatedAt: createdAt,
+			URI:       uri,
+			CID:       cidPtr,
+			IndexedAt: time.Now(),
+		}
+
+		return apiKey, nil
 
 	case xrpc.CollectionBookmark:
 		var record xrpc.BookmarkRecord
@@ -219,6 +250,30 @@ func parseRecord(did, collection, uri, cid string, value json.RawMessage) (inter
 			CreatedAt:   createdAt,
 			IndexedAt:   time.Now(),
 			CID:         cidPtr,
+		}, nil
+
+	case xrpc.CollectionPreferences:
+		var record xrpc.PreferencesRecord
+		if err := json.Unmarshal(value, &record); err != nil {
+			return nil, err
+		}
+
+		createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
+
+		var skippedHostnamesJSONPtr *string
+		if len(record.ExternalLinkSkippedHostnames) > 0 {
+			b, _ := json.Marshal(record.ExternalLinkSkippedHostnames)
+			s := string(b)
+			skippedHostnamesJSONPtr = &s
+		}
+
+		return &db.Preferences{
+			URI:                          uri,
+			AuthorDID:                    did,
+			ExternalLinkSkippedHostnames: skippedHostnamesJSONPtr,
+			CreatedAt:                    createdAt,
+			IndexedAt:                    time.Now(),
+			CID:                          cidPtr,
 		}, nil
 	}
 

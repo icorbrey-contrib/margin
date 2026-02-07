@@ -81,6 +81,7 @@ type APIAnnotation struct {
 type APIHighlight struct {
 	ID             string    `json:"id"`
 	Type           string    `json:"type"`
+	Motivation     string    `json:"motivation"`
 	Author         Author    `json:"creator"`
 	Target         APITarget `json:"target"`
 	Color          string    `json:"color,omitempty"`
@@ -95,6 +96,7 @@ type APIHighlight struct {
 type APIBookmark struct {
 	ID             string    `json:"id"`
 	Type           string    `json:"type"`
+	Motivation     string    `json:"motivation"`
 	Author         Author    `json:"creator"`
 	Source         string    `json:"source"`
 	Title          string    `json:"title,omitempty"`
@@ -320,9 +322,10 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 		}
 
 		result[i] = APIHighlight{
-			ID:     h.URI,
-			Type:   "Highlight",
-			Author: profiles[h.AuthorDID],
+			ID:         h.URI,
+			Type:       "Highlight",
+			Motivation: "highlighting",
+			Author:     profiles[h.AuthorDID],
 			Target: APITarget{
 				Source:   h.TargetSource,
 				Title:    title,
@@ -385,6 +388,7 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 		result[i] = APIBookmark{
 			ID:          b.URI,
 			Type:        "Bookmark",
+			Motivation:  "bookmarking",
 			Author:      profiles[b.AuthorDID],
 			Source:      b.Source,
 			Title:       title,

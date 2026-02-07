@@ -1,0 +1,30 @@
+{
+  "lexicon": 1,
+  "id": "at.margin.preferences",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "User preferences for the Margin application.",
+      "key": "literal:self",
+      "record": {
+        "type": "object",
+        "required": ["createdAt"],
+        "properties": {
+          "externalLinkSkippedHostnames": {
+            "type": "array",
+            "description": "List of hostnames to skip the external link warning modal for.",
+            "items": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "maxLength": 100
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

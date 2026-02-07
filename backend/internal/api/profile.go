@@ -139,10 +139,11 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	resp := struct {
 		URI         string   `json:"uri"`
 		DID         string   `json:"did"`
+		Handle      string   `json:"handle,omitempty"`
 		DisplayName string   `json:"displayName,omitempty"`
 		Avatar      string   `json:"avatar,omitempty"`
-		Bio         string   `json:"bio"`
-		Website     string   `json:"website"`
+		Description string   `json:"description,omitempty"`
+		Website     string   `json:"website,omitempty"`
 		Links       []string `json:"links"`
 		CreatedAt   string   `json:"createdAt"`
 		IndexedAt   string   `json:"indexedAt"`
@@ -153,6 +154,11 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		IndexedAt: profile.IndexedAt.Format(time.RFC3339),
 	}
 
+	var handle string
+	if err := h.db.QueryRow("SELECT handle FROM sessions WHERE did = $1 LIMIT 1", profile.AuthorDID).Scan(&handle); err == nil {
+		resp.Handle = handle
+	}
+
 	if profile.DisplayName != nil {
 		resp.DisplayName = *profile.DisplayName
 	}
@@ -160,7 +166,7 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		resp.Avatar = *profile.Avatar
 	}
 	if profile.Bio != nil {
-		resp.Bio = *profile.Bio
+		resp.Description = *profile.Bio
 	}
 	if profile.Website != nil {
 		resp.Website = *profile.Website

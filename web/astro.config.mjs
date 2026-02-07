@@ -1,7 +1,7 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
-import react from '@astrojs/react';
-import tailwind from '@astrojs/tailwind';
+import { defineConfig } from "astro/config";
+import react from "@astrojs/react";
+import tailwind from "@astrojs/tailwind";
 
 // https://astro.build/config
 export default defineConfig({
@@ -9,15 +9,15 @@ export default defineConfig({
   vite: {
     server: {
       proxy: {
-        '/api': {
-          target: 'http://localhost:8080',
+        "/api": {
+          target: "http://localhost:8080",
           changeOrigin: true,
         },
-        '/auth': {
-          target: 'http://localhost:8080',
+        "/auth": {
+          target: "http://localhost:8080",
           changeOrigin: true,
         },
-      }
-    }
-  }
+      },
+    },
+  },
 });

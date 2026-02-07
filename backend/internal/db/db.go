@@ -127,6 +127,9 @@ type APIKey struct {
 	KeyHash    string     `json:"-"`
 	CreatedAt  time.Time  `json:"createdAt"`
 	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
+	URI        string     `json:"uri"`
+	CID        *string    `json:"cid,omitempty"`
+	IndexedAt  time.Time  `json:"indexedAt"`
 }
 
 type Profile struct {
@@ -140,6 +143,15 @@ type Profile struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	IndexedAt   time.Time `json:"indexedAt"`
 	CID         *string   `json:"cid,omitempty"`
+}
+
+type Preferences struct {
+	URI                          string    `json:"uri"`
+	AuthorDID                    string    `json:"authorDid"`
+	ExternalLinkSkippedHostnames *string   `json:"externalLinkSkippedHostnames,omitempty"`
+	CreatedAt                    time.Time `json:"createdAt"`
+	IndexedAt                    time.Time `json:"indexedAt"`
+	CID                          *string   `json:"cid,omitempty"`
 }
 
 func New(dsn string) (*DB, error) {
@@ -336,7 +348,10 @@ func (db *DB) Migrate() error {
 		name TEXT NOT NULL,
 		key_hash TEXT NOT NULL,
 		created_at ` + dateType + ` NOT NULL,
-		last_used_at ` + dateType + `
+		last_used_at ` + dateType + `,
+		uri TEXT,
+		cid TEXT,
+		indexed_at ` + dateType + ` DEFAULT CURRENT_TIMESTAMP
 	)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_api_keys_owner ON api_keys(owner_did)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`)
@@ -354,6 +369,16 @@ func (db *DB) Migrate() error {
 		cid TEXT
 	)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_profiles_author_did ON profiles(author_did)`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS preferences (
+		uri TEXT PRIMARY KEY,
+		author_did TEXT NOT NULL,
+		external_link_skipped_hostnames TEXT,
+		created_at ` + dateType + ` NOT NULL,
+		indexed_at ` + dateType + ` NOT NULL,
+		cid TEXT
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_preferences_author_did ON preferences(author_did)`)
 
 	db.runMigrations()
 
@@ -471,8 +496,52 @@ func (db *DB) DeleteProfile(uri string) error {
 	return err
 }
 
-func (db *DB) runMigrations() {
+func (db *DB) DeleteAPIKey(id, ownerDID string) (string, error) {
+	var uri string
+	err := db.QueryRow("SELECT uri FROM api_keys WHERE id = $1 AND owner_did = $2", id, ownerDID).Scan(&uri)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
 
+	_, err = db.Exec("DELETE FROM api_keys WHERE id = $1 AND owner_did = $2", id, ownerDID)
+	return uri, err
+}
+
+func (db *DB) GetPreferences(did string) (*Preferences, error) {
+	var p Preferences
+	err := db.QueryRow("SELECT uri, author_did, external_link_skipped_hostnames, created_at, indexed_at, cid FROM preferences WHERE author_did = $1", did).Scan(
+		&p.URI, &p.AuthorDID, &p.ExternalLinkSkippedHostnames, &p.CreatedAt, &p.IndexedAt, &p.CID,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (db *DB) UpsertPreferences(p *Preferences) error {
+	query := `
+		INSERT INTO preferences (uri, author_did, external_link_skipped_hostnames, created_at, indexed_at, cid) 
+		VALUES ($1, $2, $3, $4, $5, $6) 
+		ON CONFLICT(uri) DO UPDATE SET 
+			external_link_skipped_hostnames = EXCLUDED.external_link_skipped_hostnames,
+			indexed_at = EXCLUDED.indexed_at,
+			cid = EXCLUDED.cid
+	`
+	_, err := db.Exec(db.Rebind(query), p.URI, p.AuthorDID, p.ExternalLinkSkippedHostnames, p.CreatedAt, p.IndexedAt, p.CID)
+	return err
+}
+
+func (db *DB) runMigrations() {
+	dateType := "DATETIME"
+	if db.driver == "postgres" {
+		dateType = "TIMESTAMP"
+	}
 	db.Exec(`ALTER TABLE sessions ADD COLUMN dpop_key TEXT`)
 
 	db.Exec(`ALTER TABLE annotations ADD COLUMN motivation TEXT`)
@@ -499,6 +568,10 @@ func (db *DB) runMigrations() {
 	if db.driver == "postgres" {
 		db.Exec(`ALTER TABLE cursors ALTER COLUMN last_cursor TYPE BIGINT`)
 	}
+
+	db.Exec(`ALTER TABLE api_keys ADD COLUMN uri TEXT`)
+	db.Exec(`ALTER TABLE api_keys ADD COLUMN cid TEXT`)
+	db.Exec(`ALTER TABLE api_keys ADD COLUMN indexed_at ` + dateType + ` DEFAULT CURRENT_TIMESTAMP`)
 }
 
 func (db *DB) Close() error {

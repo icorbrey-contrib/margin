@@ -19,6 +19,8 @@ extension/.wxt/
 # Database
 *.db
 *.sqlite
+*.db-wal
+*.db-shm
 
 # Keys
 oauth_private_key.pem
