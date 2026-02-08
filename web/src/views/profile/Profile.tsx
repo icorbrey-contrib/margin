@@ -12,6 +12,7 @@ import {
 import Card from "../../components/common/Card";
 import RichText from "../../components/common/RichText";
 import MoreMenu from "../../components/common/MoreMenu";
+import { BlueskyIcon } from "../../components/common/Icons";
 import type { MoreMenuItem } from "../../components/common/MoreMenu";
 import ReportModal from "../../components/modals/ReportModal";
 import {
@@ -352,6 +353,17 @@ export default function Profile({ did }: ProfileProps) {
                   <MoreMenu
                     items={(() => {
                       const items: MoreMenuItem[] = [];
+                      items.push({
+                        label: "View profile in Bluesky",
+                        icon: <BlueskyIcon size={16} />,
+                        onClick: () => {
+                          const handle = profile.handle || did;
+                          window.open(
+                            `https://bsky.app/profile/${encodeURIComponent(handle)}`,
+                            "_blank",
+                          );
+                        },
+                      });
                       if (modRelation.blocking) {
                         items.push({
                           label: `Unblock @${profile.handle || "user"}`,
