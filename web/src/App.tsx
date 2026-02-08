@@ -19,16 +19,7 @@ import {
   AnnotationDetailWrapper,
   UserUrlWrapper,
 } from "./routes/wrappers";
-
-function PageHeader({ title }: { title: string }) {
-  return (
-    <div className="max-w-2xl mx-auto mb-6 text-center lg:text-left">
-      <h1 className="text-3xl font-display font-bold text-surface-900 dark:text-white">
-        {title}
-      </h1>
-    </div>
-  );
-}
+import About from "./views/About";
 
 export default function App() {
   React.useEffect(() => {
@@ -40,6 +31,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/about" element={<About />} />
         <Route path="/auth/*" element={<div>Redirecting...</div>} />
 
         <Route

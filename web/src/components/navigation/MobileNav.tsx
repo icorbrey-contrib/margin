@@ -45,13 +45,13 @@ export default function MobileNav() {
     <>
       {isMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={closeMenu}
         />
       )}
 
       {isMenuOpen && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white dark:bg-surface-900 rounded-t-2xl shadow-2xl z-50 lg:hidden animate-slide-up">
+        <div className="fixed bottom-16 left-0 right-0 bg-white dark:bg-surface-900 rounded-t-2xl shadow-2xl z-50 md:hidden animate-slide-up">
           <div className="p-4 space-y-1">
             {isAuthenticated && user ? (
               <>
@@ -164,7 +164,7 @@ export default function MobileNav() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 h-14 bg-white dark:bg-surface-900 border-t border-surface-200 dark:border-surface-700 flex items-center justify-around px-2 z-50 lg:hidden safe-area-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 h-14 bg-white dark:bg-surface-900 border-t border-surface-200 dark:border-surface-700 flex items-center justify-around px-2 z-50 md:hidden safe-area-bottom">
         <Link
           to="/home"
           className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-colors ${

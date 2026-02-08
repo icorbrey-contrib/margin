@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowRight,
-  Github,
-  Twitter,
-  ExternalLink,
-  Loader2,
-  Search,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { getTrendingTags, type Tag } from "../../api/client";
 
 export default function RightSidebar() {
   const navigate = useNavigate();
   const [tags, setTags] = useState<Tag[]>([]);
-  const [browser, setBrowser] = useState<"chrome" | "firefox" | "other">(
-    "other",
-  );
+  const [browser] = useState<"chrome" | "firefox" | "edge" | "other">(() => {
+    if (typeof navigator === "undefined") return "other";
+    const ua = navigator.userAgent;
+    if (/Edg\//i.test(ua)) return "edge";
+    if (/Firefox/i.test(ua)) return "firefox";
+    if (/Chrome/i.test(ua)) return "chrome";
+    return "other";
+  });
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.KeyboardEvent) => {
@@ -25,25 +23,24 @@ export default function RightSidebar() {
   };
 
   useEffect(() => {
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes("firefox")) setBrowser("firefox");
-    else if (ua.includes("chrome")) setBrowser("chrome");
     getTrendingTags().then(setTags);
   }, []);
 
   const extensionLink =
     browser === "firefox"
       ? "https://addons.mozilla.org/en-US/firefox/addon/margin/"
-      : "https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa";
+      : browser === "edge"
+        ? "https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn"
+        : "https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa";
 
   return (
-    <aside className="hidden lg:block w-[280px] shrink-0 sticky top-0 h-screen overflow-y-auto px-4 py-4 border-l border-surface-100/50 dark:border-surface-800/50">
-      <div className="space-y-6">
+    <aside className="hidden xl:block w-[280px] shrink-0 sticky top-0 h-screen overflow-y-auto px-5 py-6 border-l border-surface-200/60 dark:border-surface-800/60">
+      <div className="space-y-5">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search
               className="text-surface-400 dark:text-surface-500"
-              size={16}
+              size={15}
             />
           </div>
           <input
@@ -51,30 +48,35 @@ export default function RightSidebar() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearch}
-            placeholder="Search Margin..."
-            className="w-full bg-surface-100 dark:bg-surface-800 rounded-full pl-10 pr-5 py-2.5 text-sm font-medium text-surface-900 dark:text-white placeholder:text-surface-500 dark:placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all border-none"
+            placeholder="Search..."
+            className="w-full bg-surface-100 dark:bg-surface-800/80 rounded-lg pl-9 pr-4 py-2 text-sm text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white dark:focus:bg-surface-800 transition-all border border-surface-200/60 dark:border-surface-700/60"
           />
         </div>
 
-        <div className="bg-surface-50 dark:bg-surface-900 rounded-2xl p-4 border border-surface-100 dark:border-surface-800">
-          <h3 className="font-bold text-base mb-1 text-surface-900 dark:text-white">
+        <div className="rounded-xl p-4 bg-gradient-to-br from-primary-50 to-primary-100/50 dark:from-primary-950/30 dark:to-primary-900/10 border border-primary-200/40 dark:border-primary-800/30">
+          <h3 className="font-semibold text-sm mb-1 text-surface-900 dark:text-white">
             Get the Extension
           </h3>
-          <p className="text-surface-500 dark:text-surface-400 text-sm mb-4 leading-snug">
-            Save anything, annotate anywhere.
+          <p className="text-surface-500 dark:text-surface-400 text-xs mb-3 leading-relaxed">
+            Highlight, annotate, and bookmark from any page.
           </p>
           <a
             href={extensionLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center w-full px-4 py-2 bg-surface-900 dark:bg-white text-white dark:text-surface-900 rounded-full hover:bg-black dark:hover:bg-surface-100 transition-all text-sm font-semibold"
+            className="flex items-center justify-center w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400 text-white dark:text-white rounded-lg transition-colors text-sm font-medium"
           >
-            Download for {browser === "firefox" ? "Firefox" : "Chrome"}
+            Download for{" "}
+            {browser === "firefox"
+              ? "Firefox"
+              : browser === "edge"
+                ? "Edge"
+                : "Chrome"}
           </a>
         </div>
 
-        <div className="py-2">
-          <h3 className="font-bold text-xl px-2 mb-4 text-surface-900 dark:text-white">
+        <div>
+          <h3 className="font-semibold text-sm px-1 mb-3 text-surface-900 dark:text-white tracking-tight">
             Trending
           </h3>
           {tags.length > 0 ? (
@@ -83,38 +85,30 @@ export default function RightSidebar() {
                 <a
                   key={t.tag}
                   href={`/search?q=${t.tag}`}
-                  className="px-2 py-3 hover:bg-surface-50 dark:hover:bg-surface-800 rounded-xl transition-colors group"
+                  className="px-2 py-2.5 hover:bg-surface-100 dark:hover:bg-surface-800/60 rounded-lg transition-colors group"
                 >
-                  <div className="flex justify-between items-center mb-0.5">
-                    <span className="text-xs text-surface-500 dark:text-surface-400 font-medium">
-                      Trending
-                    </span>
-                    <span className="text-xs text-surface-400 dark:text-surface-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                      ...
-                    </span>
-                  </div>
-                  <div className="font-bold text-surface-900 dark:text-white">
+                  <div className="font-semibold text-sm text-surface-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                     #{t.tag}
                   </div>
-                  <div className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">
-                    {t.count} posts
+                  <div className="text-xs text-surface-400 dark:text-surface-500 mt-0.5">
+                    {t.count} {t.count === 1 ? "post" : "posts"}
                   </div>
                 </a>
               ))}
             </div>
           ) : (
             <div className="px-2">
-              <p className="text-sm text-surface-500 dark:text-surface-400">
+              <p className="text-sm text-surface-400 dark:text-surface-500">
                 Nothing trending right now.
               </p>
             </div>
           )}
         </div>
 
-        <div className="px-2 pt-2">
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-surface-400 dark:text-surface-500 leading-relaxed">
+        <div className="px-1 pt-2">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-surface-400 dark:text-surface-500 leading-relaxed">
             <a
-              href="#"
+              href="/about"
               className="hover:underline hover:text-surface-600 dark:hover:text-surface-300"
             >
               About

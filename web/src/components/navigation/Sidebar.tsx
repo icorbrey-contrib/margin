@@ -10,6 +10,8 @@ import {
   Moon,
   Monitor,
   Folder,
+  LogIn,
+  PenSquare,
 } from "lucide-react";
 import { useStore } from "@nanostores/react";
 import { $user, logout } from "../../store/auth";
@@ -38,7 +40,13 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, [user]);
 
-  const navItems = [
+  const publicNavItems = [
+    { icon: Home, label: "Feed", href: "/home" },
+    { icon: Bookmark, label: "Bookmarks", href: "/bookmarks" },
+    { icon: PenTool, label: "Highlights", href: "/highlights" },
+  ];
+
+  const authNavItems = [
     { icon: Home, label: "Feed", href: "/home" },
     {
       icon: Bell,
@@ -51,19 +59,22 @@ export default function Sidebar() {
     { icon: Folder, label: "Collections", href: "/collections" },
   ];
 
-  if (!user) return null;
+  const navItems = user ? authNavItems : publicNavItems;
 
   return (
-    <aside className="sticky top-0 h-screen w-[240px] hidden md:flex flex-col justify-between py-5 px-4 z-50">
-      <div className="flex flex-col gap-8">
+    <aside className="sticky top-0 h-screen hidden md:flex flex-col justify-between py-6 px-2 lg:px-3 z-50 border-r border-surface-200/60 dark:border-surface-800/60 w-[68px] lg:w-[220px] transition-all duration-200">
+      <div className="flex flex-col gap-6">
         <Link
           to="/home"
-          className="px-3 hover:opacity-80 transition-opacity w-fit"
+          className="px-3 hover:opacity-80 transition-opacity w-fit flex items-center gap-2.5"
         >
-          <img src="/logo.svg" alt="Margin" className="w-9 h-9" />
+          <img src="/logo.svg" alt="Margin" className="w-8 h-8" />
+          <span className="font-display font-bold text-lg text-surface-900 dark:text-white tracking-tight hidden lg:inline">
+            Margin
+          </span>
         </Link>
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-0.5">
           {navItems.map((item) => {
             const isActive =
               currentPath === item.href ||
@@ -72,79 +83,111 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 text-[15px] group ${
+                title={item.label}
+                className={`flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg transition-all duration-150 text-[14px] group ${
                   isActive
-                    ? "font-bold text-surface-900 dark:text-white bg-surface-100 dark:bg-surface-800"
-                    : "font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800/50 hover:text-surface-900 dark:hover:text-white"
+                    ? "font-semibold text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/40"
+                    : "font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800/60 hover:text-surface-900 dark:hover:text-white"
                 }`}
               >
                 <item.icon
-                  size={22}
+                  size={20}
                   className={`transition-colors ${isActive ? "text-primary-600 dark:text-primary-400" : ""}`}
-                  strokeWidth={isActive ? 2.5 : 2}
+                  strokeWidth={isActive ? 2.25 : 1.75}
                 />
-                <span className="flex-1">{item.label}</span>
+                <span className="flex-1 hidden lg:inline">{item.label}</span>
                 {(item.badge ?? 0) > 0 && (
                   <CountBadge count={item.badge ?? 0} />
                 )}
               </Link>
             );
           })}
+
+          {user && (
+            <Link
+              to="/new"
+              title="New annotation"
+              className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 mt-2 rounded-lg bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-400 transition-colors text-[14px] font-semibold"
+            >
+              <PenSquare size={20} strokeWidth={1.75} />
+              <span className="hidden lg:inline">New</span>
+            </Link>
+          )}
         </nav>
       </div>
 
-      <div className="relative group">
-        <Link
-          to={`/profile/${user.did}`}
-          className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors w-full"
+      <div className="space-y-1">
+        <button
+          onClick={cycleTheme}
+          title={
+            theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System"
+          }
+          className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/60 text-[13px] font-medium text-surface-500 dark:text-surface-400 w-full transition-colors"
         >
-          <Avatar did={user.did} avatar={user.avatar} size="md" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-surface-900 dark:text-white truncate text-sm">
-              {user.displayName || user.handle}
-            </p>
-            <p className="text-xs text-surface-500 dark:text-surface-400 truncate">
-              @{user.handle}
-            </p>
-          </div>
-        </Link>
+          {theme === "light" ? (
+            <Sun size={18} />
+          ) : theme === "dark" ? (
+            <Moon size={18} />
+          ) : (
+            <Monitor size={18} />
+          )}
+          <span className="hidden lg:inline">
+            {theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System"}
+          </span>
+        </button>
 
-        <div className="absolute bottom-full left-0 w-full mb-2 bg-white dark:bg-surface-900 rounded-xl shadow-xl border border-surface-100 dark:border-surface-800 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-bottom scale-95 group-hover:scale-100">
-          <button
-            onClick={cycleTheme}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-800 text-sm font-medium text-surface-700 dark:text-surface-300 w-full transition-colors"
-          >
-            {theme === "light" ? (
-              <Sun size={18} />
-            ) : theme === "dark" ? (
-              <Moon size={18} />
-            ) : (
-              <Monitor size={18} />
-            )}
-            <span className="flex-1 text-left">
-              {theme === "light"
-                ? "Light"
-                : theme === "dark"
-                  ? "Dark"
-                  : "System"}
-            </span>
-          </button>
-          <Link
-            to="/settings"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-800 text-sm font-medium text-surface-700 dark:text-surface-300 transition-colors"
-          >
-            <Settings size={18} />
-            <span>Settings</span>
-          </Link>
-          <div className="h-px bg-surface-100 dark:bg-surface-800 my-1" />
-          <button
-            onClick={logout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium text-red-600 dark:text-red-400 w-full text-left transition-colors"
-          >
-            <LogOut size={18} />
-            <span>Log out</span>
-          </button>
-        </div>
+        {user ? (
+          <>
+            <Link
+              to="/settings"
+              title="Settings"
+              className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/60 text-[13px] font-medium text-surface-500 dark:text-surface-400 transition-colors"
+            >
+              <Settings size={18} />
+              <span className="hidden lg:inline">Settings</span>
+            </Link>
+
+            <div className="h-px bg-surface-200/60 dark:bg-surface-800/60 my-2" />
+
+            <Link
+              to={`/profile/${user.did}`}
+              title={user.displayName || user.handle}
+              className="flex items-center justify-center lg:justify-start gap-2.5 p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/60 transition-colors w-full"
+            >
+              <Avatar did={user.did} avatar={user.avatar} size="sm" />
+              <div className="flex-1 min-w-0 hidden lg:block">
+                <p className="font-medium text-surface-900 dark:text-white truncate text-[13px]">
+                  {user.displayName || user.handle}
+                </p>
+                <p className="text-[11px] text-surface-500 dark:text-surface-400 truncate">
+                  @{user.handle}
+                </p>
+              </div>
+            </Link>
+
+            <button
+              onClick={logout}
+              title="Log out"
+              className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[13px] font-medium text-surface-400 dark:text-surface-500 hover:text-red-600 dark:hover:text-red-400 w-full text-left transition-colors"
+            >
+              <LogOut size={16} />
+              <span className="hidden lg:inline">Log out</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="h-px bg-surface-200/60 dark:bg-surface-800/60 my-2" />
+
+            <Link
+              to="/login"
+              title="Sign in"
+              className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-950/60 text-[13px] font-semibold transition-colors"
+            >
+              <LogIn size={18} />
+              <span className="hidden lg:inline">Sign in</span>
+            </Link>
+          </>
+        )}
       </div>
     </aside>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { Loader2, AtSign } from "lucide-react";
+import { Link, useSearchParams, Navigate } from "react-router-dom";
+import { AtSign } from "lucide-react";
 import { BlueskyIcon, MarginIcon } from "../../components/common/Icons";
 import SignUpModal from "../../components/modals/SignUpModal";
 import {
@@ -9,13 +9,21 @@ import {
   type ActorSearchItem,
 } from "../../api/client";
 import { Avatar } from "../../components/ui";
+import { useStore } from "@nanostores/react";
+import { $theme } from "../../store/theme";
+import { $user } from "../../store/auth";
 
 export default function Login() {
+  useStore($theme); // ensure theme is applied on this page
+  const user = useStore($user);
+  const [searchParams] = useSearchParams();
   const [handle, setHandle] = useState("");
   const [suggestions, setSuggestions] = useState<ActorSearchItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") || null,
+  );
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showSignUp, setShowSignUp] = useState(false);
 
@@ -70,9 +78,6 @@ export default function Login() {
         }
       }, 300);
       return () => clearTimeout(timer);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
     }
   }, [handle]);
 
@@ -128,11 +133,19 @@ export default function Login() {
       if (result.authorizationUrl) {
         window.location.href = result.authorizationUrl;
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to initiate login. Please try again.");
+      if (result.authorizationUrl) {
+        window.location.href = result.authorizationUrl;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(message || "Failed to initiate login. Please try again.");
       setLoading(false);
     }
   };
+
+  if (user) {
+    return <Navigate to="/home" replace />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950 p-4">
@@ -166,7 +179,14 @@ export default function Login() {
               ref={inputRef}
               type="text"
               value={handle}
-              onChange={(e) => setHandle(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setHandle(val);
+                if (val.length < 3) {
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                }
+              }}
               onKeyDown={handleKeyDown}
               onFocus={() =>
                 handle.length >= 3 &&
@@ -219,7 +239,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading || !handle}
-            className="w-full py-3.5 bg-surface-900 dark:bg-white hover:bg-surface-800 dark:hover:bg-surface-100 text-white dark:text-surface-900 rounded-xl font-bold text-lg shadow-lg shadow-surface-900/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-primary-600 dark:bg-primary-500 hover:bg-primary-700 dark:hover:bg-primary-400 text-white rounded-xl font-bold text-lg shadow-lg shadow-primary-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
           >
             {loading ? "Connecting..." : "Continue"}
           </button>

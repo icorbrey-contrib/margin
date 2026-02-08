@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getNotifications, markNotificationsRead } from "../../api/client";
-import type { NotificationItem } from "../../types";
-import { Heart, MessageCircle, Bell, PenTool, Loader2 } from "lucide-react";
+import type { NotificationItem, AnnotationItem } from "../../types";
+import { Heart, MessageCircle, Bell, PenTool } from "lucide-react";
 import Card from "../../components/common/Card";
 import { formatDistanceToNow } from "date-fns";
 import { clsx } from "clsx";
@@ -42,16 +42,15 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadNotifications = async () => {
+      setLoading(true);
+      const data = await getNotifications();
+      setNotifications(data);
+      setLoading(false);
+      markNotificationsRead();
+    };
     loadNotifications();
   }, []);
-
-  const loadNotifications = async () => {
-    setLoading(true);
-    const data = await getNotifications();
-    setNotifications(data);
-    setLoading(false);
-    markNotificationsRead();
-  };
 
   if (loading) {
     return (
@@ -127,14 +126,15 @@ export default function Notifications() {
                   </span>
                 </div>
 
-                {n.subject && (
+                {!!n.subject && (
                   <div className="mt-3 pl-3 border-l-2 border-surface-200 dark:border-surface-700">
-                    {n.type === "reply" && n.subject.text ? (
+                    {n.type === "reply" &&
+                    (n.subject as AnnotationItem).text ? (
                       <p className="text-surface-600 dark:text-surface-300 text-sm">
-                        {n.subject.text}
+                        {(n.subject as AnnotationItem).text}
                       </p>
-                    ) : n.subject.uri ? (
-                      <Card item={n.subject} hideShare />
+                    ) : (n.subject as AnnotationItem).uri ? (
+                      <Card item={n.subject as AnnotationItem} hideShare />
                     ) : null}
                   </div>
                 )}

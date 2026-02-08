@@ -39,6 +39,11 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [externalLinkUrl, setExternalLinkUrl] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    setLiked(!!item.viewer?.like);
+    setLikes(item.likeCount || 0);
+  }, [item.viewer?.like, item.likeCount]);
+
   const type =
     item.motivation === "highlighting"
       ? "highlight"
@@ -76,14 +81,18 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
     e.stopPropagation();
 
     try {
-      const hostname = new URL(url).hostname;
-      const skipped = $preferences.get().externalLinkSkippedHostnames;
-      if (skipped.includes(hostname)) {
-        window.open(url, "_blank", "noopener,noreferrer");
-        return;
+      const hostname = safeUrlHostname(url);
+      if (hostname) {
+        const skipped = $preferences.get().externalLinkSkippedHostnames;
+        if (skipped.includes(hostname)) {
+          window.open(url, "_blank", "noopener,noreferrer");
+          return;
+        }
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      if (err instanceof Error && err.name !== "TypeError") {
+        console.debug("Failed to check skipped hostname:", err);
+      }
     }
 
     setExternalLinkUrl(url);
@@ -103,13 +112,22 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
 
   const detailUrl = `/${item.author?.handle || item.author?.did}/${type}/${(item.uri || "").split("/").pop()}`;
 
+  const safeUrlHostname = (url: string | null | undefined) => {
+    if (!url) return null;
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return null;
+    }
+  };
+
   const pageUrl = item.target?.source || item.source;
   const pageTitle =
     item.target?.title ||
     item.title ||
-    (pageUrl ? new URL(pageUrl).hostname : null);
+    (pageUrl ? safeUrlHostname(pageUrl) : null);
   const pageHostname = pageUrl
-    ? new URL(pageUrl).hostname.replace("www.", "")
+    ? safeUrlHostname(pageUrl)?.replace("www.", "")
     : null;
   const isBookmark = type === "bookmark";
 

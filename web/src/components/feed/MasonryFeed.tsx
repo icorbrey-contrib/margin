@@ -3,15 +3,118 @@ import { getFeed } from "../../api/client";
 import Card from "../common/Card";
 import { Loader2 } from "lucide-react";
 import { useStore } from "@nanostores/react";
-import { $user, initAuth } from "../../store/auth";
+import { $user } from "../../store/auth";
 import type { AnnotationItem } from "../../types";
 import { Tabs, EmptyState } from "../ui";
+import LayoutToggle from "../ui/LayoutToggle";
+import { useStore as useNanoStore } from "@nanostores/react";
+import { $feedLayout } from "../../store/feedLayout";
 
 interface MasonryFeedProps {
   motivation?: string;
   emptyMessage?: string;
   showTabs?: boolean;
   title?: string;
+}
+
+function MasonryContent({
+  tab,
+  motivation,
+  emptyMessage,
+  userDid,
+  layout,
+}: {
+  tab: string;
+  motivation?: string;
+  emptyMessage: string;
+  userDid?: string;
+  layout: "list" | "mosaic";
+}) {
+  const [items, setItems] = useState<AnnotationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const params: { type?: string; motivation?: string; creator?: string } = {
+      motivation,
+    };
+
+    if (tab === "my" && userDid) {
+      params.creator = userDid;
+      params.type = "my-feed";
+    } else {
+      params.type = "all";
+    }
+
+    getFeed(params)
+      .then((data) => {
+        if (cancelled) return;
+        setItems(data?.items || []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.error(e);
+        setItems([]);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, motivation, userDid]);
+
+  const handleDelete = (uri: string) => {
+    setItems((prev) => prev.filter((i) => i.uri !== uri));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2
+          className="animate-spin text-primary-600 dark:text-primary-400"
+          size={32}
+        />
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        message={
+          tab === "my"
+            ? emptyMessage
+            : `No ${motivation === "bookmarking" ? "bookmarks" : "highlights"} from the community yet.`
+        }
+      />
+    );
+  }
+
+  if (layout === "list") {
+    return (
+      <div className="space-y-3 animate-fade-in">
+        {items.map((item) => (
+          <Card
+            key={item.uri || item.cid}
+            item={item}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="columns-1 sm:columns-2 gap-4 animate-fade-in">
+      {items.map((item) => (
+        <div key={item.uri || item.cid} className="break-inside-avoid mb-4">
+          <Card item={item} onDelete={handleDelete} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function MasonryFeed({
@@ -21,52 +124,24 @@ export default function MasonryFeed({
   title,
 }: MasonryFeedProps) {
   const user = useStore($user);
-  const [items, setItems] = useState<AnnotationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("my");
+  const layout = useNanoStore($feedLayout);
+  const [activeTab, setActiveTab] = useState(user ? "my" : "global");
 
-  useEffect(() => {
-    initAuth();
-  }, []);
-
-  useEffect(() => {
-    const fetchFeed = async () => {
-      setLoading(true);
-      try {
-        const params: { type?: string; motivation?: string; creator?: string } =
-          {
-            motivation,
-          };
-
-        if (activeTab === "my" && user?.did) {
-          params.creator = user.did;
-          params.type = "my-feed";
-        } else {
-          params.type = "all";
-        }
-
-        const data = await getFeed(params);
-        setItems(data?.items || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFeed();
-  }, [motivation, activeTab, user?.did]);
-
-  const handleDelete = (uri: string) => {
-    setItems((prev) => prev.filter((i) => i.uri !== uri));
+  const handleTabChange = (id: string) => {
+    if (id === activeTab) return;
+    setActiveTab(id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const tabs = [
-    { id: "my", label: "My" },
-    { id: "global", label: "Global" },
-  ];
+  const tabs = user
+    ? [
+        { id: "my", label: "My" },
+        { id: "global", label: "Global" },
+      ]
+    : [{ id: "global", label: "Global" }];
 
   return (
-    <div className="max-w-2xl mx-auto animate-slide-up">
+    <div className="max-w-2xl mx-auto">
       {title && (
         <h1 className="text-3xl font-display font-bold text-surface-900 dark:text-white mb-6 text-center lg:text-left">
           {title}
@@ -74,38 +149,34 @@ export default function MasonryFeed({
       )}
 
       {showTabs && (
-        <Tabs
-          tabs={tabs}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          className="mb-6"
-        />
+        <div className="sticky top-0 z-10 bg-surface-50/95 dark:bg-surface-950/95 backdrop-blur-sm pb-4 mb-2 -mx-1 px-1 pt-1">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <Tabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onChange={handleTabChange}
+              />
+            </div>
+            <LayoutToggle />
+          </div>
+        </div>
       )}
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2
-            className="animate-spin text-primary-600 dark:text-primary-400"
-            size={32}
-          />
-        </div>
-      ) : items.length === 0 ? (
-        <EmptyState
-          message={
-            activeTab === "my"
-              ? emptyMessage
-              : `No ${motivation === "bookmarking" ? "bookmarks" : "highlights"} from the community yet.`
-          }
-        />
-      ) : (
-        <div className="columns-1 xl:columns-2 gap-4 animate-fade-in">
-          {items.map((item) => (
-            <div key={item.uri || item.cid} className="break-inside-avoid mb-4">
-              <Card item={item} onDelete={handleDelete} />
-            </div>
-          ))}
+      {!showTabs && (
+        <div className="flex justify-end mb-4">
+          <LayoutToggle />
         </div>
       )}
+
+      <MasonryContent
+        key={activeTab}
+        tab={activeTab}
+        motivation={motivation}
+        emptyMessage={emptyMessage}
+        userDid={user?.did}
+        layout={layout}
+      />
     </div>
   );
 }

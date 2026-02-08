@@ -4,6 +4,9 @@ import type {
   FeedResponse,
   AnnotationItem,
   Collection,
+  NotificationItem,
+  Target,
+  Selector,
 } from "../types";
 export type { Collection } from "../types";
 
@@ -47,21 +50,26 @@ export async function checkSession(): Promise<UserProfile | null> {
       }
 
       try {
-        const marginProfile = await getProfile(data.did);
-        if (marginProfile) {
-          if (marginProfile.description)
-            baseProfile.description = marginProfile.description;
-          if (marginProfile.followersCount)
-            baseProfile.followersCount = marginProfile.followersCount;
-          if (marginProfile.followsCount)
-            baseProfile.followsCount = marginProfile.followsCount;
-          if (marginProfile.postsCount)
-            baseProfile.postsCount = marginProfile.postsCount;
-          if (marginProfile.website)
-            baseProfile.website = marginProfile.website;
-          if (marginProfile.links) baseProfile.links = marginProfile.links;
+        const res = await fetch(`/api/profile/${data.did}`);
+        if (res.ok) {
+          const marginProfile = await res.json();
+          if (marginProfile) {
+            if (marginProfile.description)
+              baseProfile.description = marginProfile.description;
+            if (marginProfile.followersCount)
+              baseProfile.followersCount = marginProfile.followersCount;
+            if (marginProfile.followsCount)
+              baseProfile.followsCount = marginProfile.followsCount;
+            if (marginProfile.postsCount)
+              baseProfile.postsCount = marginProfile.postsCount;
+            if (marginProfile.website)
+              baseProfile.website = marginProfile.website;
+            if (marginProfile.links) baseProfile.links = marginProfile.links;
+          }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.debug("Failed to fetch Margin profile:", e);
+      }
 
       sessionAtom.set(baseProfile);
       return baseProfile;
@@ -70,6 +78,7 @@ export async function checkSession(): Promise<UserProfile | null> {
     sessionAtom.set(null);
     return null;
   } catch (e) {
+    console.error("Session check failed:", e);
     sessionAtom.set(null);
     return null;
   }
@@ -77,24 +86,27 @@ export async function checkSession(): Promise<UserProfile | null> {
 
 async function apiRequest(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit & { skipAuthRedirect?: boolean } = {},
 ): Promise<Response> {
+  const { skipAuthRedirect, ...fetchOptions } = options;
   const headers = {
     "Content-Type": "application/json",
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
   };
 
   const apiPath =
     path.startsWith("/api") || path.startsWith("/auth") ? path : `/api${path}`;
 
   const response = await fetch(apiPath, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && !skipAuthRedirect) {
     sessionAtom.set(null);
-    window.location.href = "/login";
+    if (window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
   }
 
   return response;
@@ -110,15 +122,47 @@ interface GetFeedParams {
   creator?: string;
 }
 
-function normalizeItem(raw: any): AnnotationItem {
+interface RawItem {
+  type?: string;
+  collectionUri?: string;
+  annotation?: RawItem;
+  highlight?: RawItem;
+  bookmark?: RawItem;
+  uri?: string;
+  id?: string;
+  cid?: string;
+  author?: UserProfile;
+  creator?: UserProfile;
+  collection?: {
+    uri: string;
+    name: string;
+    icon?: string;
+  };
+  created?: string;
+  createdAt?: string;
+  target?: string | { source?: string; title?: string; selector?: Selector };
+  url?: string;
+  targetUrl?: string;
+  title?: string;
+  selector?: Selector;
+  viewer?: { like?: string; [key: string]: unknown };
+  viewerHasLiked?: boolean;
+  motivation?: string;
+  [key: string]: unknown;
+}
+
+function normalizeItem(raw: RawItem): AnnotationItem {
   if (raw.type === "CollectionItem" || raw.collectionUri) {
     const inner = raw.annotation || raw.highlight || raw.bookmark || {};
     const normalizedInner = normalizeItem(inner);
 
     return {
       ...normalizedInner,
-      uri: normalizedInner.uri || raw.uri,
-      author: normalizedInner.author || raw.author,
+      uri: normalizedInner.uri || raw.uri || "",
+      cid: raw.cid || "",
+      author: (normalizedInner.author ||
+        raw.author ||
+        raw.creator) as UserProfile,
       collection: raw.collection
         ? {
             uri: raw.collection.uri,
@@ -127,12 +171,25 @@ function normalizeItem(raw: any): AnnotationItem {
           }
         : undefined,
       addedBy: raw.creator || raw.author,
-      createdAt: raw.created || raw.createdAt,
+      createdAt: raw.created || raw.createdAt || new Date().toISOString(),
       collectionItemUri: raw.uri,
     };
   }
 
-  let target = raw.target;
+  let target: Target | undefined;
+
+  if (raw.target) {
+    if (typeof raw.target === "string") {
+      target = { source: raw.target, title: raw.title, selector: raw.selector };
+    } else {
+      target = {
+        source: raw.target.source || "",
+        title: raw.target.title || raw.title,
+        selector: raw.target.selector || raw.selector,
+      };
+    }
+  }
+
   if (!target || !target.source) {
     const url =
       raw.url ||
@@ -141,19 +198,25 @@ function normalizeItem(raw: any): AnnotationItem {
     if (url) {
       target = {
         source: url,
-        title: raw.title || raw.target?.title,
-        selector: raw.selector || raw.target?.selector,
+        title:
+          raw.title ||
+          (typeof raw.target !== "string" ? raw.target?.title : undefined),
+        selector:
+          raw.selector ||
+          (typeof raw.target !== "string" ? raw.target?.selector : undefined),
       };
     }
   }
 
   return {
     ...raw,
-    uri: raw.id || raw.uri,
-    author: raw.creator || raw.author,
-    createdAt: raw.created || raw.createdAt,
-    target: target || raw.target,
+    uri: raw.id || raw.uri || "",
+    cid: raw.cid || "",
+    author: (raw.creator || raw.author) as UserProfile,
+    createdAt: raw.created || raw.createdAt || new Date().toISOString(),
+    target: target,
     viewer: raw.viewer || { like: raw.viewerHasLiked ? "true" : undefined },
+    motivation: raw.motivation || "highlighting",
   };
 }
 
@@ -178,7 +241,9 @@ export async function getFeed({
   const endpoint = source ? "/api/targets" : "/api/annotations/feed";
 
   try {
-    const res = await apiRequest(`${endpoint}?${params.toString()}`);
+    const res = await apiRequest(`${endpoint}?${params.toString()}`, {
+      skipAuthRedirect: true,
+    });
     if (!res.ok) throw new Error("Failed to fetch feed");
     const data = await res.json();
     return {
@@ -214,9 +279,9 @@ export async function createAnnotation({
     if (!res.ok) throw new Error(await res.text());
     const raw = await res.json();
     return normalizeItem(raw);
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
-    return { error: e.message };
+    return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }
 
@@ -243,9 +308,9 @@ export async function createHighlight({
     if (!res.ok) throw new Error(await res.text());
     const raw = await res.json();
     return normalizeItem(raw);
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
-    return { error: e.message };
+    return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }
 
@@ -266,13 +331,15 @@ export async function createBookmark({
     if (!res.ok) throw new Error(await res.text());
     const raw = await res.json();
     return normalizeItem(raw);
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
-    return { error: e.message };
+    return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }
 
-export async function uploadAvatar(file: File): Promise<{ blob: any }> {
+export async function uploadAvatar(
+  file: File,
+): Promise<{ blob: Blob | string }> {
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch("/api/upload/avatar", {
@@ -289,7 +356,7 @@ export async function uploadAvatar(file: File): Promise<{ blob: any }> {
 export async function updateProfile(updates: {
   displayName?: string;
   description?: string;
-  avatar?: any;
+  avatar?: Blob | string | null;
   website?: string;
   links?: string[];
 }): Promise<boolean> {
@@ -313,6 +380,7 @@ export async function likeItem(uri: string, cid: string): Promise<boolean> {
     });
     return res.ok;
   } catch (e) {
+    console.error("Failed to like item:", e);
     return false;
   }
 }
@@ -327,13 +395,14 @@ export async function unlikeItem(uri: string): Promise<boolean> {
     );
     return res.ok;
   } catch (e) {
+    console.error("Failed to unlike item:", e);
     return false;
   }
 }
 
 export async function deleteItem(
   uri: string,
-  type: string = "annotation",
+  _type: string = "annotation",
 ): Promise<boolean> {
   const rkey = (uri || "").split("/").pop();
   let endpoint = "/api/annotations";
@@ -346,6 +415,7 @@ export async function deleteItem(
     });
     return res.ok;
   } catch (e) {
+    console.error("Failed to delete item:", e);
     return false;
   }
 }
@@ -365,6 +435,7 @@ export async function updateAnnotation(
     );
     return res.ok;
   } catch (e) {
+    console.error("Failed to update annotation:", e);
     return false;
   }
 }
@@ -384,6 +455,7 @@ export async function updateHighlight(
     );
     return res.ok;
   } catch (e) {
+    console.error("Failed to update highlight:", e);
     return false;
   }
 }
@@ -404,6 +476,7 @@ export async function updateBookmark(
     );
     return res.ok;
   } catch (e) {
+    console.error("Failed to save bookmark:", e);
     return false;
   }
 }
@@ -418,11 +491,14 @@ export async function getCollectionsContaining(
     if (!res.ok) return [];
     return await res.json();
   } catch (e) {
+    console.error("Failed to fetch containing collections:", e);
     return [];
   }
 }
 
-export async function getEditHistory(uri: string): Promise<any[]> {
+import type { EditHistoryItem } from "../types";
+
+export async function getEditHistory(uri: string): Promise<EditHistoryItem[]> {
   try {
     const res = await apiRequest(
       `/api/annotations/history?uri=${encodeURIComponent(uri)}`,
@@ -430,6 +506,7 @@ export async function getEditHistory(uri: string): Promise<any[]> {
     if (!res.ok) return [];
     return await res.json();
   } catch (e) {
+    console.error("Failed to fetch edit history:", e);
     return [];
   }
 }
@@ -440,6 +517,7 @@ export async function getProfile(did: string): Promise<UserProfile | null> {
     if (!res.ok) return null;
     return await res.json();
   } catch (e) {
+    console.error("Failed to fetch profile:", e);
     return null;
   }
 }
@@ -472,6 +550,7 @@ export async function searchActors(
     if (!res.ok) throw new Error("Search failed");
     return await res.json();
   } catch (e) {
+    console.error("Failed to search actors:", e);
     return { actors: [] };
   }
 }
@@ -485,6 +564,7 @@ export async function resolveHandle(handle: string): Promise<string | null> {
     const data = await res.json();
     return data.did;
   } catch (e) {
+    console.error("Failed to resolve handle:", e);
     return null;
   }
 }
@@ -511,29 +591,36 @@ export async function startSignup(
   return await res.json();
 }
 
-export async function getNotifications(limit = 50, offset = 0): Promise<any[]> {
+export async function getNotifications(
+  limit = 50,
+  offset = 0,
+): Promise<NotificationItem[]> {
   try {
     const res = await apiRequest(
       `/api/notifications?limit=${limit}&offset=${offset}`,
     );
     if (!res.ok) throw new Error("Failed to fetch notifications");
     const data = await res.json();
-    return (data.items || []).map((n: any) => ({
+    return (data.items || []).map((n: NotificationItem) => ({
       ...n,
-      subject: n.subject ? normalizeItem(n.subject) : undefined,
+      subject: n.subject ? normalizeItem(n.subject as RawItem) : undefined,
     }));
   } catch (e) {
+    console.error("Failed to fetch notifications:", e);
     return [];
   }
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {
   try {
-    const res = await apiRequest("/api/notifications/count");
+    const res = await apiRequest("/api/notifications/count", {
+      skipAuthRedirect: true,
+    });
     if (!res.ok) return 0;
     const data = await res.json();
     return data.count || 0;
   } catch (e) {
+    console.error("Failed to fetch unread notification count:", e);
     return 0;
   }
 }
@@ -543,13 +630,14 @@ export async function markNotificationsRead(): Promise<boolean> {
     const res = await apiRequest("/api/notifications/read", { method: "POST" });
     return res.ok;
   } catch (e) {
+    console.error("Failed to mark notifications as read:", e);
     return false;
   }
 }
 
 export interface APIKey {
   id: string;
-  alias: string;
+  name: string;
   key?: string;
   createdAt: string;
 }
@@ -561,19 +649,21 @@ export async function getAPIKeys(): Promise<APIKey[]> {
     const data = await res.json();
     return Array.isArray(data) ? data : data.keys || [];
   } catch (e) {
+    console.error("Failed to fetch API keys:", e);
     return [];
   }
 }
 
-export async function createAPIKey(alias: string): Promise<APIKey | null> {
+export async function createAPIKey(name: string): Promise<APIKey | null> {
   try {
     const res = await apiRequest("/api/keys", {
       method: "POST",
-      body: JSON.stringify({ alias }),
+      body: JSON.stringify({ name }),
     });
     if (!res.ok) return null;
     return await res.json();
   } catch (e) {
+    console.error("Failed to create API key:", e);
     return null;
   }
 }
@@ -583,6 +673,7 @@ export async function deleteAPIKey(id: string): Promise<boolean> {
     const res = await apiRequest(`/api/keys/${id}`, { method: "DELETE" });
     return res.ok;
   } catch (e) {
+    console.error("Failed to delete API key:", e);
     return false;
   }
 }
@@ -594,11 +685,14 @@ export interface Tag {
 
 export async function getTrendingTags(limit = 10): Promise<Tag[]> {
   try {
-    const res = await apiRequest(`/api/tags/trending?limit=${limit}`);
+    const res = await apiRequest(`/api/tags/trending?limit=${limit}`, {
+      skipAuthRedirect: true,
+    });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : data.tags || [];
   } catch (e) {
+    console.error("Failed to fetch trending tags:", e);
     return [];
   }
 }
@@ -609,7 +703,18 @@ export async function getCollections(creator?: string): Promise<Collection[]> {
     const res = await apiRequest(`/api/collections${query}`);
     if (!res.ok) throw new Error("Failed to fetch collections");
     const data = await res.json();
-    return Array.isArray(data) ? data : data.items || [];
+    let items = Array.isArray(data)
+      ? data
+      : data.items || data.collections || [];
+
+    items = items.map((item: Record<string, unknown>) => {
+      if (!item.id && item.uri) {
+        item.id = (item.uri as string).split("/").pop();
+      }
+      return item;
+    });
+
+    return items;
   } catch (e) {
     console.error(e);
     return [];
@@ -778,7 +883,7 @@ export async function getAnnotation(
     );
     if (!res.ok) return null;
     return normalizeItem(await res.json());
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -791,7 +896,7 @@ export async function getReplies(
     if (!res.ok) return { items: [] };
     const data = await res.json();
     return { items: (data.items || []).map(normalizeItem) };
-  } catch (e) {
+  } catch {
     return { items: [] };
   }
 }
@@ -811,7 +916,7 @@ export async function getByTarget(
       annotations: (data.annotations || []).map(normalizeItem),
       highlights: (data.highlights || []).map(normalizeItem),
     };
-  } catch (e) {
+  } catch {
     return { annotations: [], highlights: [] };
   }
 }
@@ -832,7 +937,7 @@ export async function getUserTargetItems(
       annotations: (data.annotations || []).map(normalizeItem),
       highlights: (data.highlights || []).map(normalizeItem),
     };
-  } catch (e) {
+  } catch {
     return { annotations: [], highlights: [] };
   }
 }
@@ -840,7 +945,9 @@ export async function getPreferences(): Promise<{
   externalLinkSkippedHostnames?: string[];
 }> {
   try {
-    const res = await apiRequest("/api/preferences");
+    const res = await apiRequest("/api/preferences", {
+      skipAuthRedirect: true,
+    });
     if (!res.ok) return {};
     return await res.json();
   } catch (e) {

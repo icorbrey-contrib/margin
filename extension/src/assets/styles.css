@@ -1,50 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-primary: #0a0a0d;
-  --bg-secondary: #121216;
-  --bg-tertiary: #1a1a1f;
-  --bg-card: #0f0f13;
-  --bg-elevated: #18181d;
-  --bg-hover: #1e1e24;
-  --text-primary: #eaeaee;
-  --text-secondary: #b7b6c5;
-  --text-tertiary: #6e6d7a;
-  --border: rgba(183, 182, 197, 0.12);
-  --border-strong: rgba(183, 182, 197, 0.2);
-  --accent: #957a86;
-  --accent-hover: #a98d98;
-  --accent-subtle: rgba(149, 122, 134, 0.15);
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-card: #0f172a;
+  --bg-elevated: #1e293b;
+  --bg-hover: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --border: rgba(148, 163, 184, 0.12);
+  --border-strong: rgba(148, 163, 184, 0.2);
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --accent-subtle: rgba(139, 92, 246, 0.15);
   --success: #34d399;
   --warning: #fbbf24;
 }
 
 .light {
-  --bg-primary: #f8f8fa;
+  --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f0f0f4;
+  --bg-tertiary: #f1f5f9;
   --bg-card: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-hover: #eeeef2;
-  --text-primary: #18171c;
-  --text-secondary: #5c495a;
-  --text-tertiary: #8a8494;
-  --border: rgba(92, 73, 90, 0.12);
-  --border-strong: rgba(92, 73, 90, 0.2);
-  --accent: #7a5f6d;
-  --accent-hover: #664e5b;
-  --accent-subtle: rgba(149, 122, 134, 0.12);
+  --bg-hover: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --border: rgba(100, 116, 139, 0.15);
+  --border-strong: rgba(100, 116, 139, 0.25);
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-subtle: rgba(124, 58, 237, 0.12);
 }
 
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family:
-    'IBM Plex Sans',
+    'Inter',
+    system-ui,
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;

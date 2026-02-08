@@ -27,6 +27,7 @@ import {
   Skeleton,
   EmptyState,
 } from "../../components/ui";
+import { AppleIcon } from "../../components/common/Icons";
 
 export default function Settings() {
   const user = useStore($user);
@@ -39,15 +40,14 @@ export default function Settings() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
+    const loadKeys = async () => {
+      setLoading(true);
+      const data = await getAPIKeys();
+      setKeys(data);
+      setLoading(false);
+    };
     loadKeys();
   }, []);
-
-  const loadKeys = async () => {
-    setLoading(true);
-    const data = await getAPIKeys();
-    setKeys(data);
-    setLoading(false);
-  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,7 +219,7 @@ export default function Settings() {
               {keys.map((key) => (
                 <div
                   key={key.id}
-                  className="flex items-center justify-between p-4 bg-surface-50 dark:bg-surface-800 rounded-xl group transition-all hover:bg-surface-100 dark:hover:bg-surface-750"
+                  className="flex items-center justify-between p-4 bg-surface-50 dark:bg-surface-800 rounded-xl group transition-all hover:bg-surface-100 dark:hover:bg-surface-700"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-surface-200 dark:bg-surface-700 rounded-lg">
@@ -230,7 +230,7 @@ export default function Settings() {
                     </div>
                     <div>
                       <p className="font-medium text-surface-900 dark:text-white">
-                        {key.alias}
+                        {key.name}
                       </p>
                       <p className="text-xs text-surface-500 dark:text-surface-400">
                         Created {new Date(key.createdAt).toLocaleDateString()}
@@ -247,6 +247,24 @@ export default function Settings() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">
+            iOS Shortcut
+          </h2>
+          <p className="text-sm text-surface-400 dark:text-surface-500 mb-4">
+            Save pages to Margin from Safari on iPhone and iPad
+          </p>
+          <a
+            href="https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-surface-900 dark:bg-white text-white dark:text-surface-900 rounded-xl font-medium text-sm transition-all hover:opacity-90"
+          >
+            <AppleIcon size={16} />
+            Get iOS Shortcut
+          </a>
         </section>
 
         <section className="card p-5">

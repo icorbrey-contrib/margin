@@ -32,44 +32,44 @@ export default function CollectionDetail({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [handle, rkey, uri]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      let targetUri = uri;
-      if (!targetUri && handle && rkey) {
-        if (handle.startsWith("did:")) {
-          targetUri = `at://${handle}/at.margin.collection/${rkey}`;
-        } else {
-          const did = await resolveHandle(handle);
-          if (did) {
-            targetUri = `at://${did}/at.margin.collection/${rkey}`;
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        let targetUri = uri;
+        if (!targetUri && handle && rkey) {
+          if (handle.startsWith("did:")) {
+            targetUri = `at://${handle}/at.margin.collection/${rkey}`;
           } else {
-            setError("Collection not found");
-            setLoading(false);
-            return;
+            const did = await resolveHandle(handle);
+            if (did) {
+              targetUri = `at://${did}/at.margin.collection/${rkey}`;
+            } else {
+              setError("Collection not found");
+              setLoading(false);
+              return;
+            }
           }
         }
-      }
 
-      if (targetUri) {
-        const col = await getCollection(targetUri);
-        if (col) {
-          setCollection(col);
-          const colItems = await getCollectionItems(col.uri);
-          setItems(colItems.filter((i) => i && i.uri));
-        } else {
-          setError("Collection not found");
+        if (targetUri) {
+          const col = await getCollection(targetUri);
+          if (col) {
+            setCollection(col);
+            const colItems = await getCollectionItems(col.uri);
+            setItems(colItems.filter((i) => i && i.uri));
+          } else {
+            setError("Collection not found");
+          }
         }
+      } catch {
+        setError("Failed to load collection");
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      setError("Failed to load collection");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadData();
+  }, [handle, rkey, uri]);
 
   const handleDelete = async () => {
     if (!collection) return;

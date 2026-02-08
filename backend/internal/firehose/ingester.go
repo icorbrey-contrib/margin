@@ -342,11 +342,8 @@ func (i *Ingester) handleAnnotation(event *FirehoseEvent) {
 		targetSource = record.URL
 	}
 
-	targetHash := record.Target.SourceHash
-	if targetHash == "" {
-		targetHash = record.URLHash
-	}
-	if targetHash == "" && targetSource != "" {
+	var targetHash string
+	if targetSource != "" {
 		targetHash = db.HashURL(targetSource)
 	}
 
@@ -501,8 +498,8 @@ func (i *Ingester) handleHighlight(event *FirehoseEvent) {
 		createdAt = time.Now()
 	}
 
-	targetHash := record.Target.SourceHash
-	if targetHash == "" && record.Target.Source != "" {
+	var targetHash string
+	if record.Target.Source != "" {
 		targetHash = db.HashURL(record.Target.Source)
 	}
 
@@ -564,8 +561,8 @@ func (i *Ingester) handleBookmark(event *FirehoseEvent) {
 		createdAt = time.Now()
 	}
 
-	sourceHash := record.SourceHash
-	if sourceHash == "" && record.Source != "" {
+	var sourceHash string
+	if record.Source != "" {
 		sourceHash = db.HashURL(record.Source)
 	}
 

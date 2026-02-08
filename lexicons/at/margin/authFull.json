@@ -21,7 +21,9 @@
             "at.margin.like",
             "at.margin.collection",
             "at.margin.collectionItem",
-            "at.margin.profile"
+            "at.margin.profile",
+            "at.margin.apikey",
+            "at.margin.preferences"
           ]
         }
       ]

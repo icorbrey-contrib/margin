@@ -207,15 +207,18 @@ export default function ReplyList({
   }
 
   const buildReplyTree = () => {
-    const replyMap: Record<string, any> = {};
-    const rootReplies: any[] = [];
+    const replyMap: Record<
+      string,
+      AnnotationItem & { children: AnnotationItem[] }
+    > = {};
+    const rootReplies: (AnnotationItem & { children: AnnotationItem[] })[] = [];
 
     replies.forEach((r) => {
       replyMap[r.uri || r.id || ""] = { ...r, children: [] };
     });
 
     replies.forEach((r) => {
-      const parentUri = (r as any).reply?.parent?.uri || (r as any).parentUri;
+      const parentUri = r.reply?.parent?.uri || r.parentUri;
       if (parentUri === rootUri || !parentUri || !replyMap[parentUri]) {
         rootReplies.push(replyMap[r.uri || r.id || ""]);
       } else {

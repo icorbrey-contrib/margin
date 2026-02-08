@@ -6,9 +6,9 @@ import (
 
 func (db *DB) CreateAPIKey(key *APIKey) error {
 	_, err := db.Exec(db.Rebind(`
-		INSERT INTO api_keys (id, owner_did, name, key_hash, created_at, uri, cid, indexed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`), key.ID, key.OwnerDID, key.Name, key.KeyHash, key.CreatedAt, key.URI, key.CID, key.IndexedAt)
+		INSERT INTO api_keys (id, owner_did, name, key_hash, created_at, uri, cid)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`), key.ID, key.OwnerDID, key.Name, key.KeyHash, key.CreatedAt, key.URI, key.CID)
 	return err
 }
 

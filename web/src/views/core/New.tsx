@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
 import Composer from "../../components/feed/Composer";
+import type { Selector } from "../../types";
 
 export default function NewAnnotationPage() {
   const user = useStore($user);
@@ -11,7 +12,7 @@ export default function NewAnnotationPage() {
 
   const initialUrl = searchParams.get("url") || "";
 
-  let initialSelector: any = null;
+  let initialSelector: Selector | null = null;
   const selectorParam = searchParams.get("selector");
   if (selectorParam) {
     try {

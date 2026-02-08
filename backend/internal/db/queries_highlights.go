@@ -9,6 +9,8 @@ func (db *DB) CreateHighlight(h *Highlight) error {
 		INSERT INTO highlights (uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(uri) DO UPDATE SET
+			target_source = excluded.target_source,
+			target_hash = excluded.target_hash,
 			target_title = excluded.target_title,
 			selector_json = excluded.selector_json,
 			color = excluded.color,
@@ -39,6 +41,66 @@ func (db *DB) GetRecentHighlights(limit, offset int) ([]Highlight, error) {
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetPopularHighlights(limit, offset int) ([]Highlight, error) {
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = highlights.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = highlights.uri)
+		) > 0
+		ORDER BY (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = highlights.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = highlights.uri)
+		) DESC, created_at DESC
+		LIMIT ? OFFSET ?
+	`), since, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var highlights []Highlight
+	for rows.Next() {
+		var h Highlight
+		if err := rows.Scan(&h.URI, &h.AuthorDID, &h.TargetSource, &h.TargetHash, &h.TargetTitle, &h.SelectorJSON, &h.Color, &h.TagsJSON, &h.CreatedAt, &h.IndexedAt, &h.CID); err != nil {
+			return nil, err
+		}
+		highlights = append(highlights, h)
+	}
+	return highlights, nil
+}
+
+func (db *DB) GetShelvedHighlights(limit, offset int) ([]Highlight, error) {
+	olderThan := time.Now().AddDate(0, 0, -1)
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, target_source, target_hash, target_title, selector_json, color, tags_json, created_at, indexed_at, cid
+		FROM highlights
+		WHERE created_at < ? AND created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = highlights.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = highlights.uri)
+		) = 0
+		ORDER BY RANDOM()
+		LIMIT ? OFFSET ?
+	`), olderThan, since, limit, offset)
 	if err != nil {
 		return nil, err
 	}

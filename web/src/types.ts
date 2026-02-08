@@ -13,6 +13,7 @@ export interface UserProfile {
 }
 
 export interface Selector {
+  type?: string;
   exact: string;
   prefix?: string;
   suffix?: string;
@@ -68,6 +69,17 @@ export interface AnnotationItem {
   };
   addedBy?: UserProfile;
   collectionItemUri?: string;
+  reply?: {
+    parent?: {
+      uri: string;
+      cid: string;
+    };
+    root?: {
+      uri: string;
+      cid: string;
+    };
+  };
+  parentUri?: string;
 }
 
 export type ActorSearchItem = UserProfile;
@@ -90,7 +102,7 @@ export interface NotificationItem {
     | "like"
     | "follow";
   subjectUri: string;
-  subject?: any;
+  subject?: AnnotationItem | unknown;
   createdAt: string;
   readAt?: string;
 }
@@ -113,4 +125,12 @@ export interface CollectionItem {
   subjectUri: string;
   createdAt: string;
   annotation?: AnnotationItem;
+}
+
+export interface EditHistoryItem {
+  uri: string;
+  cid: string;
+  author: UserProfile;
+  text: string;
+  createdAt: string;
 }

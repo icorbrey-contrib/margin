@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { createAnnotation, createHighlight } from "../../api/client";
+import type { Selector } from "../../types";
 import { X } from "lucide-react";
 
 interface ComposerProps {
   url: string;
-  selector?: any;
+  selector?: Selector | null;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -48,9 +49,14 @@ export default function Composer({
         .filter(Boolean);
 
       if (!text.trim()) {
+        if (!finalSelector) throw new Error("No text selected");
         await createHighlight({
           url,
-          selector: finalSelector,
+          selector: finalSelector as {
+            exact: string;
+            prefix?: string;
+            suffix?: string;
+          },
           color: "yellow",
           tags: tagList,
         });
@@ -67,8 +73,11 @@ export default function Composer({
       setQuoteText("");
       setSelector(null);
       if (onSuccess) onSuccess();
-    } catch (err: any) {
-      setError(err.message || "Failed to post");
+    } catch (err) {
+      setError(
+        (err instanceof Error ? err.message : "Unknown error") ||
+          "Failed to post",
+      );
     } finally {
       setLoading(false);
     }

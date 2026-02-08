@@ -23,7 +23,8 @@ export default defineConfig({
 
     return {
       name: 'Margin',
-      description: 'Annotate and highlight any webpage, with your notes saved to the decentralized AT Protocol.',
+      description:
+        'Annotate and highlight any webpage, with your notes saved to the decentralized AT Protocol.',
       permissions: browser === 'firefox' ? basePermissions : chromePermissions,
       host_permissions: ['https://margin.at/*', '*://*/*'],
       icons: {
@@ -72,25 +73,27 @@ export default defineConfig({
           128: '/icons/icon-128.png',
         },
       },
-      ...(browser === 'chrome' ? {
-        side_panel: {
-          default_path: 'sidepanel.html',
-        },
-      } : {
-        sidebar_action: {
-          default_title: 'Margin',
-          default_panel: 'sidepanel.html',
-        },
-        browser_specific_settings: {
-          gecko: {
-            id: 'hello@margin.at',
-            strict_min_version: '140.0',
-            data_collection_permissions: {
-              required: ['none'],
+      ...(browser === 'chrome'
+        ? {
+            side_panel: {
+              default_path: 'sidepanel.html',
             },
-          },
-        },
-      }),
+          }
+        : {
+            sidebar_action: {
+              default_title: 'Margin',
+              default_panel: 'sidepanel.html',
+            },
+            browser_specific_settings: {
+              gecko: {
+                id: 'hello@margin.at',
+                strict_min_version: '140.0',
+                data_collection_permissions: {
+                  required: ['none'],
+                },
+              },
+            },
+          }),
     };
   },
 });

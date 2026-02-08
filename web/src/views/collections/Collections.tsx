@@ -5,9 +5,8 @@ import {
   deleteCollection,
 } from "../../api/client";
 import { Plus, Folder, Trash2, X } from "lucide-react";
-import CollectionIcon, {
-  ICON_MAP,
-} from "../../components/common/CollectionIcon";
+import CollectionIcon from "../../components/common/CollectionIcon";
+import { ICON_MAP } from "../../components/common/iconMap";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
 import type { Collection } from "../../types";
@@ -25,16 +24,21 @@ export default function Collections() {
   const [newItemIcon, setNewItemIcon] = useState("folder");
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    loadCollections();
-  }, []);
-
-  const loadCollections = async () => {
-    setLoading(true);
-    const data = await getCollections();
-    setCollections(data);
-    setLoading(false);
+  const fetchCollections = async () => {
+    try {
+      setLoading(true);
+      const data = await getCollections();
+      setCollections(data);
+    } catch (error) {
+      console.error("Failed to load collections:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchCollections();
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +52,7 @@ export default function Collections() {
       setNewItemName("");
       setNewItemDesc("");
       setNewItemIcon("folder");
-      loadCollections();
+      fetchCollections();
     }
     setCreating(false);
   };

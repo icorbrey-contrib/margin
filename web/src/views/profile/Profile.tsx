@@ -2,18 +2,14 @@ import React, { useEffect, useState } from "react";
 import { getProfile, getFeed, getCollections } from "../../api/client";
 import Card from "../../components/common/Card";
 import {
-  Loader2,
   Edit2,
-  Bookmark,
-  PenTool,
-  MessageSquare,
-  Folder,
-  Share2,
-  MoreHorizontal,
-  Plus,
-  ArrowRight,
   Github,
   Linkedin,
+  Loader2,
+  Folder,
+  MessageSquare,
+  PenTool,
+  Bookmark,
   Link2,
 } from "lucide-react";
 import { TangledIcon } from "../../components/common/Icons";

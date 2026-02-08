@@ -19,7 +19,6 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
-import { clsx } from "clsx";
 import { getAvatarUrl } from "../../api/client";
 
 export default function AnnotationDetail() {
@@ -60,8 +59,11 @@ export default function AnnotationDetail() {
           } else {
             throw new Error("Could not resolve handle");
           }
-        } catch (e: any) {
-          setError("Failed to resolve handle: " + e.message);
+        } catch (e) {
+          setError(
+            "Failed to resolve handle: " +
+              (e instanceof Error ? e.message : "Unknown error"),
+          );
           setLoading(false);
         }
       } else if (did && rkey) {
@@ -108,8 +110,8 @@ export default function AnnotationDetail() {
           setAnnotation(annData);
           setReplies(repliesData.items || []);
         }
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }
@@ -142,8 +144,11 @@ export default function AnnotationDetail() {
       setReplyText("");
       setReplyingTo(null);
       await refreshReplies();
-    } catch (err: any) {
-      alert("Failed to post reply: " + err.message);
+    } catch (err) {
+      alert(
+        "Failed to post reply: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
     } finally {
       setPosting(false);
     }
@@ -154,8 +159,11 @@ export default function AnnotationDetail() {
     try {
       await deleteReply(reply.uri || reply.id!);
       await refreshReplies();
-    } catch (err: any) {
-      alert("Failed to delete: " + err.message);
+    } catch (err) {
+      alert(
+        "Failed to delete: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
     }
   };
 

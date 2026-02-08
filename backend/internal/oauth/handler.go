@@ -362,6 +362,20 @@ func (h *Handler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	client := h.getDynamicClient(r)
 
+	if oauthErr := r.URL.Query().Get("error"); oauthErr != "" {
+		errDesc := r.URL.Query().Get("error_description")
+		log.Printf("OAuth callback error: %s - %s", oauthErr, errDesc)
+
+		if state := r.URL.Query().Get("state"); state != "" {
+			h.pendingMu.Lock()
+			delete(h.pending, state)
+			h.pendingMu.Unlock()
+		}
+
+		http.Redirect(w, r, "/login?error="+url.QueryEscape(errDesc), http.StatusFound)
+		return
+	}
+
 	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
 	iss := r.URL.Query().Get("iss")

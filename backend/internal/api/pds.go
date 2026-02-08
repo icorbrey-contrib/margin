@@ -89,8 +89,8 @@ func parseRecord(did, collection, uri, cid string, value json.RawMessage) (inter
 
 		targetSource := record.Target.Source
 
-		targetHash := record.Target.SourceHash
-		if targetHash == "" && targetSource != "" {
+		var targetHash string
+		if targetSource != "" {
 			targetHash = db.HashURL(targetSource)
 		}
 
@@ -154,8 +154,8 @@ func parseRecord(did, collection, uri, cid string, value json.RawMessage) (inter
 			createdAt = time.Now()
 		}
 
-		targetHash := record.Target.SourceHash
-		if targetHash == "" && record.Target.Source != "" {
+		var targetHash string
+		if record.Target.Source != "" {
 			targetHash = db.HashURL(record.Target.Source)
 		}
 
@@ -219,8 +219,8 @@ func parseRecord(did, collection, uri, cid string, value json.RawMessage) (inter
 
 		createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
 
-		sourceHash := record.SourceHash
-		if sourceHash == "" && record.Source != "" {
+		var sourceHash string
+		if record.Source != "" {
 			sourceHash = db.HashURL(record.Source)
 		}
 

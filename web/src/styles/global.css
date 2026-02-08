@@ -10,13 +10,13 @@
   }
 
   html {
-    background-color: #fafafa;
-    color: #18181b;
+    background-color: #f8fafc;
+    color: #0f172a;
   }
 
   html[data-theme="dark"] {
-    background-color: #09090b;
-    color: #fafafa;
+    background-color: #020617;
+    color: #f8fafc;
   }
 
   h1,
@@ -52,7 +52,7 @@
   }
 
   .card {
-    @apply bg-white dark:bg-surface-900 rounded-lg shadow-sm ring-1 ring-black/5 dark:ring-white/5;
+    @apply bg-white dark:bg-surface-900 rounded-xl border border-surface-200/80 dark:border-surface-800 shadow-sm;
   }
 
   .transition-default {

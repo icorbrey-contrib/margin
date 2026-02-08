@@ -16,9 +16,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 flex">
       <Sidebar />
 
-      <div className="flex-1 min-w-0 transition-all duration-300">
-        <div className="flex w-full max-w-[1100px] mx-auto">
-          <main className="flex-1 w-full min-w-0 py-6 px-3 md:px-6 lg:px-8 pb-20 lg:pb-6">
+      <div className="flex-1 min-w-0 transition-all duration-200">
+        <div className="flex w-full max-w-[1200px] mx-auto">
+          <main className="flex-1 w-full min-w-0 py-6 px-3 md:px-5 lg:px-8 pb-20 md:pb-6">
             {children}
           </main>
 

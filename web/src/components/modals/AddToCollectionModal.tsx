@@ -7,7 +7,8 @@ import {
   ChevronRight,
   FolderPlus,
 } from "lucide-react";
-import CollectionIcon, { ICON_MAP } from "../common/CollectionIcon";
+import CollectionIcon from "../common/CollectionIcon";
+import { ICON_MAP } from "../common/iconMap";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
 import {

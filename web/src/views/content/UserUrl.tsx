@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { getUserTargetItems } from "../../api/client";
 import type { AnnotationItem, UserProfile } from "../../types";
 import Card from "../../components/common/Card";
@@ -55,8 +55,8 @@ export default function UserUrlPage() {
         const data = await getUserTargetItems(did, decodedUrl);
         setAnnotations(data.annotations || []);
         setHighlights(data.highlights || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }

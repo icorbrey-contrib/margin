@@ -20,7 +20,7 @@ export default function EditProfileModal({
   const [links, setLinks] = useState<string[]>(profile.links || []);
   const [newLink, setNewLink] = useState("");
 
-  const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
+  const [avatarBlob, setAvatarBlob] = useState<Blob | string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -49,8 +49,12 @@ export default function EditProfileModal({
     try {
       const result = await uploadAvatar(file);
       setAvatarBlob(result.blob);
-    } catch (err: any) {
-      setError("Failed to upload: " + err.message);
+      setAvatarBlob(result.blob);
+    } catch (err) {
+      setError(
+        "Failed to upload: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
       setAvatarPreview(null);
     } finally {
       setUploading(false);
@@ -91,8 +95,9 @@ export default function EditProfileModal({
         avatar: avatarPreview || profile.avatar,
       });
       onClose();
-    } catch (err: any) {
-      setError(err.message);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "../ui";
-import { ExternalLink, AlertTriangle, X } from "lucide-react";
+import { ExternalLink, AlertTriangle } from "lucide-react";
 import { addSkippedHostname } from "../../store/preferences";
 
 interface ExternalLinkModalProps {

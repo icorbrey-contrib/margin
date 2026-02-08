@@ -271,6 +271,10 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				annotations, _ = h.db.GetMarginAnnotations(fetchLimit, 0)
 			case "semble":
 				annotations, _ = h.db.GetSembleAnnotations(fetchLimit, 0)
+			case "popular":
+				annotations, _ = h.db.GetPopularAnnotations(fetchLimit, 0)
+			case "shelved":
+				annotations, _ = h.db.GetShelvedAnnotations(fetchLimit, 0)
 			default:
 				annotations, _ = h.db.GetRecentAnnotations(fetchLimit, 0)
 			}
@@ -281,6 +285,10 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				highlights, _ = h.db.GetMarginHighlights(fetchLimit, 0)
 			case "semble":
 				highlights, _ = h.db.GetSembleHighlights(fetchLimit, 0)
+			case "popular":
+				highlights, _ = h.db.GetPopularHighlights(fetchLimit, 0)
+			case "shelved":
+				highlights, _ = h.db.GetShelvedHighlights(fetchLimit, 0)
 			default:
 				highlights, _ = h.db.GetRecentHighlights(fetchLimit, 0)
 			}
@@ -291,12 +299,23 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				bookmarks, _ = h.db.GetMarginBookmarks(fetchLimit, 0)
 			case "semble":
 				bookmarks, _ = h.db.GetSembleBookmarks(fetchLimit, 0)
+			case "popular":
+				bookmarks, _ = h.db.GetPopularBookmarks(fetchLimit, 0)
+			case "shelved":
+				bookmarks, _ = h.db.GetShelvedBookmarks(fetchLimit, 0)
 			default:
 				bookmarks, _ = h.db.GetRecentBookmarks(fetchLimit, 0)
 			}
 		}
 		if motivation == "" {
-			collectionItems, err = h.db.GetRecentCollectionItems(fetchLimit, 0)
+			switch feedType {
+			case "popular":
+				collectionItems, err = h.db.GetPopularCollectionItems(fetchLimit, 0)
+			case "shelved":
+				collectionItems, err = h.db.GetShelvedCollectionItems(fetchLimit, 0)
+			default:
+				collectionItems, err = h.db.GetRecentCollectionItems(fetchLimit, 0)
+			}
 			if err != nil {
 				log.Printf("Error fetching collection items: %v\n", err)
 			}
@@ -374,7 +393,15 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 			case APIBookmark:
 				uri = v.ID
 			case APICollectionItem:
-				uri = v.ID
+				if v.Annotation != nil {
+					uri = v.Annotation.ID
+				} else if v.Highlight != nil {
+					uri = v.Highlight.ID
+				} else if v.Bookmark != nil {
+					uri = v.Bookmark.ID
+				} else {
+					uri = v.ID
+				}
 			}
 			if strings.Contains(uri, "network.cosmik") {
 				isSemble = true
@@ -389,19 +416,14 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				if !isSemble {
 					filtered = append(filtered, item)
 				}
-			case "popular":
+			case "popular", "shelved":
 				filtered = append(filtered, item)
-			case "shelved":
-				createdAt := getCreatedAt(item)
-				popularity := getPopularity(item)
-				if time.Since(createdAt) > 24*time.Hour && popularity == 0 {
-					filtered = append(filtered, item)
-				}
 			}
 		}
 		feed = filtered
 	}
 
+	// ...
 	switch feedType {
 	case "popular":
 		sortFeedByPopularity(feed)
@@ -409,11 +431,23 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		sortFeed(feed)
 	}
 
+	log.Printf("[DEBUG] FeedType: %s, Total Items before slice: %d", feedType, len(feed))
+	if len(feed) > 0 {
+		first := feed[0]
+		switch v := first.(type) {
+		case APIAnnotation:
+			log.Printf("[DEBUG] First Item (Annotation): %s, Likes: %d, Replies: %d", v.ID, v.LikeCount, v.ReplyCount)
+		case APIHighlight:
+			log.Printf("[DEBUG] First Item (Highlight): %s, Likes: %d, Replies: %d", v.ID, v.LikeCount, v.ReplyCount)
+		}
+	}
+
 	if offset < len(feed) {
 		feed = feed[offset:]
 	} else {
 		feed = []interface{}{}
 	}
+	// ...
 
 	if len(feed) > limit {
 		feed = feed[:limit]
@@ -619,7 +653,12 @@ func sortFeedByPopularity(feed []interface{}) {
 	sort.Slice(feed, func(i, j int) bool {
 		p1 := getPopularity(feed[i])
 		p2 := getPopularity(feed[j])
-		return p1 > p2
+		if p1 != p2 {
+			return p1 > p2
+		}
+		t1 := getCreatedAt(feed[i])
+		t2 := getCreatedAt(feed[j])
+		return t1.After(t2)
 	})
 }
 

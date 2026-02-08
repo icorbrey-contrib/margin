@@ -21,13 +21,6 @@ const SembleLogo = () => (
 
 const BLUESKY_COLOR = "#1185fe";
 
-interface ShareOption {
-  name: string;
-  icon: React.ReactNode;
-  action: () => void;
-  highlight?: boolean;
-}
-
 interface ShareMenuProps {
   uri: string;
   text?: string;

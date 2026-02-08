@@ -655,8 +655,8 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 		}
 	}
 
-	result := make([]APICollectionItem, len(items))
-	for i, item := range items {
+	var result []APICollectionItem
+	for _, item := range items {
 		apiItem := APICollectionItem{
 			ID:            item.URI,
 			Type:          "CollectionItem",
@@ -670,12 +670,16 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 			apiItem.Collection = &coll
 		}
 
+		isValid := false
 		if val, ok := annotationsMap[item.AnnotationURI]; ok {
 			apiItem.Annotation = &val
+			isValid = true
 		} else if val, ok := highlightsMap[item.AnnotationURI]; ok {
 			apiItem.Highlight = &val
+			isValid = true
 		} else if val, ok := bookmarksMap[item.AnnotationURI]; ok {
 			apiItem.Bookmark = &val
+			isValid = true
 		} else if strings.Contains(item.AnnotationURI, "network.cosmik.card") {
 			apiItem.Annotation = &APIAnnotation{
 				ID:   item.AnnotationURI,
@@ -687,9 +691,12 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 				CreatedAt: item.CreatedAt,
 				Author:    profiles[item.AuthorDID],
 			}
+			isValid = true
 		}
 
-		result[i] = apiItem
+		if isValid && apiItem.Collection != nil {
+			result = append(result, apiItem)
+		}
 	}
 	return result, nil
 }

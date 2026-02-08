@@ -1,0 +1,588 @@
+import React from "react";
+import { useStore } from "@nanostores/react";
+import { Link } from "react-router-dom";
+import { $theme } from "../store/theme";
+import {
+  MessageSquareText,
+  Highlighter,
+  Bookmark,
+  FolderOpen,
+  Keyboard,
+  PanelRight,
+  MousePointerClick,
+  Shield,
+  Users,
+  Sparkles,
+  Chrome,
+  ArrowRight,
+  Github,
+  ExternalLink,
+  Hash,
+  Heart,
+  Eye,
+} from "lucide-react";
+import { AppleIcon } from "../components/common/Icons";
+import { FaFirefox, FaEdge } from "react-icons/fa";
+
+function FeatureCard({
+  icon: Icon,
+  title,
+  description,
+  accent = false,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={`group p-6 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+        accent
+          ? "bg-primary-50 dark:bg-primary-950/30 border-primary-200/50 dark:border-primary-800/40"
+          : "bg-white dark:bg-surface-900 border-surface-200/80 dark:border-surface-800"
+      }`}
+    >
+      <div
+        className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-colors ${
+          accent
+            ? "bg-primary-600 text-white"
+            : "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 group-hover:bg-primary-600 group-hover:text-white dark:group-hover:bg-primary-500"
+        }`}
+      >
+        <Icon size={20} />
+      </div>
+      <h3 className="font-display font-semibold text-base mb-2 text-surface-900 dark:text-white">
+        {title}
+      </h3>
+      <p className="text-sm text-surface-500 dark:text-surface-400 leading-relaxed">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function ExtensionFeature({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex gap-4 items-start">
+      <div className="w-9 h-9 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 text-primary-600 dark:text-primary-400">
+        <Icon size={18} />
+      </div>
+      <div>
+        <h4 className="font-semibold text-sm text-surface-900 dark:text-white mb-1">
+          {title}
+        </h4>
+        <p className="text-sm text-surface-500 dark:text-surface-400 leading-relaxed">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function About() {
+  useStore($theme); // ensure theme is applied on this page
+
+  const [browser] = React.useState<
+    "chrome" | "firefox" | "edge" | "safari" | "other"
+  >(() => {
+    if (typeof navigator === "undefined") return "other";
+    const ua = navigator.userAgent;
+    if (/Edg\//i.test(ua)) return "edge";
+    if (/Firefox/i.test(ua)) return "firefox";
+    if (/^((?!chrome|android).)*safari/i.test(ua)) return "safari";
+    if (/Chrome/i.test(ua)) return "chrome";
+    return "other";
+  });
+
+  const extensionLink =
+    browser === "firefox"
+      ? "https://addons.mozilla.org/en-US/firefox/addon/margin/"
+      : browser === "edge"
+        ? "https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn"
+        : "https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa";
+
+  const ExtensionIcon =
+    browser === "firefox" ? FaFirefox : browser === "edge" ? FaEdge : Chrome;
+  const extensionLabel =
+    browser === "firefox" ? "Firefox" : browser === "edge" ? "Edge" : "Chrome";
+
+  return (
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-950">
+      <nav className="sticky top-0 z-50 bg-surface-50/80 dark:bg-surface-950/80 backdrop-blur-xl border-b border-surface-200/60 dark:border-surface-800/60">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Link to="/home" className="flex items-center gap-2.5 group">
+            <img src="/logo.svg" alt="Margin" className="w-7 h-7" />
+            <span className="font-display font-bold text-lg tracking-tight text-surface-900 dark:text-white">
+              Margin
+            </span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/home"
+              className="text-sm text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white transition-colors px-3 py-1.5"
+            >
+              Feed
+            </Link>
+            <a
+              href={extensionLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400 text-white rounded-lg transition-colors"
+            >
+              Get Extension
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <section>
+        <div className="max-w-5xl mx-auto px-6 pt-24 pb-20 md:pt-32 md:pb-28 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400 text-xs font-medium mb-6">
+            <Sparkles size={13} />
+            Built on the AT Protocol
+          </div>
+
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-surface-900 dark:text-white leading-[1.1] mb-6">
+            Write on the margins
+            <br />
+            <span className="text-primary-600 dark:text-primary-400">
+              of the internet
+            </span>
+          </h1>
+
+          <p className="text-lg md:text-xl text-surface-500 dark:text-surface-400 max-w-2xl mx-auto leading-relaxed mb-10">
+            Margin is an open annotation layer for the internet. Highlight text,
+            leave notes, and bookmark pages, all stored on your decentralized
+            identity with the{" "}
+            <a
+              href="https://atproto.com"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              AT Protocol
+            </a>
+            .
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 px-7 py-3 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400 text-white rounded-xl font-semibold transition-colors"
+            >
+              Get Started
+              <ArrowRight size={16} />
+            </Link>
+            <a
+              href={extensionLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-7 py-3 bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-700 dark:text-surface-200 hover:text-surface-900 dark:hover:text-white rounded-xl font-semibold transition-colors"
+            >
+              <ExtensionIcon size={16} />
+              Install for {extensionLabel}
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-6 py-20 md:py-24">
+        <div className="text-center mb-12">
+          <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-surface-900 dark:text-white mb-3">
+            Everything you need to engage with the web
+          </h2>
+          <p className="text-surface-500 dark:text-surface-400 max-w-xl mx-auto">
+            More than bookmarks. A full toolkit for reading, thinking, and
+            sharing on the open web.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <FeatureCard
+            icon={MessageSquareText}
+            title="Annotations"
+            description="Leave notes on any web page. Start discussions, share insights, or just jot down your thoughts for later."
+            accent
+          />
+          <FeatureCard
+            icon={Highlighter}
+            title="Highlights"
+            description="Select and highlight text on any page with customizable colors. Your highlights are rendered inline with the CSS Highlights API."
+          />
+          <FeatureCard
+            icon={Bookmark}
+            title="Bookmarks"
+            description="Save pages with one click or a keyboard shortcut. All your bookmarks are synced to your AT Protocol identity."
+          />
+          <FeatureCard
+            icon={FolderOpen}
+            title="Collections"
+            description="Organize your annotations, highlights, and bookmarks into themed collections. Share them publicly or keep them private."
+          />
+          <FeatureCard
+            icon={Users}
+            title="Social Discovery"
+            description="See what others are saying about the pages you visit. Discover annotations, trending tags, and connect with other readers."
+          />
+          <FeatureCard
+            icon={Hash}
+            title="Tags & Search"
+            description="Tag your annotations for easy retrieval. Search by URL, tag, or content to find exactly what you're looking for."
+          />
+        </div>
+      </section>
+
+      <section className="bg-surface-100/50 dark:bg-surface-900/50 border-y border-surface-200/60 dark:border-surface-800/60">
+        <div className="max-w-5xl mx-auto px-6 py-20 md:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-200/60 dark:bg-surface-800 text-surface-600 dark:text-surface-400 text-xs font-medium mb-5">
+                <ExtensionIcon size={13} />
+                Browser Extension
+              </div>
+              <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-surface-900 dark:text-white mb-4">
+                Your annotation toolkit,
+                <br />
+                right in the browser
+              </h2>
+              <p className="text-surface-500 dark:text-surface-400 leading-relaxed mb-8">
+                The Margin extension brings the full annotation experience
+                directly into every page you visit. Just select, annotate, and
+                go.
+              </p>
+
+              <div className="space-y-5">
+                <ExtensionFeature
+                  icon={Eye}
+                  title="Inline Overlay"
+                  description="See annotations and highlights rendered directly on the page. Uses the CSS Highlights API for beautiful, native-feeling text underlines."
+                />
+                <ExtensionFeature
+                  icon={MousePointerClick}
+                  title="Context Menu & Selection"
+                  description="Right-click any selected text to annotate, highlight, or quote it. Or just right-click the page to bookmark it instantly."
+                />
+                <ExtensionFeature
+                  icon={Keyboard}
+                  title="Keyboard Shortcuts"
+                  description="Toggle the overlay, bookmark the current page, or annotate selected text without reaching for the mouse."
+                />
+                <ExtensionFeature
+                  icon={PanelRight}
+                  title="Side Panel"
+                  description="Open the Margin side panel to browse annotations, bookmarks, and collections without leaving the page you're reading."
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-8 flex-wrap">
+                <a
+                  href="https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-surface-900 dark:bg-white text-white dark:text-surface-900 rounded-lg font-medium text-sm transition-all hover:opacity-90"
+                >
+                  <Chrome size={15} />
+                  Chrome Web Store
+                  <ExternalLink size={12} />
+                </a>
+                <a
+                  href="https://addons.mozilla.org/en-US/firefox/addon/margin/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-200 rounded-lg font-medium text-sm transition-all hover:bg-surface-200 dark:hover:bg-surface-700 border border-surface-200/80 dark:border-surface-700/80"
+                >
+                  <FaFirefox size={15} />
+                  Firefox Add-ons
+                  <ExternalLink size={12} />
+                </a>
+                <a
+                  href="https://microsoftedge.microsoft.com/addons/detail/margin/nfjnmllpdgcdnhmmggjihjbidmeadddn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-200 rounded-lg font-medium text-sm transition-all hover:bg-surface-200 dark:hover:bg-surface-700 border border-surface-200/80 dark:border-surface-700/80"
+                >
+                  <FaEdge size={15} />
+                  Edge Add-ons
+                  <ExternalLink size={12} />
+                </a>
+                <a
+                  href="https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-200 rounded-lg font-medium text-sm transition-all hover:bg-surface-200 dark:hover:bg-surface-700 border border-surface-200/80 dark:border-surface-700/80"
+                >
+                  <AppleIcon size={15} />
+                  iOS Shortcut
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+
+            <div className="relative hidden lg:block">
+              <div className="relative rounded-2xl border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 p-6 shadow-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-400/60" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
+                    <div className="w-3 h-3 rounded-full bg-green-400/60" />
+                  </div>
+                  <div className="flex-1 mx-3 bg-surface-200 dark:bg-surface-800 rounded-md h-6 flex items-center px-3">
+                    <span className="text-[10px] text-surface-400 truncate">
+                      example.com/article/how-to-think-clearly
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm text-surface-600 dark:text-surface-300 leading-relaxed">
+                  <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-3/4" />
+                  <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-full" />
+                  <div className="flex gap-0.5 flex-wrap">
+                    <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-1/4" />
+                    <span className="px-1 py-0.5 bg-yellow-200/70 dark:bg-yellow-500/30 rounded text-xs text-surface-700 dark:text-yellow-200 font-medium leading-none">
+                      The point here is that Margin is indeed
+                    </span>
+                    <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-1/5" />
+                  </div>
+                  <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-5/6" />
+                  <div className="flex gap-0.5 flex-wrap">
+                    <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-2/5" />
+                    <span className="px-1 py-0.5 bg-primary-200/70 dark:bg-primary-500/30 rounded text-xs text-primary-700 dark:text-primary-200 font-medium leading-none">
+                      the best thing ever
+                    </span>
+                    <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-1/4" />
+                  </div>
+                  <div className="h-3 bg-surface-200 dark:bg-surface-800 rounded w-2/3" />
+                </div>
+
+                <div className="absolute -right-4 top-1/3 w-56 bg-white dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 shadow-lg p-3.5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-[10px] font-bold">
+                      S
+                    </div>
+                    <span className="text-xs font-semibold text-surface-900 dark:text-white">
+                      @scan.margin.cafe
+                    </span>
+                  </div>
+                  <p className="text-xs text-surface-600 dark:text-surface-300 leading-relaxed">
+                    I agree, Margin is just so good, like the other day I was
+                    drinking some of that Margin for breakfast
+                  </p>
+                  <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-surface-100 dark:border-surface-700">
+                    <span className="text-[10px] text-surface-400 flex items-center gap-1">
+                      <Heart size={10} /> 3
+                    </span>
+                    <span className="text-[10px] text-surface-400 flex items-center gap-1">
+                      <MessageSquareText size={10} /> 1
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-6 py-20 md:py-24">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400 text-xs font-medium mb-5">
+              <Shield size={13} />
+              Decentralized
+            </div>
+            <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-surface-900 dark:text-white mb-4">
+              Your data, your identity
+            </h2>
+            <p className="text-surface-500 dark:text-surface-400 leading-relaxed mb-6">
+              Margin is built on the{" "}
+              <a
+                href="https://atproto.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary-600 dark:text-primary-400 hover:underline font-medium"
+              >
+                AT Protocol
+              </a>
+              , the open protocol that powers apps like Bluesky. Your
+              annotations, highlights, and bookmarks are stored in your personal
+              data repository, not locked in a silo.
+            </p>
+            <ul className="space-y-3 text-sm text-surface-600 dark:text-surface-300">
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary-600 dark:bg-primary-400" />
+                </div>
+                Sign in with your AT Protocol handle, no new account needed
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary-600 dark:bg-primary-400" />
+                </div>
+                Your data lives in your PDS, portable and under your control
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary-600 dark:bg-primary-400" />
+                </div>
+                Custom Lexicon schemas for annotations, highlights, collections
+                & more
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary-600 dark:bg-primary-400" />
+                </div>
+                Fully open source, check out the code and contribute
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-2xl bg-surface-900 dark:bg-surface-800 p-5 text-sm font-mono shadow-xl border border-surface-800 dark:border-surface-700">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="text-xs text-surface-500">lexicon</div>
+              <div className="text-xs text-primary-400 px-2 py-0.5 rounded bg-primary-400/10">
+                at.margin.annotation
+              </div>
+            </div>
+            <div className="space-y-1 text-[13px] leading-relaxed">
+              <span className="text-surface-500">{"{"}</span>
+              <div className="pl-4">
+                <span className="text-green-400">"type"</span>
+                <span className="text-surface-400">: </span>
+                <span className="text-amber-400">"record"</span>
+                <span className="text-surface-400">,</span>
+              </div>
+              <div className="pl-4">
+                <span className="text-green-400">"record"</span>
+                <span className="text-surface-400">: {"{"}</span>
+              </div>
+              <div className="pl-8">
+                <span className="text-green-400">"body"</span>
+                <span className="text-surface-400">: </span>
+                <span className="text-amber-400">"Great insight..."</span>
+                <span className="text-surface-400">,</span>
+              </div>
+              <div className="pl-8">
+                <span className="text-green-400">"target"</span>
+                <span className="text-surface-400">: {"{"}</span>
+              </div>
+              <div className="pl-12">
+                <span className="text-green-400">"source"</span>
+                <span className="text-surface-400">: </span>
+                <span className="text-sky-400">"https://..."</span>
+                <span className="text-surface-400">,</span>
+              </div>
+              <div className="pl-12">
+                <span className="text-green-400">"selector"</span>
+                <span className="text-surface-400">: {"{"}</span>
+              </div>
+              <div className="pl-16">
+                <span className="text-green-400">"exact"</span>
+                <span className="text-surface-400">: </span>
+                <span className="text-amber-400">"selected text"</span>
+              </div>
+              <div className="pl-12">
+                <span className="text-surface-400">{"}"}</span>
+              </div>
+              <div className="pl-8">
+                <span className="text-surface-400">{"}"}</span>
+              </div>
+              <div className="pl-4">
+                <span className="text-surface-400">{"}"}</span>
+              </div>
+              <span className="text-surface-500">{"}"}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-surface-200/60 dark:border-surface-800/60">
+        <div className="max-w-5xl mx-auto px-6 py-20 md:py-24 text-center">
+          <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-surface-900 dark:text-white mb-4">
+            Start writing on the margins
+          </h2>
+          <p className="text-surface-500 dark:text-surface-400 max-w-lg mx-auto mb-8">
+            Join the open annotation layer. Sign in with your AT Protocol
+            identity and install the extension to get started.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 px-7 py-3 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400 text-white rounded-xl font-semibold transition-colors"
+            >
+              Sign in
+              <ArrowRight size={16} />
+            </Link>
+            <a
+              href="https://github.com/margin-at"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-7 py-3 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition-colors font-medium"
+            >
+              <Github size={16} />
+              View on GitHub
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-surface-200/60 dark:border-surface-800/60">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/logo.svg"
+                alt="Margin"
+                className="w-5 h-5 opacity-60"
+              />
+              <span className="text-sm text-surface-400 dark:text-surface-500">
+                © 2026 Margin
+              </span>
+            </div>
+            <div className="flex items-center gap-5 text-sm text-surface-400 dark:text-surface-500">
+              <Link
+                to="/home"
+                className="hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+              >
+                Feed
+              </Link>
+              <a
+                href="/privacy"
+                className="hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+              >
+                Privacy
+              </a>
+              <a
+                href="/terms"
+                className="hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+              >
+                Terms
+              </a>
+              <a
+                href="https://github.com/margin-at"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+              >
+                GitHub
+              </a>
+              <a
+                href="mailto:hello@margin.at"
+                className="hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+              >
+                Contact
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

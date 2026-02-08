@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
@@ -16,7 +16,7 @@ import {
   Clock,
   Globe,
 } from "lucide-react";
-import { clsx } from "clsx";
+
 import { EmptyState, Tabs } from "../../components/ui";
 
 export default function UrlPage() {
@@ -41,17 +41,66 @@ export default function UrlPage() {
     if (stored) {
       try {
         setRecentSearches(JSON.parse(stored).slice(0, 5));
-      } catch {}
+      } catch (e) {
+        console.warn("Failed to parse recent searches", e);
+      }
     }
   }, []);
 
-  const saveRecentSearch = (q: string) => {
-    const updated = [q, ...recentSearches.filter((s) => s !== q)].slice(0, 5);
-    setRecentSearches(updated);
-    localStorage.setItem("margin-recent-searches", JSON.stringify(updated));
-  };
+  const saveRecentSearch = useCallback((q: string) => {
+    setRecentSearches((prev) => {
+      const updated = [q, ...prev.filter((s) => s !== q)].slice(0, 5);
+      localStorage.setItem("margin-recent-searches", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   useEffect(() => {
+    const performSearch = async (urlOrHandle: string) => {
+      if (!urlOrHandle.trim()) return;
+
+      setLoading(true);
+      setError(null);
+      setSearched(true);
+      setAnnotations([]);
+      setHighlights([]);
+
+      const isProtocol =
+        urlOrHandle.startsWith("http://") || urlOrHandle.startsWith("https://");
+
+      if (isProtocol) {
+        try {
+          const data = await getByTarget(urlOrHandle);
+          setAnnotations(data.annotations || []);
+          setHighlights(data.highlights || []);
+          saveRecentSearch(urlOrHandle);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Search failed");
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        try {
+          const actorRes = await searchActors(urlOrHandle);
+          if (actorRes?.actors?.length > 0) {
+            const match = actorRes.actors[0];
+            navigate(`/profile/${encodeURIComponent(match.handle)}`, {
+              replace: true,
+            });
+            return;
+          } else {
+            setError(
+              "User not found. To search for a URL, please include 'http://' or 'https://'.",
+            );
+            setLoading(false);
+          }
+        } catch {
+          setError("Failed to search user.");
+          setLoading(false);
+        }
+      }
+    };
+
     if (query) {
       performSearch(query);
     } else {
@@ -60,52 +109,7 @@ export default function UrlPage() {
       setHighlights([]);
       setLoading(false);
     }
-  }, [query]);
-
-  const performSearch = async (urlOrHandle: string) => {
-    if (!urlOrHandle.trim()) return;
-
-    setLoading(true);
-    setError(null);
-    setSearched(true);
-    setAnnotations([]);
-    setHighlights([]);
-
-    const isProtocol =
-      urlOrHandle.startsWith("http://") || urlOrHandle.startsWith("https://");
-
-    if (isProtocol) {
-      try {
-        const data = await getByTarget(urlOrHandle);
-        setAnnotations(data.annotations || []);
-        setHighlights(data.highlights || []);
-        saveRecentSearch(urlOrHandle);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      try {
-        const actorRes = await searchActors(urlOrHandle);
-        if (actorRes?.actors?.length > 0) {
-          const match = actorRes.actors[0];
-          navigate(`/profile/${encodeURIComponent(match.handle)}`, {
-            replace: true,
-          });
-          return;
-        } else {
-          setError(
-            "User not found. To search for a URL, please include 'http://' or 'https://'.",
-          );
-          setLoading(false);
-        }
-      } catch (err: any) {
-        setError("Failed to search user.");
-        setLoading(false);
-      }
-    }
-  };
+  }, [query, navigate, saveRecentSearch]);
 
   const myAnnotations = user
     ? annotations.filter((a) => (a.author?.did || a.creator?.did) === user.did)
@@ -127,8 +131,8 @@ export default function UrlPage() {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      prompt("Copy this link:", shareUrl);
+    } catch (err) {
+      console.error("Failed to copy link:", err);
     }
   };
 
@@ -271,7 +275,9 @@ export default function UrlPage() {
                 },
               ]}
               activeTab={activeTab}
-              onChange={(id) => setActiveTab(id as any)}
+              onChange={(id: string) =>
+                setActiveTab(id as "all" | "annotations" | "highlights")
+              }
             />
           </div>
 

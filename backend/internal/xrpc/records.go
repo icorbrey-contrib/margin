@@ -71,6 +71,12 @@ func (s *TextPositionSelector) Validate() error {
 	return nil
 }
 
+type Generator struct {
+	ID       string `json:"id,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Homepage string `json:"homepage,omitempty"`
+}
+
 type AnnotationRecord struct {
 	Type       string           `json:"$type"`
 	Motivation string           `json:"motivation,omitempty"`
@@ -78,6 +84,8 @@ type AnnotationRecord struct {
 	Target     AnnotationTarget `json:"target"`
 	Tags       []string         `json:"tags,omitempty"`
 	Facets     []Facet          `json:"facets,omitempty"`
+	Generator  *Generator       `json:"generator,omitempty"`
+	Rights     string           `json:"rights,omitempty"`
 	CreatedAt  string           `json:"createdAt"`
 }
 
@@ -193,6 +201,8 @@ type HighlightRecord struct {
 	Target    AnnotationTarget `json:"target"`
 	Color     string           `json:"color,omitempty"`
 	Tags      []string         `json:"tags,omitempty"`
+	Generator *Generator       `json:"generator,omitempty"`
+	Rights    string           `json:"rights,omitempty"`
 	CreatedAt string           `json:"createdAt"`
 }
 
@@ -297,13 +307,15 @@ func NewLikeRecord(subjectURI, subjectCID string) *LikeRecord {
 }
 
 type BookmarkRecord struct {
-	Type        string   `json:"$type"`
-	Source      string   `json:"source"`
-	SourceHash  string   `json:"sourceHash"`
-	Title       string   `json:"title,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	CreatedAt   string   `json:"createdAt"`
+	Type        string     `json:"$type"`
+	Source      string     `json:"source"`
+	SourceHash  string     `json:"sourceHash"`
+	Title       string     `json:"title,omitempty"`
+	Description string     `json:"description,omitempty"`
+	Tags        []string   `json:"tags,omitempty"`
+	Generator   *Generator `json:"generator,omitempty"`
+	Rights      string     `json:"rights,omitempty"`
+	CreatedAt   string     `json:"createdAt"`
 }
 
 func (r *BookmarkRecord) Validate() error {
