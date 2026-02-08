@@ -189,13 +189,13 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 				} else {
 					err = e
 				}
-				case xrpc.CollectionAPIKey:
-					localURIs, err = s.db.GetAPIKeyURIs(did)
-					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionAPIKey)
-				case xrpc.CollectionPreferences:
-					localURIs, err = s.db.GetPreferenceURIs(did)
-					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionPreferences)
-				case xrpc.CollectionSembleCollectionLink:
+			case xrpc.CollectionAPIKey:
+				localURIs, err = s.db.GetAPIKeyURIs(did)
+				localURIs = filterURIsByCollection(localURIs, xrpc.CollectionAPIKey)
+			case xrpc.CollectionPreferences:
+				localURIs, err = s.db.GetPreferenceURIs(did)
+				localURIs = filterURIsByCollection(localURIs, xrpc.CollectionPreferences)
+			case xrpc.CollectionSembleCollectionLink:
 				items, e := s.db.GetCollectionItemsByAuthor(did)
 				if e == nil {
 					for _, item := range items {

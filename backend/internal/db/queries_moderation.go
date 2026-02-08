@@ -2,7 +2,6 @@ package db
 
 import "time"
 
-
 func (db *DB) CreateBlock(actorDID, subjectDID string) error {
 	query := `INSERT INTO blocks (actor_did, subject_did, created_at) VALUES (?, ?, ?)
 		ON CONFLICT(actor_did, subject_did) DO NOTHING`
@@ -80,7 +79,6 @@ func (db *DB) GetBlockedByDIDs(actorDID string) ([]string, error) {
 	}
 	return dids, nil
 }
-
 
 func (db *DB) CreateMute(actorDID, subjectDID string) error {
 	query := `INSERT INTO mutes (actor_did, subject_did, created_at) VALUES (?, ?, ?)
@@ -188,7 +186,6 @@ func (db *DB) GetViewerRelationship(viewerDID, subjectDID string) (blocked bool,
 	return
 }
 
-
 func (db *DB) CreateReport(reporterDID, subjectDID string, subjectURI *string, reasonType string, reasonText *string) (int, error) {
 	query := `INSERT INTO moderation_reports (reporter_did, subject_did, subject_uri, reason_type, reason_text, status, created_at)
 		VALUES (?, ?, ?, ?, ?, 'pending', ?)`
@@ -283,7 +280,6 @@ func (db *DB) GetReportCount(status string) (int, error) {
 	err := db.QueryRow(db.Rebind(query), args...).Scan(&count)
 	return count, err
 }
-
 
 func (db *DB) CreateContentLabel(src, uri, val, createdBy string) error {
 	query := `INSERT INTO content_labels (src, uri, val, neg, created_by, created_at) VALUES (?, ?, ?, 0, ?, ?)`

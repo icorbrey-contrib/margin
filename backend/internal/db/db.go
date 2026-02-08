@@ -171,25 +171,25 @@ type Mute struct {
 }
 
 type ModerationReport struct {
-	ID           int        `json:"id"`
-	ReporterDID  string     `json:"reporterDid"`
-	SubjectDID   string     `json:"subjectDid"`
-	SubjectURI   *string    `json:"subjectUri,omitempty"`
-	ReasonType   string     `json:"reasonType"`
-	ReasonText   *string    `json:"reasonText,omitempty"`
-	Status       string     `json:"status"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	ResolvedAt   *time.Time `json:"resolvedAt,omitempty"`
-	ResolvedBy   *string    `json:"resolvedBy,omitempty"`
+	ID          int        `json:"id"`
+	ReporterDID string     `json:"reporterDid"`
+	SubjectDID  string     `json:"subjectDid"`
+	SubjectURI  *string    `json:"subjectUri,omitempty"`
+	ReasonType  string     `json:"reasonType"`
+	ReasonText  *string    `json:"reasonText,omitempty"`
+	Status      string     `json:"status"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	ResolvedAt  *time.Time `json:"resolvedAt,omitempty"`
+	ResolvedBy  *string    `json:"resolvedBy,omitempty"`
 }
 
 type ModerationAction struct {
-	ID         int       `json:"id"`
-	ReportID   int       `json:"reportId"`
-	ActorDID   string    `json:"actorDid"`
-	Action     string    `json:"action"`
-	Comment    *string   `json:"comment,omitempty"`
-	CreatedAt  time.Time `json:"createdAt"`
+	ID        int       `json:"id"`
+	ReportID  int       `json:"reportId"`
+	ActorDID  string    `json:"actorDid"`
+	Action    string    `json:"action"`
+	Comment   *string   `json:"comment,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type ContentLabel struct {

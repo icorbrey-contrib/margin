@@ -23,8 +23,8 @@ type LabelPreference struct {
 
 type PreferencesResponse struct {
 	ExternalLinkSkippedHostnames []string              `json:"externalLinkSkippedHostnames"`
-	SubscribedLabelers           []LabelerSubscription  `json:"subscribedLabelers"`
-	LabelPreferences             []LabelPreference      `json:"labelPreferences"`
+	SubscribedLabelers           []LabelerSubscription `json:"subscribedLabelers"`
+	LabelPreferences             []LabelPreference     `json:"labelPreferences"`
 }
 
 func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {

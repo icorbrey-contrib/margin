@@ -332,16 +332,16 @@ func NewLikeRecord(subjectURI, subjectCID string) *LikeRecord {
 }
 
 type BookmarkRecord struct {
-	Type        string     `json:"$type"`
-	Source      string     `json:"source"`
-	SourceHash  string     `json:"sourceHash"`
-	Title       string     `json:"title,omitempty"`
-	Description string     `json:"description,omitempty"`
-	Tags        []string   `json:"tags,omitempty"`
-	Generator   *Generator `json:"generator,omitempty"`
-	Rights      string     `json:"rights,omitempty"`
+	Type        string      `json:"$type"`
+	Source      string      `json:"source"`
+	SourceHash  string      `json:"sourceHash"`
+	Title       string      `json:"title,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Tags        []string    `json:"tags,omitempty"`
+	Generator   *Generator  `json:"generator,omitempty"`
+	Rights      string      `json:"rights,omitempty"`
 	Labels      *SelfLabels `json:"labels,omitempty"`
-	CreatedAt   string     `json:"createdAt"`
+	CreatedAt   string      `json:"createdAt"`
 }
 
 func (r *BookmarkRecord) Validate() error {
@@ -474,8 +474,8 @@ type LabelPreference struct {
 type PreferencesRecord struct {
 	Type                         string                `json:"$type"`
 	ExternalLinkSkippedHostnames []string              `json:"externalLinkSkippedHostnames,omitempty"`
-	SubscribedLabelers           []LabelerSubscription  `json:"subscribedLabelers,omitempty"`
-	LabelPreferences             []LabelPreference      `json:"labelPreferences,omitempty"`
+	SubscribedLabelers           []LabelerSubscription `json:"subscribedLabelers,omitempty"`
+	LabelPreferences             []LabelPreference     `json:"labelPreferences,omitempty"`
 	CreatedAt                    string                `json:"createdAt"`
 }
 

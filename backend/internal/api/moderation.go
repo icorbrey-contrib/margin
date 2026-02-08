@@ -110,7 +110,6 @@ func (m *ModerationHandler) GetBlocks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"items": items})
 }
 
-
 func (m *ModerationHandler) MuteUser(w http.ResponseWriter, r *http.Request) {
 	session, err := m.refresher.GetSessionWithAutoRefresh(r)
 	if err != nil {
@@ -225,7 +224,6 @@ func (m *ModerationHandler) GetRelationship(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-
 func (m *ModerationHandler) CreateReport(w http.ResponseWriter, r *http.Request) {
 	session, err := m.refresher.GetSessionWithAutoRefresh(r)
 	if err != nil {
@@ -250,12 +248,12 @@ func (m *ModerationHandler) CreateReport(w http.ResponseWriter, r *http.Request)
 	}
 
 	validReasons := map[string]bool{
-		"spam":        true,
-		"violation":   true,
-		"misleading":  true,
-		"sexual":      true,
-		"rude":        true,
-		"other":       true,
+		"spam":       true,
+		"violation":  true,
+		"misleading": true,
+		"sexual":     true,
+		"rude":       true,
+		"other":      true,
 	}
 
 	if !validReasons[req.ReasonType] {
@@ -273,7 +271,6 @@ func (m *ModerationHandler) CreateReport(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "status": "ok"})
 }
-
 
 func (m *ModerationHandler) AdminGetReports(w http.ResponseWriter, r *http.Request) {
 	session, err := m.refresher.GetSessionWithAutoRefresh(r)
@@ -477,7 +474,6 @@ func (m *ModerationHandler) deleteContent(uri string) {
 	m.db.Exec("DELETE FROM replies WHERE uri = $1", uri)
 }
 
-
 func (m *ModerationHandler) AdminCreateLabel(w http.ResponseWriter, r *http.Request) {
 	session, err := m.refresher.GetSessionWithAutoRefresh(r)
 	if err != nil {
@@ -607,12 +603,12 @@ func (m *ModerationHandler) AdminGetLabels(w http.ResponseWriter, r *http.Reques
 	profiles := fetchProfilesForDIDs(m.db, dids)
 
 	type HydratedLabel struct {
-		ID        int    `json:"id"`
-		Src       string `json:"src"`
-		URI       string `json:"uri"`
-		Val       string `json:"val"`
-		CreatedBy Author `json:"createdBy"`
-		CreatedAt string `json:"createdAt"`
+		ID        int     `json:"id"`
+		Src       string  `json:"src"`
+		URI       string  `json:"uri"`
+		Val       string  `json:"val"`
+		CreatedBy Author  `json:"createdBy"`
+		CreatedAt string  `json:"createdAt"`
 		Subject   *Author `json:"subject,omitempty"`
 	}
 
