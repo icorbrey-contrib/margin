@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import RichText from "./RichText";
+import MoreMenu from "./MoreMenu";
+import type { MoreMenuItem } from "./MoreMenu";
 import {
   MessageSquare,
   Heart,
@@ -9,29 +11,106 @@ import {
   Trash2,
   Edit3,
   Globe,
+  ShieldBan,
+  VolumeX,
+  Flag,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import ShareMenu from "../modals/ShareMenu";
 import AddToCollectionModal from "../modals/AddToCollectionModal";
 import ExternalLinkModal from "../modals/ExternalLinkModal";
+import ReportModal from "../modals/ReportModal";
+import EditItemModal from "../modals/EditItemModal";
 import { clsx } from "clsx";
-import { likeItem, unlikeItem, deleteItem } from "../../api/client";
+import {
+  likeItem,
+  unlikeItem,
+  deleteItem,
+  blockUser,
+  muteUser,
+} from "../../api/client";
 import { $user } from "../../store/auth";
 import { $preferences } from "../../store/preferences";
 import { useStore } from "@nanostores/react";
-import type { AnnotationItem } from "../../types";
+import type {
+  AnnotationItem,
+  ContentLabel,
+  LabelVisibility,
+} from "../../types";
 import { Link } from "react-router-dom";
 import { Avatar } from "../ui";
 import CollectionIcon from "./CollectionIcon";
 import ProfileHoverCard from "./ProfileHoverCard";
 
+const LABEL_DESCRIPTIONS: Record<string, string> = {
+  sexual: "Sexual Content",
+  nudity: "Nudity",
+  violence: "Violence",
+  gore: "Graphic Content",
+  spam: "Spam",
+  misleading: "Misleading",
+};
+
+function getContentWarning(
+  labels?: ContentLabel[],
+  prefs?: {
+    labelPreferences: {
+      labelerDid: string;
+      label: string;
+      visibility: LabelVisibility;
+    }[];
+  },
+): {
+  label: string;
+  description: string;
+  visibility: LabelVisibility;
+  isAccountWide: boolean;
+} | null {
+  if (!labels || labels.length === 0) return null;
+  const priority = [
+    "gore",
+    "violence",
+    "nudity",
+    "sexual",
+    "misleading",
+    "spam",
+  ];
+  for (const p of priority) {
+    const match = labels.find((l) => l.val === p);
+    if (match) {
+      const pref = prefs?.labelPreferences.find(
+        (lp) => lp.label === p && lp.labelerDid === match.src,
+      );
+      const visibility: LabelVisibility = pref?.visibility || "warn";
+      if (visibility === "ignore") continue;
+      return {
+        label: p,
+        description: LABEL_DESCRIPTIONS[p] || p,
+        visibility,
+        isAccountWide: match.scope === "account",
+      };
+    }
+  }
+  return null;
+}
+
 interface CardProps {
   item: AnnotationItem;
   onDelete?: (uri: string) => void;
+  onUpdate?: (item: AnnotationItem) => void;
   hideShare?: boolean;
 }
 
-export default function Card({ item, onDelete, hideShare }: CardProps) {
+export default function Card({
+  item: initialItem,
+  onDelete,
+  onUpdate,
+  hideShare,
+}: CardProps) {
+  const [item, setItem] = useState(initialItem);
   const user = useStore($user);
+  const preferences = useStore($preferences);
   const isAuthor = user && item.author?.did === user.did;
 
   const [liked, setLiked] = useState(!!item.viewer?.like);
@@ -39,6 +118,17 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [externalLinkUrl, setExternalLinkUrl] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [contentRevealed, setContentRevealed] = useState(false);
+
+  const contentWarning = getContentWarning(item.labels, preferences);
+
+  if (contentWarning?.visibility === "hide") return null;
+
+  React.useEffect(() => {
+    setItem(initialItem);
+  }, [initialItem]);
 
   React.useEffect(() => {
     setLiked(!!item.viewer?.like);
@@ -183,7 +273,7 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
   const displayImage = ogData?.image;
 
   return (
-    <article className="card p-4 hover:ring-black/10 dark:hover:ring-white/10 transition-all">
+    <article className="card p-4 hover:ring-black/10 dark:hover:ring-white/10 transition-all relative">
       {item.collection && (
         <div className="flex items-center gap-1.5 text-xs text-surface-400 dark:text-surface-500 mb-2">
           {item.addedBy && item.addedBy.did !== item.author?.did ? (
@@ -221,11 +311,22 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
       <div className="flex items-start gap-3">
         <ProfileHoverCard did={item.author?.did}>
           <Link to={`/profile/${item.author?.did}`} className="shrink-0">
-            <Avatar
-              did={item.author?.did}
-              avatar={item.author?.avatar}
-              size="md"
-            />
+            <div className="rounded-full overflow-hidden">
+              <div
+                className={clsx(
+                  "transition-all",
+                  contentWarning?.isAccountWide &&
+                    !contentRevealed &&
+                    "blur-md",
+                )}
+              >
+                <Avatar
+                  did={item.author?.did}
+                  avatar={item.author?.avatar}
+                  size="md"
+                />
+              </div>
+            </div>
           </Link>
         </ProfileHoverCard>
 
@@ -282,7 +383,7 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
               })()}
           </div>
 
-          {pageUrl && !isBookmark && (
+          {pageUrl && !isBookmark && !(contentWarning && !contentRevealed) && (
             <a
               href={pageUrl}
               target="_blank"
@@ -297,7 +398,33 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
         </div>
       </div>
 
-      <div className="mt-3 ml-[52px]">
+      <div className="mt-3 ml-[52px] relative">
+        {contentWarning && !contentRevealed && (
+          <div className="absolute inset-0 z-10 rounded-lg bg-surface-100 dark:bg-surface-800 flex flex-col items-center justify-center gap-2 py-4">
+            <div className="flex items-center gap-2 text-surface-500 dark:text-surface-400">
+              <EyeOff size={16} />
+              <span className="text-sm font-medium">
+                {contentWarning.description}
+              </span>
+            </div>
+            <button
+              onClick={() => setContentRevealed(true)}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-300 dark:hover:bg-surface-600 transition-colors"
+            >
+              <Eye size={12} />
+              Show
+            </button>
+          </div>
+        )}
+        {contentWarning && contentRevealed && (
+          <button
+            onClick={() => setContentRevealed(false)}
+            className="flex items-center gap-1.5 mb-2 px-2.5 py-1 text-xs font-medium rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+          >
+            <EyeOff size={12} />
+            Hide Content
+          </button>
+        )}
         {isBookmark && (
           <a
             href={pageUrl || "#"}
@@ -450,6 +577,7 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
           <>
             <div className="flex-1" />
             <button
+              onClick={() => setShowEditModal(true)}
               className="flex items-center px-2.5 py-1.5 rounded-lg text-surface-400 dark:text-surface-500 hover:text-surface-600 dark:hover:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-all"
               title="Edit"
             >
@@ -464,6 +592,46 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
             </button>
           </>
         )}
+
+        {!isAuthor && user && (
+          <>
+            <div className="flex-1" />
+            <MoreMenu
+              items={(() => {
+                const menuItems: MoreMenuItem[] = [
+                  {
+                    label: "Report",
+                    icon: <Flag size={14} />,
+                    onClick: () => setShowReportModal(true),
+                    variant: "danger",
+                  },
+                  {
+                    label: `Mute @${item.author?.handle || "user"}`,
+                    icon: <VolumeX size={14} />,
+                    onClick: async () => {
+                      if (item.author?.did) {
+                        await muteUser(item.author.did);
+                        onDelete?.(item.uri);
+                      }
+                    },
+                  },
+                  {
+                    label: `Block @${item.author?.handle || "user"}`,
+                    icon: <ShieldBan size={14} />,
+                    onClick: async () => {
+                      if (item.author?.did) {
+                        await blockUser(item.author.did);
+                        onDelete?.(item.uri);
+                      }
+                    },
+                    variant: "danger",
+                  },
+                ];
+                return menuItems;
+              })()}
+            />
+          </>
+        )}
       </div>
 
       <AddToCollectionModal
@@ -476,6 +644,25 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
         isOpen={showExternalLinkModal}
         onClose={() => setShowExternalLinkModal(false)}
         url={externalLinkUrl}
+      />
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        subjectDid={item.author?.did || ""}
+        subjectUri={item.uri}
+        subjectHandle={item.author?.handle}
+      />
+
+      <EditItemModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        item={item}
+        type={type}
+        onSaved={(updated) => {
+          setItem(updated);
+          onUpdate?.(updated);
+        }}
       />
     </article>
   );

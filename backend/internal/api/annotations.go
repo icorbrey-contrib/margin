@@ -28,6 +28,7 @@ type CreateAnnotationRequest struct {
 	Selector json.RawMessage `json:"selector,omitempty"`
 	Title    string          `json:"title,omitempty"`
 	Tags     []string        `json:"tags,omitempty"`
+	Labels   []string        `json:"labels,omitempty"`
 }
 
 type CreateAnnotationResponse struct {
@@ -138,6 +139,15 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 		record.Facets = facets
 	}
 
+	validSelfLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+	var validLabels []string
+	for _, l := range req.Labels {
+		if validSelfLabels[l] {
+			validLabels = append(validLabels, l)
+		}
+	}
+	record.Labels = xrpc.NewSelfLabels(validLabels)
+
 	var result *xrpc.CreateRecordOutput
 
 	if existing, err := s.checkDuplicateAnnotation(session.DID, req.URL, req.Text); err == nil && existing != nil {
@@ -213,6 +223,12 @@ func (s *AnnotationService) CreateAnnotation(w http.ResponseWriter, r *http.Requ
 		log.Printf("Warning: failed to index annotation in local DB: %v", err)
 	}
 
+	for _, label := range validLabels {
+		if err := s.db.CreateContentLabel(session.DID, result.URI, label, session.DID); err != nil {
+			log.Printf("Warning: failed to create self-label %s: %v", label, err)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(CreateAnnotationResponse{
 		URI: result.URI,
@@ -262,8 +278,9 @@ func (s *AnnotationService) DeleteAnnotation(w http.ResponseWriter, r *http.Requ
 }
 
 type UpdateAnnotationRequest struct {
-	Text string   `json:"text"`
-	Tags []string `json:"tags"`
+	Text   string   `json:"text"`
+	Tags   []string `json:"tags"`
+	Labels []string `json:"labels,omitempty"`
 }
 
 func (s *AnnotationService) UpdateAnnotation(w http.ResponseWriter, r *http.Request) {
@@ -336,6 +353,15 @@ func (s *AnnotationService) UpdateAnnotation(w http.ResponseWriter, r *http.Requ
 			record.Tags = nil
 		}
 
+		updateValidLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+		var updateLabels []string
+		for _, l := range req.Labels {
+			if updateValidLabels[l] {
+				updateLabels = append(updateLabels, l)
+			}
+		}
+		record.Labels = xrpc.NewSelfLabels(updateLabels)
+
 		if err := record.Validate(); err != nil {
 			return fmt.Errorf("validation failed: %w", err)
 		}
@@ -351,11 +377,23 @@ func (s *AnnotationService) UpdateAnnotation(w http.ResponseWriter, r *http.Requ
 	})
 
 	if err != nil {
+		log.Printf("[UpdateAnnotation] Failed: %v", err)
 		http.Error(w, "Failed to update record: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	s.db.UpdateAnnotation(uri, req.Text, tagsJSON, result.CID)
+
+	validSelfLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+	var validLabels []string
+	for _, l := range req.Labels {
+		if validSelfLabels[l] {
+			validLabels = append(validLabels, l)
+		}
+	}
+	if err := s.db.SyncSelfLabels(session.DID, uri, validLabels); err != nil {
+		log.Printf("Warning: failed to sync self-labels: %v", err)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -603,6 +641,7 @@ type CreateHighlightRequest struct {
 	Selector json.RawMessage `json:"selector"`
 	Color    string          `json:"color,omitempty"`
 	Tags     []string        `json:"tags,omitempty"`
+	Labels   []string        `json:"labels,omitempty"`
 }
 
 func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Request) {
@@ -625,6 +664,15 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 
 	urlHash := db.HashURL(req.URL)
 	record := xrpc.NewHighlightRecord(req.URL, urlHash, req.Selector, req.Color, req.Tags)
+
+	validSelfLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+	var validLabels []string
+	for _, l := range req.Labels {
+		if validSelfLabels[l] {
+			validLabels = append(validLabels, l)
+		}
+	}
+	record.Labels = xrpc.NewSelfLabels(validLabels)
 
 	if err := record.Validate(); err != nil {
 		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
@@ -689,6 +737,12 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 	if err := s.db.CreateHighlight(highlight); err != nil {
 		http.Error(w, "Failed to index highlight", http.StatusInternalServerError)
 		return
+	}
+
+	for _, label := range validLabels {
+		if err := s.db.CreateContentLabel(session.DID, result.URI, label, session.DID); err != nil {
+			log.Printf("Warning: failed to create self-label %s: %v", label, err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -828,8 +882,9 @@ func (s *AnnotationService) DeleteBookmark(w http.ResponseWriter, r *http.Reques
 }
 
 type UpdateHighlightRequest struct {
-	Color string   `json:"color"`
-	Tags  []string `json:"tags,omitempty"`
+	Color  string   `json:"color"`
+	Tags   []string `json:"tags,omitempty"`
+	Labels []string `json:"labels,omitempty"`
 }
 
 func (s *AnnotationService) UpdateHighlight(w http.ResponseWriter, r *http.Request) {
@@ -880,6 +935,15 @@ func (s *AnnotationService) UpdateHighlight(w http.ResponseWriter, r *http.Reque
 			record.Tags = req.Tags
 		}
 
+		updateValidLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+		var updateLabels []string
+		for _, l := range req.Labels {
+			if updateValidLabels[l] {
+				updateLabels = append(updateLabels, l)
+			}
+		}
+		record.Labels = xrpc.NewSelfLabels(updateLabels)
+
 		if err := record.Validate(); err != nil {
 			return fmt.Errorf("validation failed: %w", err)
 		}
@@ -906,6 +970,17 @@ func (s *AnnotationService) UpdateHighlight(w http.ResponseWriter, r *http.Reque
 	}
 	s.db.UpdateHighlight(uri, req.Color, tagsJSON, result.CID)
 
+	validSelfLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+	var validLabels []string
+	for _, l := range req.Labels {
+		if validSelfLabels[l] {
+			validLabels = append(validLabels, l)
+		}
+	}
+	if err := s.db.SyncSelfLabels(session.DID, uri, validLabels); err != nil {
+		log.Printf("Warning: failed to sync self-labels: %v", err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "uri": result.URI, "cid": result.CID})
 }
@@ -914,6 +989,7 @@ type UpdateBookmarkRequest struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
 	Tags        []string `json:"tags,omitempty"`
+	Labels      []string `json:"labels,omitempty"`
 }
 
 func (s *AnnotationService) UpdateBookmark(w http.ResponseWriter, r *http.Request) {
@@ -967,6 +1043,15 @@ func (s *AnnotationService) UpdateBookmark(w http.ResponseWriter, r *http.Reques
 			record.Tags = req.Tags
 		}
 
+		updateValidLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+		var updateLabels []string
+		for _, l := range req.Labels {
+			if updateValidLabels[l] {
+				updateLabels = append(updateLabels, l)
+			}
+		}
+		record.Labels = xrpc.NewSelfLabels(updateLabels)
+
 		if err := record.Validate(); err != nil {
 			return fmt.Errorf("validation failed: %w", err)
 		}
@@ -992,6 +1077,17 @@ func (s *AnnotationService) UpdateBookmark(w http.ResponseWriter, r *http.Reques
 		tagsJSON = string(b)
 	}
 	s.db.UpdateBookmark(uri, req.Title, req.Description, tagsJSON, result.CID)
+
+	validSelfLabels := map[string]bool{"sexual": true, "nudity": true, "violence": true, "gore": true, "spam": true, "misleading": true}
+	var validLabels []string
+	for _, l := range req.Labels {
+		if validSelfLabels[l] {
+			validLabels = append(validLabels, l)
+		}
+	}
+	if err := s.db.SyncSelfLabels(session.DID, uri, validLabels); err != nil {
+		log.Printf("Warning: failed to sync self-labels: %v", err)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "uri": result.URI, "cid": result.CID})

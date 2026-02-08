@@ -1,7 +1,16 @@
 import React, { useState } from "react";
 import { createAnnotation, createHighlight } from "../../api/client";
-import type { Selector } from "../../types";
-import { X } from "lucide-react";
+import type { Selector, ContentLabelValue } from "../../types";
+import { X, ShieldAlert } from "lucide-react";
+
+const SELF_LABEL_OPTIONS: { value: ContentLabelValue; label: string }[] = [
+  { value: "sexual", label: "Sexual" },
+  { value: "nudity", label: "Nudity" },
+  { value: "violence", label: "Violence" },
+  { value: "gore", label: "Gore" },
+  { value: "spam", label: "Spam" },
+  { value: "misleading", label: "Misleading" },
+];
 
 interface ComposerProps {
   url: string;
@@ -23,6 +32,8 @@ export default function Composer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showQuoteInput, setShowQuoteInput] = useState(false);
+  const [selfLabels, setSelfLabels] = useState<ContentLabelValue[]>([]);
+  const [showLabelPicker, setShowLabelPicker] = useState(false);
 
   const highlightedText =
     selector?.type === "TextQuoteSelector" ? selector.exact : null;
@@ -59,6 +70,7 @@ export default function Composer({
           },
           color: "yellow",
           tags: tagList,
+          labels: selfLabels.length > 0 ? selfLabels : undefined,
         });
       } else {
         await createAnnotation({
@@ -66,6 +78,7 @@ export default function Composer({
           text: text.trim(),
           selector: finalSelector || undefined,
           tags: tagList,
+          labels: selfLabels.length > 0 ? selfLabels : undefined,
         });
       }
 
@@ -171,6 +184,45 @@ export default function Composer({
         className="w-full p-2.5 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-400 outline-none text-sm"
         disabled={loading}
       />
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowLabelPicker(!showLabelPicker)}
+          className="flex items-center gap-1.5 text-sm text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 transition-colors"
+        >
+          <ShieldAlert size={14} />
+          <span>
+            Content Warning
+            {selfLabels.length > 0 ? ` (${selfLabels.length})` : ""}
+          </span>
+        </button>
+
+        {showLabelPicker && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {SELF_LABEL_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() =>
+                  setSelfLabels((prev) =>
+                    prev.includes(opt.value)
+                      ? prev.filter((v) => v !== opt.value)
+                      : [...prev, opt.value],
+                  )
+                }
+                className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${
+                  selfLabels.includes(opt.value)
+                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 ring-1 ring-amber-300 dark:ring-amber-700"
+                    : "bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center justify-between pt-2">
         <span

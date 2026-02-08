@@ -70,6 +70,11 @@
             "format": "uri",
             "description": "License URI (e.g., https://creativecommons.org/licenses/by/4.0/)"
           },
+          "labels": {
+            "type": "ref",
+            "ref": "com.atproto.label.defs#selfLabels",
+            "description": "Self-applied content labels for this annotation"
+          },
           "createdAt": {
             "type": "string",
             "format": "datetime"

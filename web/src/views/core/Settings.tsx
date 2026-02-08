@@ -3,11 +3,31 @@ import { useStore } from "@nanostores/react";
 import { $user, logout } from "../../store/auth";
 import { $theme, setTheme, type Theme } from "../../store/theme";
 import {
+  $preferences,
+  loadPreferences,
+  addLabeler,
+  removeLabeler,
+  setLabelVisibility,
+  getLabelVisibility,
+} from "../../store/preferences";
+import {
   getAPIKeys,
   createAPIKey,
   deleteAPIKey,
+  getBlocks,
+  getMutes,
+  unblockUser,
+  unmuteUser,
+  getLabelerInfo,
   type APIKey,
 } from "../../api/client";
+import type {
+  BlockedUser,
+  MutedUser,
+  LabelerInfo,
+  LabelVisibility as LabelVisibilityType,
+  ContentLabelValue,
+} from "../../types";
 import {
   Copy,
   Trash2,
@@ -19,6 +39,14 @@ import {
   Monitor,
   LogOut,
   ChevronRight,
+  ShieldBan,
+  VolumeX,
+  ShieldOff,
+  Volume2,
+  Shield,
+  Eye,
+  EyeOff,
+  XCircle,
 } from "lucide-react";
 import {
   Avatar,
@@ -28,6 +56,7 @@ import {
   EmptyState,
 } from "../../components/ui";
 import { AppleIcon } from "../../components/common/Icons";
+import { Link } from "react-router-dom";
 
 export default function Settings() {
   const user = useStore($user);
@@ -38,6 +67,13 @@ export default function Settings() {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [justCopied, setJustCopied] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [blocks, setBlocks] = useState<BlockedUser[]>([]);
+  const [mutes, setMutes] = useState<MutedUser[]>([]);
+  const [modLoading, setModLoading] = useState(true);
+  const [labelerInfo, setLabelerInfo] = useState<LabelerInfo | null>(null);
+  const [newLabelerDid, setNewLabelerDid] = useState("");
+  const [addingLabeler, setAddingLabeler] = useState(false);
+  const preferences = useStore($preferences);
 
   useEffect(() => {
     const loadKeys = async () => {
@@ -47,6 +83,21 @@ export default function Settings() {
       setLoading(false);
     };
     loadKeys();
+
+    const loadModeration = async () => {
+      setModLoading(true);
+      const [blocksData, mutesData] = await Promise.all([
+        getBlocks(),
+        getMutes(),
+      ]);
+      setBlocks(blocksData);
+      setMutes(mutesData);
+      setModLoading(false);
+    };
+    loadModeration();
+
+    loadPreferences();
+    getLabelerInfo().then(setLabelerInfo);
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -247,6 +298,315 @@ export default function Settings() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">
+            Moderation
+          </h2>
+          <p className="text-sm text-surface-400 dark:text-surface-500 mb-5">
+            Manage blocked and muted accounts
+          </p>
+
+          {modLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-14 rounded-xl" />
+              <Skeleton className="h-14 rounded-xl" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2 flex items-center gap-2">
+                  <ShieldBan size={14} />
+                  Blocked accounts ({blocks.length})
+                </h3>
+                {blocks.length === 0 ? (
+                  <p className="text-sm text-surface-400 dark:text-surface-500 pl-6">
+                    No blocked accounts
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {blocks.map((b) => (
+                      <div
+                        key={b.did}
+                        className="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-xl group hover:bg-surface-100 dark:hover:bg-surface-700 transition-all"
+                      >
+                        <Link
+                          to={`/profile/${b.did}`}
+                          className="flex items-center gap-3 min-w-0 flex-1"
+                        >
+                          <Avatar
+                            did={b.did}
+                            avatar={b.author?.avatar}
+                            size="sm"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-medium text-surface-900 dark:text-white text-sm truncate">
+                              {b.author?.displayName ||
+                                b.author?.handle ||
+                                b.did}
+                            </p>
+                            {b.author?.handle && (
+                              <p className="text-xs text-surface-400 dark:text-surface-500 truncate">
+                                @{b.author.handle}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            await unblockUser(b.did);
+                            setBlocks((prev) =>
+                              prev.filter((x) => x.did !== b.did),
+                            );
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-surface-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <ShieldOff size={12} />
+                          Unblock
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2 flex items-center gap-2">
+                  <VolumeX size={14} />
+                  Muted accounts ({mutes.length})
+                </h3>
+                {mutes.length === 0 ? (
+                  <p className="text-sm text-surface-400 dark:text-surface-500 pl-6">
+                    No muted accounts
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {mutes.map((m) => (
+                      <div
+                        key={m.did}
+                        className="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-xl group hover:bg-surface-100 dark:hover:bg-surface-700 transition-all"
+                      >
+                        <Link
+                          to={`/profile/${m.did}`}
+                          className="flex items-center gap-3 min-w-0 flex-1"
+                        >
+                          <Avatar
+                            did={m.did}
+                            avatar={m.author?.avatar}
+                            size="sm"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-medium text-surface-900 dark:text-white text-sm truncate">
+                              {m.author?.displayName ||
+                                m.author?.handle ||
+                                m.did}
+                            </p>
+                            {m.author?.handle && (
+                              <p className="text-xs text-surface-400 dark:text-surface-500 truncate">
+                                @{m.author.handle}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            await unmuteUser(m.did);
+                            setMutes((prev) =>
+                              prev.filter((x) => x.did !== m.did),
+                            );
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-surface-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Volume2 size={12} />
+                          Unmute
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">
+            Content Filtering
+          </h2>
+          <p className="text-sm text-surface-400 dark:text-surface-500 mb-5">
+            Subscribe to labelers and configure how labeled content appears
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-3 flex items-center gap-2">
+                <Shield size={14} />
+                Subscribed Labelers
+              </h3>
+
+              {preferences.subscribedLabelers.length === 0 ? (
+                <p className="text-sm text-surface-400 dark:text-surface-500 pl-6 mb-3">
+                  No labelers subscribed
+                </p>
+              ) : (
+                <div className="space-y-1.5 mb-3">
+                  {preferences.subscribedLabelers.map((labeler) => (
+                    <div
+                      key={labeler.did}
+                      className="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-xl group hover:bg-surface-100 dark:hover:bg-surface-700 transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                          <Shield
+                            size={14}
+                            className="text-primary-600 dark:text-primary-400"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-surface-900 dark:text-white text-sm truncate">
+                            {labelerInfo?.did === labeler.did
+                              ? labelerInfo.name
+                              : labeler.did}
+                          </p>
+                          <p className="text-xs text-surface-400 dark:text-surface-500 truncate font-mono">
+                            {labeler.did}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeLabeler(labeler.did)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-surface-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <XCircle size={12} />
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!newLabelerDid.trim()) return;
+                  setAddingLabeler(true);
+                  await addLabeler(newLabelerDid.trim());
+                  setNewLabelerDid("");
+                  setAddingLabeler(false);
+                }}
+                className="flex gap-2"
+              >
+                <div className="flex-1">
+                  <Input
+                    value={newLabelerDid}
+                    onChange={(e) => setNewLabelerDid(e.target.value)}
+                    placeholder="did:plc:... (labeler DID)"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={!newLabelerDid.trim()}
+                  loading={addingLabeler}
+                  icon={<Plus size={16} />}
+                >
+                  Add
+                </Button>
+              </form>
+            </div>
+
+            {preferences.subscribedLabelers.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-3 flex items-center gap-2">
+                  <Eye size={14} />
+                  Label Visibility
+                </h3>
+                <p className="text-xs text-surface-400 dark:text-surface-500 mb-3 pl-6">
+                  Choose how to handle each label type: <strong>Warn</strong>{" "}
+                  shows a blur overlay, <strong>Hide</strong> removes content
+                  entirely, <strong>Ignore</strong> shows content normally.
+                </p>
+
+                <div className="space-y-4">
+                  {preferences.subscribedLabelers.map((labeler) => {
+                    const labels: ContentLabelValue[] = [
+                      "sexual",
+                      "nudity",
+                      "violence",
+                      "gore",
+                      "spam",
+                      "misleading",
+                    ];
+                    return (
+                      <div
+                        key={labeler.did}
+                        className="bg-surface-50 dark:bg-surface-800 rounded-xl p-4"
+                      >
+                        <p className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-3 truncate">
+                          {labelerInfo?.did === labeler.did
+                            ? labelerInfo.name
+                            : labeler.did}
+                        </p>
+                        <div className="space-y-2">
+                          {labels.map((label) => {
+                            const current = getLabelVisibility(
+                              labeler.did,
+                              label,
+                            );
+                            const options: {
+                              value: LabelVisibilityType;
+                              label: string;
+                              icon: typeof Eye;
+                            }[] = [
+                              { value: "warn", label: "Warn", icon: EyeOff },
+                              { value: "hide", label: "Hide", icon: XCircle },
+                              { value: "ignore", label: "Ignore", icon: Eye },
+                            ];
+                            return (
+                              <div
+                                key={label}
+                                className="flex items-center justify-between py-1.5"
+                              >
+                                <span className="text-sm text-surface-600 dark:text-surface-400 capitalize">
+                                  {label}
+                                </span>
+                                <div className="flex gap-1">
+                                  {options.map((opt) => (
+                                    <button
+                                      key={opt.value}
+                                      onClick={() =>
+                                        setLabelVisibility(
+                                          labeler.did,
+                                          label,
+                                          opt.value,
+                                        )
+                                      }
+                                      className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 ${
+                                        current === opt.value
+                                          ? opt.value === "hide"
+                                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                                            : opt.value === "warn"
+                                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                                              : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                                          : "text-surface-400 dark:text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700"
+                                      }`}
+                                    >
+                                      <opt.icon size={12} />
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="card p-5">

@@ -263,6 +263,7 @@ interface CreateAnnotationParams {
   title?: string;
   selector?: { exact: string; prefix?: string; suffix?: string };
   tags?: string[];
+  labels?: string[];
 }
 
 export async function createAnnotation({
@@ -271,11 +272,12 @@ export async function createAnnotation({
   title,
   selector,
   tags,
+  labels,
 }: CreateAnnotationParams) {
   try {
     const res = await apiRequest("/api/annotations", {
       method: "POST",
-      body: JSON.stringify({ url, text, title, selector, tags }),
+      body: JSON.stringify({ url, text, title, selector, tags, labels }),
     });
     if (!res.ok) throw new Error(await res.text());
     const raw = await res.json();
@@ -292,6 +294,7 @@ interface CreateHighlightParams {
   color?: string;
   tags?: string[];
   title?: string;
+  labels?: string[];
 }
 
 export async function createHighlight({
@@ -300,11 +303,12 @@ export async function createHighlight({
   color,
   tags,
   title,
+  labels,
 }: CreateHighlightParams) {
   try {
     const res = await apiRequest("/api/highlights", {
       method: "POST",
-      body: JSON.stringify({ url, selector, color, tags, title }),
+      body: JSON.stringify({ url, selector, color, tags, title, labels }),
     });
     if (!res.ok) throw new Error(await res.text());
     const raw = await res.json();
@@ -425,13 +429,14 @@ export async function updateAnnotation(
   uri: string,
   text: string,
   tags?: string[],
+  labels?: string[],
 ): Promise<boolean> {
   try {
     const res = await apiRequest(
       `/api/annotations?uri=${encodeURIComponent(uri)}`,
       {
         method: "PUT",
-        body: JSON.stringify({ text, tags }),
+        body: JSON.stringify({ text, tags, labels }),
       },
     );
     return res.ok;
@@ -445,13 +450,14 @@ export async function updateHighlight(
   uri: string,
   color: string,
   tags?: string[],
+  labels?: string[],
 ): Promise<boolean> {
   try {
     const res = await apiRequest(
       `/api/highlights?uri=${encodeURIComponent(uri)}`,
       {
         method: "PUT",
-        body: JSON.stringify({ color, tags }),
+        body: JSON.stringify({ color, tags, labels }),
       },
     );
     return res.ok;
@@ -466,13 +472,14 @@ export async function updateBookmark(
   title?: string,
   description?: string,
   tags?: string[],
+  labels?: string[],
 ): Promise<boolean> {
   try {
     const res = await apiRequest(
       `/api/bookmarks?uri=${encodeURIComponent(uri)}`,
       {
         method: "PUT",
-        body: JSON.stringify({ title, description, tags }),
+        body: JSON.stringify({ title, description, tags, labels }),
       },
     );
     return res.ok;
@@ -942,9 +949,19 @@ export async function getUserTargetItems(
     return { annotations: [], highlights: [] };
   }
 }
-export async function getPreferences(): Promise<{
+import type {
+  LabelerSubscription,
+  LabelPreference,
+  LabelerInfo,
+} from "../types";
+
+export interface PreferencesResponse {
   externalLinkSkippedHostnames?: string[];
-}> {
+  subscribedLabelers?: LabelerSubscription[];
+  labelPreferences?: LabelPreference[];
+}
+
+export async function getPreferences(): Promise<PreferencesResponse> {
   try {
     const res = await apiRequest("/api/preferences", {
       skipAuthRedirect: true,
@@ -959,6 +976,8 @@ export async function getPreferences(): Promise<{
 
 export async function updatePreferences(prefs: {
   externalLinkSkippedHostnames?: string[];
+  subscribedLabelers?: LabelerSubscription[];
+  labelPreferences?: LabelPreference[];
 }): Promise<boolean> {
   try {
     const res = await apiRequest("/api/preferences", {
@@ -969,5 +988,236 @@ export async function updatePreferences(prefs: {
   } catch (e) {
     console.error(e);
     return false;
+  }
+}
+
+export async function getLabelerInfo(): Promise<LabelerInfo | null> {
+  try {
+    const res = await apiRequest("/moderation/labeler", {
+      skipAuthRedirect: true,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.error("Failed to fetch labeler info:", e);
+    return null;
+  }
+}
+
+import type {
+  ModerationRelationship,
+  BlockedUser,
+  MutedUser,
+  ModerationReport,
+  ReportReasonType,
+} from "../types";
+
+export async function blockUser(did: string): Promise<boolean> {
+  try {
+    const res = await apiRequest("/api/moderation/block", {
+      method: "POST",
+      body: JSON.stringify({ did }),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to block user:", e);
+    return false;
+  }
+}
+
+export async function unblockUser(did: string): Promise<boolean> {
+  try {
+    const res = await apiRequest(
+      `/api/moderation/block?did=${encodeURIComponent(did)}`,
+      { method: "DELETE" },
+    );
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to unblock user:", e);
+    return false;
+  }
+}
+
+export async function getBlocks(): Promise<BlockedUser[]> {
+  try {
+    const res = await apiRequest("/api/moderation/blocks");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.items || [];
+  } catch (e) {
+    console.error("Failed to fetch blocks:", e);
+    return [];
+  }
+}
+
+export async function muteUser(did: string): Promise<boolean> {
+  try {
+    const res = await apiRequest("/api/moderation/mute", {
+      method: "POST",
+      body: JSON.stringify({ did }),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to mute user:", e);
+    return false;
+  }
+}
+
+export async function unmuteUser(did: string): Promise<boolean> {
+  try {
+    const res = await apiRequest(
+      `/api/moderation/mute?did=${encodeURIComponent(did)}`,
+      { method: "DELETE" },
+    );
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to unmute user:", e);
+    return false;
+  }
+}
+
+export async function getMutes(): Promise<MutedUser[]> {
+  try {
+    const res = await apiRequest("/api/moderation/mutes");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.items || [];
+  } catch (e) {
+    console.error("Failed to fetch mutes:", e);
+    return [];
+  }
+}
+
+export async function getModerationRelationship(
+  did: string,
+): Promise<ModerationRelationship> {
+  try {
+    const res = await apiRequest(
+      `/api/moderation/relationship?did=${encodeURIComponent(did)}`,
+      { skipAuthRedirect: true },
+    );
+    if (!res.ok) return { blocking: false, muting: false, blockedBy: false };
+    return await res.json();
+  } catch (e) {
+    console.error("Failed to get moderation relationship:", e);
+    return { blocking: false, muting: false, blockedBy: false };
+  }
+}
+
+export async function reportUser(params: {
+  subjectDid: string;
+  subjectUri?: string;
+  reasonType: ReportReasonType;
+  reasonText?: string;
+}): Promise<boolean> {
+  try {
+    const res = await apiRequest("/api/moderation/report", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to submit report:", e);
+    return false;
+  }
+}
+
+export async function checkAdminAccess(): Promise<boolean> {
+  try {
+    const res = await apiRequest("/api/moderation/admin/check", {
+      skipAuthRedirect: true,
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.isAdmin || false;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function getAdminReports(
+  status?: string,
+  limit = 50,
+  offset = 0,
+): Promise<{
+  items: ModerationReport[];
+  totalItems: number;
+  pendingCount: number;
+}> {
+  try {
+    const params = new URLSearchParams();
+    if (status) params.append("status", status);
+    params.append("limit", limit.toString());
+    params.append("offset", offset.toString());
+    const res = await apiRequest(
+      `/api/moderation/admin/reports?${params.toString()}`,
+    );
+    if (!res.ok) return { items: [], totalItems: 0, pendingCount: 0 };
+    return await res.json();
+  } catch (e) {
+    console.error("Failed to fetch admin reports:", e);
+    return { items: [], totalItems: 0, pendingCount: 0 };
+  }
+}
+
+export async function adminTakeAction(params: {
+  reportId: number;
+  action: string;
+  comment?: string;
+}): Promise<boolean> {
+  try {
+    const res = await apiRequest("/api/moderation/admin/action", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to take moderation action:", e);
+    return false;
+  }
+}
+
+export async function adminCreateLabel(params: {
+  src: string;
+  uri?: string;
+  val: string;
+}): Promise<boolean> {
+  try {
+    const res = await apiRequest("/api/moderation/admin/label", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to create label:", e);
+    return false;
+  }
+}
+
+export async function adminDeleteLabel(id: number): Promise<boolean> {
+  try {
+    const res = await apiRequest(`/api/moderation/admin/label?id=${id}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Failed to delete label:", e);
+    return false;
+  }
+}
+
+export async function adminGetLabels(
+  limit = 50,
+  offset = 0,
+): Promise<{ items: any[] }> {
+  try {
+    const res = await apiRequest(
+      `/api/moderation/admin/labels?limit=${limit}&offset=${offset}`,
+    );
+    if (!res.ok) return { items: [] };
+    return await res.json();
+  } catch (e) {
+    console.error("Failed to fetch labels:", e);
+    return { items: [] };
   }
 }

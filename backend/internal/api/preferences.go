@@ -1,18 +1,30 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"margin.at/internal/config"
 	"margin.at/internal/db"
 	"margin.at/internal/xrpc"
 )
 
+type LabelerSubscription struct {
+	DID string `json:"did"`
+}
+
+type LabelPreference struct {
+	LabelerDID string `json:"labelerDid"`
+	Label      string `json:"label"`
+	Visibility string `json:"visibility"`
+}
+
 type PreferencesResponse struct {
-	ExternalLinkSkippedHostnames []string `json:"externalLinkSkippedHostnames"`
+	ExternalLinkSkippedHostnames []string              `json:"externalLinkSkippedHostnames"`
+	SubscribedLabelers           []LabelerSubscription  `json:"subscribedLabelers"`
+	LabelPreferences             []LabelPreference      `json:"labelPreferences"`
 }
 
 func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
@@ -33,9 +45,31 @@ func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
 		json.Unmarshal([]byte(*prefs.ExternalLinkSkippedHostnames), &hostnames)
 	}
 
+	var labelers []LabelerSubscription
+	if prefs != nil && prefs.SubscribedLabelers != nil {
+		json.Unmarshal([]byte(*prefs.SubscribedLabelers), &labelers)
+	}
+	if labelers == nil {
+		labelers = []LabelerSubscription{}
+		serviceDID := config.Get().ServiceDID
+		if serviceDID != "" {
+			labelers = append(labelers, LabelerSubscription{DID: serviceDID})
+		}
+	}
+
+	var labelPrefs []LabelPreference
+	if prefs != nil && prefs.LabelPreferences != nil {
+		json.Unmarshal([]byte(*prefs.LabelPreferences), &labelPrefs)
+	}
+	if labelPrefs == nil {
+		labelPrefs = []LabelPreference{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(PreferencesResponse{
 		ExternalLinkSkippedHostnames: hostnames,
+		SubscribedLabelers:           labelers,
+		LabelPreferences:             labelPrefs,
 	})
 }
 
@@ -52,53 +86,32 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record := xrpc.NewPreferencesRecord(input.ExternalLinkSkippedHostnames)
+	var xrpcLabelers []xrpc.LabelerSubscription
+	for _, l := range input.SubscribedLabelers {
+		xrpcLabelers = append(xrpcLabelers, xrpc.LabelerSubscription{DID: l.DID})
+	}
+	var xrpcLabelPrefs []xrpc.LabelPreference
+	for _, lp := range input.LabelPreferences {
+		xrpcLabelPrefs = append(xrpcLabelPrefs, xrpc.LabelPreference{
+			LabelerDID: lp.LabelerDID,
+			Label:      lp.Label,
+			Visibility: lp.Visibility,
+		})
+	}
+
+	record := xrpc.NewPreferencesRecord(input.ExternalLinkSkippedHostnames, xrpcLabelers, xrpcLabelPrefs)
 	if err := record.Validate(); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid record: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, _ string) error {
-		url := fmt.Sprintf("%s/xrpc/com.atproto.repo.putRecord", client.PDS)
-
-		body := map[string]interface{}{
-			"repo":       session.DID,
-			"collection": xrpc.CollectionPreferences,
-			"rkey":       "self",
-			"record":     record,
-		}
-
-		jsonBody, err := json.Marshal(body)
-		if err != nil {
-			return err
-		}
-
-		req, err := http.NewRequestWithContext(r.Context(), "POST", url, bytes.NewBuffer(jsonBody))
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Authorization", "Bearer "+client.AccessToken)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != 200 {
-			var errResp struct {
-				Error   string `json:"error"`
-				Message string `json:"message"`
-			}
-			json.NewDecoder(resp.Body).Decode(&errResp)
-			return fmt.Errorf("XRPC error %d: %s - %s", resp.StatusCode, errResp.Error, errResp.Message)
-		}
-
-		return nil
+	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+		_, err := client.PutRecord(r.Context(), did, xrpc.CollectionPreferences, "self", record)
+		return err
 	})
 
 	if err != nil {
+		fmt.Printf("[UpdatePreferences] PDS write failed: %v\n", err)
 		http.Error(w, fmt.Sprintf("Failed to update preferences: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -106,12 +119,27 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 	createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
 	hostnamesJSON, _ := json.Marshal(input.ExternalLinkSkippedHostnames)
 	hostnamesStr := string(hostnamesJSON)
+
+	var subscribedLabelersPtr, labelPrefsPtr *string
+	if len(input.SubscribedLabelers) > 0 {
+		labelersJSON, _ := json.Marshal(input.SubscribedLabelers)
+		s := string(labelersJSON)
+		subscribedLabelersPtr = &s
+	}
+	if len(input.LabelPreferences) > 0 {
+		prefsJSON, _ := json.Marshal(input.LabelPreferences)
+		s := string(prefsJSON)
+		labelPrefsPtr = &s
+	}
+
 	uri := fmt.Sprintf("at://%s/%s/self", session.DID, xrpc.CollectionPreferences)
 
 	err = h.db.UpsertPreferences(&db.Preferences{
 		URI:                          uri,
 		AuthorDID:                    session.DID,
 		ExternalLinkSkippedHostnames: &hostnamesStr,
+		SubscribedLabelers:           subscribedLabelersPtr,
+		LabelPreferences:             labelPrefsPtr,
 		CreatedAt:                    createdAt,
 		IndexedAt:                    time.Now(),
 	})

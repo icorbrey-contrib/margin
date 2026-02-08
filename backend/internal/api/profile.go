@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"margin.at/internal/config"
 	"margin.at/internal/db"
 	"margin.at/internal/xrpc"
 )
@@ -147,6 +148,15 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		Links       []string `json:"links"`
 		CreatedAt   string   `json:"createdAt"`
 		IndexedAt   string   `json:"indexedAt"`
+		Labels      []struct {
+			Val string `json:"val"`
+			Src string `json:"src"`
+		} `json:"labels,omitempty"`
+		Viewer *struct {
+			Blocking  bool `json:"blocking"`
+			Muting    bool `json:"muting"`
+			BlockedBy bool `json:"blockedBy"`
+		} `json:"viewer,omitempty"`
 	}{
 		URI:       profile.URI,
 		DID:       profile.AuthorDID,
@@ -176,6 +186,40 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	if resp.Links == nil {
 		resp.Links = []string{}
+	}
+
+	viewerDID := h.getViewerDID(r)
+	if viewerDID != "" && viewerDID != profile.AuthorDID {
+		blocking, muting, blockedBy, err := h.db.GetViewerRelationship(viewerDID, profile.AuthorDID)
+		if err == nil {
+			resp.Viewer = &struct {
+				Blocking  bool `json:"blocking"`
+				Muting    bool `json:"muting"`
+				BlockedBy bool `json:"blockedBy"`
+			}{
+				Blocking:  blocking,
+				Muting:    muting,
+				BlockedBy: blockedBy,
+			}
+		}
+	}
+
+	subscribedLabelers := getSubscribedLabelers(h.db, viewerDID)
+	if subscribedLabelers == nil {
+		serviceDID := config.Get().ServiceDID
+		if serviceDID != "" {
+			subscribedLabelers = []string{serviceDID}
+		}
+	}
+	if didLabels, err := h.db.GetContentLabelsForDIDs([]string{profile.AuthorDID}, subscribedLabelers); err == nil {
+		if labels, ok := didLabels[profile.AuthorDID]; ok {
+			for _, l := range labels {
+				resp.Labels = append(resp.Labels, struct {
+					Val string `json:"val"`
+					Src string `json:"src"`
+				}{Val: l.Val, Src: l.Src})
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

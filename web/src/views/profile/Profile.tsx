@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { getProfile, getFeed, getCollections } from "../../api/client";
+import {
+  getProfile,
+  getFeed,
+  getCollections,
+  blockUser,
+  unblockUser,
+  muteUser,
+  unmuteUser,
+} from "../../api/client";
 import Card from "../../components/common/Card";
 import RichText from "../../components/common/RichText";
+import MoreMenu from "../../components/common/MoreMenu";
+import type { MoreMenuItem } from "../../components/common/MoreMenu";
+import ReportModal from "../../components/modals/ReportModal";
 import {
   Edit2,
   Github,
@@ -12,9 +23,23 @@ import {
   PenTool,
   Bookmark,
   Link2,
+  ShieldBan,
+  VolumeX,
+  Flag,
+  ShieldOff,
+  Volume2,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { TangledIcon } from "../../components/common/Icons";
-import type { UserProfile, AnnotationItem, Collection } from "../../types";
+import type {
+  UserProfile,
+  AnnotationItem,
+  Collection,
+  ModerationRelationship,
+  ContentLabel,
+  LabelVisibility,
+} from "../../types";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
 import EditProfileModal from "../../components/modals/EditProfileModal";
@@ -22,6 +47,7 @@ import ExternalLinkModal from "../../components/modals/ExternalLinkModal";
 import CollectionIcon from "../../components/common/CollectionIcon";
 import { $preferences, loadPreferences } from "../../store/preferences";
 import { Link } from "react-router-dom";
+import { clsx } from "clsx";
 import {
   Avatar,
   Tabs,
@@ -51,6 +77,15 @@ export default function Profile({ did }: ProfileProps) {
   const isOwner = user?.did === did;
   const [showEdit, setShowEdit] = useState(false);
   const [externalLink, setExternalLink] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [modRelation, setModRelation] = useState<ModerationRelationship>({
+    blocking: false,
+    muting: false,
+    blockedBy: false,
+  });
+  const [accountLabels, setAccountLabels] = useState<ContentLabel[]>([]);
+  const [profileRevealed, setProfileRevealed] = useState(false);
+  const preferences = useStore($preferences);
 
   const formatLinkText = (url: string) => {
     try {
@@ -116,7 +151,22 @@ export default function Profile({ did }: ProfileProps) {
           postsCount: bskyData?.postsCount || marginData?.postsCount,
         };
 
+        if (marginData?.labels && Array.isArray(marginData.labels)) {
+          setAccountLabels(marginData.labels);
+        }
+
         setProfile(merged);
+
+        if (user && user.did !== did) {
+          try {
+            const { getModerationRelationship } =
+              await import("../../api/client");
+            const rel = await getModerationRelationship(did);
+            setModRelation(rel);
+          } catch {
+            // ignore
+          }
+        }
       } catch (e) {
         console.error("Profile load failed", e);
       } finally {
@@ -218,16 +268,66 @@ export default function Profile({ did }: ProfileProps) {
         ? highlights
         : bookmarks;
 
+  const LABEL_DESCRIPTIONS: Record<string, string> = {
+    sexual: "Sexual Content",
+    nudity: "Nudity",
+    violence: "Violence",
+    gore: "Graphic Content",
+    spam: "Spam",
+    misleading: "Misleading",
+  };
+
+  const accountWarning = (() => {
+    if (!accountLabels.length) return null;
+    const priority = [
+      "gore",
+      "violence",
+      "nudity",
+      "sexual",
+      "misleading",
+      "spam",
+    ];
+    for (const p of priority) {
+      const match = accountLabels.find((l) => l.val === p);
+      if (match) {
+        const pref = preferences.labelPreferences.find(
+          (lp) => lp.label === p && lp.labelerDid === match.src,
+        );
+        const visibility = pref?.visibility || "warn";
+        if (visibility === "ignore") continue;
+        return {
+          label: p,
+          description: LABEL_DESCRIPTIONS[p] || p,
+          visibility,
+        };
+      }
+    }
+    return null;
+  })();
+
+  const shouldBlurAvatar = accountWarning && !profileRevealed;
+
   return (
     <div className="max-w-2xl mx-auto animate-slide-up">
       <div className="card p-5 mb-4">
         <div className="flex items-start gap-4">
-          <Avatar
-            did={profile.did}
-            avatar={profile.avatar}
-            size="xl"
-            className="ring-4 ring-surface-100 dark:ring-surface-800"
-          />
+          <div className="relative">
+            <div className="rounded-full overflow-hidden">
+              <div
+                className={clsx(
+                  "transition-all",
+                  shouldBlurAvatar && "blur-lg",
+                )}
+              >
+                <Avatar
+                  did={profile.did}
+                  avatar={profile.avatar}
+                  size="xl"
+                  className="ring-4 ring-surface-100 dark:ring-surface-800"
+                />
+              </div>
+            </div>
+          </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3">
@@ -239,16 +339,83 @@ export default function Profile({ did }: ProfileProps) {
                   @{profile.handle}
                 </p>
               </div>
-              {isOwner && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowEdit(true)}
-                  icon={<Edit2 size={14} />}
-                >
-                  <span className="hidden sm:inline">Edit</span>
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {isOwner && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowEdit(true)}
+                    icon={<Edit2 size={14} />}
+                  >
+                    <span className="hidden sm:inline">Edit</span>
+                  </Button>
+                )}
+                {!isOwner && user && (
+                  <MoreMenu
+                    items={(() => {
+                      const items: MoreMenuItem[] = [];
+                      if (modRelation.blocking) {
+                        items.push({
+                          label: `Unblock @${profile.handle || "user"}`,
+                          icon: <ShieldOff size={14} />,
+                          onClick: async () => {
+                            await unblockUser(did);
+                            setModRelation((prev) => ({
+                              ...prev,
+                              blocking: false,
+                            }));
+                          },
+                        });
+                      } else {
+                        items.push({
+                          label: `Block @${profile.handle || "user"}`,
+                          icon: <ShieldBan size={14} />,
+                          onClick: async () => {
+                            await blockUser(did);
+                            setModRelation((prev) => ({
+                              ...prev,
+                              blocking: true,
+                            }));
+                          },
+                          variant: "danger",
+                        });
+                      }
+                      if (modRelation.muting) {
+                        items.push({
+                          label: `Unmute @${profile.handle || "user"}`,
+                          icon: <Volume2 size={14} />,
+                          onClick: async () => {
+                            await unmuteUser(did);
+                            setModRelation((prev) => ({
+                              ...prev,
+                              muting: false,
+                            }));
+                          },
+                        });
+                      } else {
+                        items.push({
+                          label: `Mute @${profile.handle || "user"}`,
+                          icon: <VolumeX size={14} />,
+                          onClick: async () => {
+                            await muteUser(did);
+                            setModRelation((prev) => ({
+                              ...prev,
+                              muting: true,
+                            }));
+                          },
+                        });
+                      }
+                      items.push({
+                        label: "Report",
+                        icon: <Flag size={14} />,
+                        onClick: () => setShowReportModal(true),
+                        variant: "danger",
+                      });
+                      return items;
+                    })()}
+                  />
+                )}
+              </div>
             </div>
 
             {profile.description && (
@@ -315,6 +482,101 @@ export default function Profile({ did }: ProfileProps) {
           </div>
         </div>
       </div>
+
+      {accountWarning && (
+        <div className="card p-4 mb-4 border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-900/10">
+          <div className="flex items-center gap-3">
+            <EyeOff size={18} className="text-amber-500 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                Account labeled: {accountWarning.description}
+              </p>
+              <p className="text-xs text-amber-600/70 dark:text-amber-400/60 mt-0.5">
+                This label was applied by a moderation service you subscribe to.
+              </p>
+            </div>
+            {!profileRevealed ? (
+              <button
+                onClick={() => setProfileRevealed(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+              >
+                <Eye size={12} />
+                Show
+              </button>
+            ) : (
+              <button
+                onClick={() => setProfileRevealed(false)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+              >
+                <EyeOff size={12} />
+                Hide
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {modRelation.blocking && (
+        <div className="card p-4 mb-4 border-red-200 dark:border-red-800/50 bg-red-50/50 dark:bg-red-900/10">
+          <div className="flex items-center gap-3">
+            <ShieldBan size={18} className="text-red-500 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                You have blocked @{profile.handle}
+              </p>
+              <p className="text-xs text-red-600/70 dark:text-red-400/60 mt-0.5">
+                Their content is hidden from your feeds.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                await unblockUser(did);
+                setModRelation((prev) => ({ ...prev, blocking: false }));
+              }}
+              className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+            >
+              Unblock
+            </button>
+          </div>
+        </div>
+      )}
+
+      {modRelation.muting && !modRelation.blocking && (
+        <div className="card p-4 mb-4 border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-900/10">
+          <div className="flex items-center gap-3">
+            <VolumeX size={18} className="text-amber-500 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                You have muted @{profile.handle}
+              </p>
+              <p className="text-xs text-amber-600/70 dark:text-amber-400/60 mt-0.5">
+                Their content is hidden from your feeds.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                await unmuteUser(did);
+                setModRelation((prev) => ({ ...prev, muting: false }));
+              }}
+              className="px-3 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+            >
+              Unmute
+            </button>
+          </div>
+        </div>
+      )}
+
+      {modRelation.blockedBy && !modRelation.blocking && (
+        <div className="card p-4 mb-4 border-surface-200 dark:border-surface-700">
+          <div className="flex items-center gap-3">
+            <ShieldBan size={18} className="text-surface-400 flex-shrink-0" />
+            <p className="text-sm text-surface-500 dark:text-surface-400">
+              @{profile.handle} has blocked you. You cannot interact with their
+              content.
+            </p>
+          </div>
+        </div>
+      )}
 
       <Tabs
         tabs={tabs}
@@ -406,6 +668,13 @@ export default function Profile({ did }: ProfileProps) {
         isOpen={!!externalLink}
         onClose={() => setExternalLink(null)}
         url={externalLink}
+      />
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        subjectDid={did}
+        subjectHandle={profile?.handle}
       />
     </div>
   );

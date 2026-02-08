@@ -8,6 +8,11 @@ func (db *DB) CreateAPIKey(key *APIKey) error {
 	_, err := db.Exec(db.Rebind(`
 		INSERT INTO api_keys (id, owner_did, name, key_hash, created_at, uri, cid)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			key_hash = EXCLUDED.key_hash,
+			uri = EXCLUDED.uri,
+			cid = EXCLUDED.cid
 	`), key.ID, key.OwnerDID, key.Name, key.KeyHash, key.CreatedAt, key.URI, key.CID)
 	return err
 }

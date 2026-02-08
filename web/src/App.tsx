@@ -20,6 +20,7 @@ import {
   UserUrlWrapper,
 } from "./routes/wrappers";
 import About from "./views/About";
+import AdminModeration from "./views/core/AdminModeration";
 
 export default function App() {
   React.useEffect(() => {
@@ -174,6 +175,15 @@ export default function App() {
           element={
             <AppLayout>
               <UserUrlWrapper />
+            </AppLayout>
+          }
+        />
+
+        <Route
+          path="/admin/moderation"
+          element={
+            <AppLayout>
+              <AdminModeration />
             </AppLayout>
           }
         />

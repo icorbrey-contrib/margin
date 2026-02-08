@@ -25,6 +25,29 @@ const (
 	SelectorTypePosition = "TextPositionSelector"
 )
 
+type SelfLabel struct {
+	Val string `json:"val"`
+}
+
+type SelfLabels struct {
+	Type   string      `json:"$type"`
+	Values []SelfLabel `json:"values"`
+}
+
+func NewSelfLabels(vals []string) *SelfLabels {
+	if len(vals) == 0 {
+		return nil
+	}
+	labels := make([]SelfLabel, len(vals))
+	for i, v := range vals {
+		labels[i] = SelfLabel{Val: v}
+	}
+	return &SelfLabels{
+		Type:   "com.atproto.label.defs#selfLabels",
+		Values: labels,
+	}
+}
+
 type Selector struct {
 	Type string `json:"type"`
 }
@@ -86,6 +109,7 @@ type AnnotationRecord struct {
 	Facets     []Facet          `json:"facets,omitempty"`
 	Generator  *Generator       `json:"generator,omitempty"`
 	Rights     string           `json:"rights,omitempty"`
+	Labels     *SelfLabels      `json:"labels,omitempty"`
 	CreatedAt  string           `json:"createdAt"`
 }
 
@@ -203,6 +227,7 @@ type HighlightRecord struct {
 	Tags      []string         `json:"tags,omitempty"`
 	Generator *Generator       `json:"generator,omitempty"`
 	Rights    string           `json:"rights,omitempty"`
+	Labels    *SelfLabels      `json:"labels,omitempty"`
 	CreatedAt string           `json:"createdAt"`
 }
 
@@ -315,6 +340,7 @@ type BookmarkRecord struct {
 	Tags        []string   `json:"tags,omitempty"`
 	Generator   *Generator `json:"generator,omitempty"`
 	Rights      string     `json:"rights,omitempty"`
+	Labels      *SelfLabels `json:"labels,omitempty"`
 	CreatedAt   string     `json:"createdAt"`
 }
 
@@ -435,10 +461,22 @@ func (r *MarginProfileRecord) Validate() error {
 	return nil
 }
 
+type LabelerSubscription struct {
+	DID string `json:"did"`
+}
+
+type LabelPreference struct {
+	LabelerDID string `json:"labelerDid"`
+	Label      string `json:"label"`
+	Visibility string `json:"visibility"`
+}
+
 type PreferencesRecord struct {
-	Type                         string   `json:"$type"`
-	ExternalLinkSkippedHostnames []string `json:"externalLinkSkippedHostnames,omitempty"`
-	CreatedAt                    string   `json:"createdAt"`
+	Type                         string                `json:"$type"`
+	ExternalLinkSkippedHostnames []string              `json:"externalLinkSkippedHostnames,omitempty"`
+	SubscribedLabelers           []LabelerSubscription  `json:"subscribedLabelers,omitempty"`
+	LabelPreferences             []LabelPreference      `json:"labelPreferences,omitempty"`
+	CreatedAt                    string                `json:"createdAt"`
 }
 
 func (r *PreferencesRecord) Validate() error {
@@ -450,15 +488,37 @@ func (r *PreferencesRecord) Validate() error {
 			return fmt.Errorf("hostname too long: %s", host)
 		}
 	}
+	if len(r.SubscribedLabelers) > 50 {
+		return fmt.Errorf("too many subscribed labelers")
+	}
+	if len(r.LabelPreferences) > 500 {
+		return fmt.Errorf("too many label preferences")
+	}
 	return nil
 }
 
-func NewPreferencesRecord(skippedHostnames []string) *PreferencesRecord {
-	return &PreferencesRecord{
+func NewPreferencesRecord(skippedHostnames []string, labelers interface{}, labelPrefs interface{}) *PreferencesRecord {
+	record := &PreferencesRecord{
 		Type:                         CollectionPreferences,
 		ExternalLinkSkippedHostnames: skippedHostnames,
 		CreatedAt:                    time.Now().UTC().Format(time.RFC3339),
 	}
+
+	if labelers != nil {
+		switch v := labelers.(type) {
+		case []LabelerSubscription:
+			record.SubscribedLabelers = v
+		}
+	}
+
+	if labelPrefs != nil {
+		switch v := labelPrefs.(type) {
+		case []LabelPreference:
+			record.LabelPreferences = v
+		}
+	}
+
+	return record
 }
 
 type APIKeyRecord struct {

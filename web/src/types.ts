@@ -10,6 +10,7 @@ export interface UserProfile {
   followersCount?: number;
   followsCount?: number;
   postsCount?: number;
+  labels?: ContentLabel[];
 }
 
 export interface Selector {
@@ -80,6 +81,7 @@ export interface AnnotationItem {
     };
   };
   parentUri?: string;
+  labels?: ContentLabel[];
 }
 
 export type ActorSearchItem = UserProfile;
@@ -133,4 +135,82 @@ export interface EditHistoryItem {
   author: UserProfile;
   text: string;
   createdAt: string;
+}
+
+export interface ModerationRelationship {
+  blocking: boolean;
+  muting: boolean;
+  blockedBy: boolean;
+}
+
+export interface BlockedUser {
+  did: string;
+  author: UserProfile;
+  createdAt: string;
+}
+
+export interface MutedUser {
+  did: string;
+  author: UserProfile;
+  createdAt: string;
+}
+
+export interface ModerationReport {
+  id: number;
+  reporter: UserProfile;
+  subject: UserProfile;
+  subjectUri?: string;
+  reasonType: string;
+  reasonText?: string;
+  status: string;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+}
+
+export type ReportReasonType =
+  | "spam"
+  | "violation"
+  | "misleading"
+  | "sexual"
+  | "rude"
+  | "other";
+
+export interface ContentLabel {
+  val: string;
+  src: string;
+  scope?: "account" | "content";
+}
+
+export type ContentLabelValue =
+  | "sexual"
+  | "nudity"
+  | "violence"
+  | "gore"
+  | "spam"
+  | "misleading";
+
+export type LabelVisibility = "hide" | "warn" | "ignore";
+
+export interface LabelerSubscription {
+  did: string;
+}
+
+export interface LabelPreference {
+  labelerDid: string;
+  label: string;
+  visibility: LabelVisibility;
+}
+
+export interface LabelDefinition {
+  identifier: string;
+  severity: string;
+  blurs: string;
+  description: string;
+}
+
+export interface LabelerInfo {
+  did: string;
+  name: string;
+  labels: LabelDefinition[];
 }

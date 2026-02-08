@@ -27,6 +27,7 @@ type Handler struct {
 	refresher         *TokenRefresher
 	apiKeys           *APIKeyHandler
 	syncService       *internal_sync.Service
+	moderation        *ModerationHandler
 }
 
 func NewHandler(database *db.DB, annotationService *AnnotationService, refresher *TokenRefresher, syncService *internal_sync.Service) *Handler {
@@ -36,6 +37,7 @@ func NewHandler(database *db.DB, annotationService *AnnotationService, refresher
 		refresher:         refresher,
 		apiKeys:           NewAPIKeyHandler(database, refresher),
 		syncService:       syncService,
+		moderation:        NewModerationHandler(database, refresher),
 	}
 }
 
@@ -93,6 +95,23 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 		r.Get("/preferences", h.GetPreferences)
 		r.Put("/preferences", h.UpdatePreferences)
+
+		r.Post("/moderation/block", h.moderation.BlockUser)
+		r.Delete("/moderation/block", h.moderation.UnblockUser)
+		r.Get("/moderation/blocks", h.moderation.GetBlocks)
+		r.Post("/moderation/mute", h.moderation.MuteUser)
+		r.Delete("/moderation/mute", h.moderation.UnmuteUser)
+		r.Get("/moderation/mutes", h.moderation.GetMutes)
+		r.Get("/moderation/relationship", h.moderation.GetRelationship)
+		r.Post("/moderation/report", h.moderation.CreateReport)
+		r.Get("/moderation/admin/check", h.moderation.AdminCheckAccess)
+		r.Get("/moderation/admin/reports", h.moderation.AdminGetReports)
+		r.Get("/moderation/admin/report", h.moderation.AdminGetReport)
+		r.Post("/moderation/admin/action", h.moderation.AdminTakeAction)
+		r.Post("/moderation/admin/label", h.moderation.AdminCreateLabel)
+		r.Delete("/moderation/admin/label", h.moderation.AdminDeleteLabel)
+		r.Get("/moderation/admin/labels", h.moderation.AdminGetLabels)
+		r.Get("/moderation/labeler", h.moderation.GetLabelerInfo)
 	})
 }
 
@@ -423,7 +442,8 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 		feed = filtered
 	}
 
-	// ...
+	feed = h.filterFeedByModeration(feed, viewerDID)
+
 	switch feedType {
 	case "popular":
 		sortFeedByPopularity(feed)
@@ -447,7 +467,6 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	} else {
 		feed = []interface{}{}
 	}
-	// ...
 
 	if len(feed) > limit {
 		feed = feed[:limit]
@@ -1513,4 +1532,40 @@ func (h *Handler) getViewerDID(r *http.Request) string {
 		return ""
 	}
 	return did
+}
+
+func getItemAuthorDID(item interface{}) string {
+	switch v := item.(type) {
+	case APIAnnotation:
+		return v.Author.DID
+	case APIHighlight:
+		return v.Author.DID
+	case APIBookmark:
+		return v.Author.DID
+	case APICollectionItem:
+		return v.Author.DID
+	default:
+		return ""
+	}
+}
+
+func (h *Handler) filterFeedByModeration(feed []interface{}, viewerDID string) []interface{} {
+	if viewerDID == "" {
+		return feed
+	}
+
+	hiddenDIDs, err := h.db.GetAllHiddenDIDs(viewerDID)
+	if err != nil || len(hiddenDIDs) == 0 {
+		return feed
+	}
+
+	var filtered []interface{}
+	for _, item := range feed {
+		authorDID := getItemAuthorDID(item)
+		if authorDID != "" && hiddenDIDs[authorDID] {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
 }

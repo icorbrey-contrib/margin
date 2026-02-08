@@ -34,6 +34,8 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 		xrpc.CollectionLike,
 		xrpc.CollectionCollection,
 		xrpc.CollectionCollectionItem,
+		xrpc.CollectionAPIKey,
+		xrpc.CollectionPreferences,
 		xrpc.CollectionSembleCard,
 		xrpc.CollectionSembleCollection,
 		xrpc.CollectionSembleCollectionLink,
@@ -187,7 +189,13 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 				} else {
 					err = e
 				}
-			case xrpc.CollectionSembleCollectionLink:
+				case xrpc.CollectionAPIKey:
+					localURIs, err = s.db.GetAPIKeyURIs(did)
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionAPIKey)
+				case xrpc.CollectionPreferences:
+					localURIs, err = s.db.GetPreferenceURIs(did)
+					localURIs = filterURIsByCollection(localURIs, xrpc.CollectionPreferences)
+				case xrpc.CollectionSembleCollectionLink:
 				items, e := s.db.GetCollectionItemsByAuthor(did)
 				if e == nil {
 					for _, item := range items {
@@ -224,6 +232,10 @@ func (s *Service) PerformSync(ctx context.Context, did string, getClient func(co
 							_ = s.db.DeleteCollection(uri)
 						case xrpc.CollectionSembleCollectionLink:
 							_ = s.db.RemoveFromCollection(uri)
+						case xrpc.CollectionAPIKey:
+							_ = s.db.DeleteAPIKeyByURI(uri)
+						case xrpc.CollectionPreferences:
+							_ = s.db.DeletePreferences(uri)
 						}
 						deletedCount++
 					}
@@ -612,6 +624,66 @@ func (s *Service) upsertRecord(did, collection, uri, cid string, value json.RawM
 			Position:      0,
 			CreatedAt:     createdAt,
 			IndexedAt:     time.Now(),
+		})
+
+	case xrpc.CollectionAPIKey:
+		var record xrpc.APIKeyRecord
+		if err := json.Unmarshal(value, &record); err != nil {
+			return err
+		}
+		createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
+
+		parts := strings.Split(uri, "/")
+		rkey := parts[len(parts)-1]
+
+		return s.db.CreateAPIKey(&db.APIKey{
+			ID:        rkey,
+			OwnerDID:  did,
+			Name:      record.Name,
+			KeyHash:   record.KeyHash,
+			CreatedAt: createdAt,
+			URI:       uri,
+			CID:       cidPtr,
+			IndexedAt: time.Now(),
+		})
+
+	case xrpc.CollectionPreferences:
+		var record xrpc.PreferencesRecord
+		if err := json.Unmarshal(value, &record); err != nil {
+			return err
+		}
+		createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
+
+		var skippedHostnamesPtr *string
+		if len(record.ExternalLinkSkippedHostnames) > 0 {
+			hostnamesBytes, _ := json.Marshal(record.ExternalLinkSkippedHostnames)
+			hostnamesStr := string(hostnamesBytes)
+			skippedHostnamesPtr = &hostnamesStr
+		}
+
+		var subscribedLabelersPtr *string
+		if len(record.SubscribedLabelers) > 0 {
+			labelersBytes, _ := json.Marshal(record.SubscribedLabelers)
+			s := string(labelersBytes)
+			subscribedLabelersPtr = &s
+		}
+
+		var labelPrefsPtr *string
+		if len(record.LabelPreferences) > 0 {
+			prefsBytes, _ := json.Marshal(record.LabelPreferences)
+			s := string(prefsBytes)
+			labelPrefsPtr = &s
+		}
+
+		return s.db.UpsertPreferences(&db.Preferences{
+			URI:                          uri,
+			AuthorDID:                    did,
+			ExternalLinkSkippedHostnames: skippedHostnamesPtr,
+			SubscribedLabelers:           subscribedLabelersPtr,
+			LabelPreferences:             labelPrefsPtr,
+			CreatedAt:                    createdAt,
+			IndexedAt:                    time.Now(),
+			CID:                          cidPtr,
 		})
 	}
 	return nil
