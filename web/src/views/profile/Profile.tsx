@@ -79,8 +79,15 @@ export default function Profile({ did }: ProfileProps) {
   };
 
   useEffect(() => {
+    setProfile(null);
+    setAnnotations([]);
+    setHighlights([]);
+    setBookmarks([]);
+    setCollections([]);
+    setActiveTab("annotations");
+    setLoading(true);
+
     const loadProfile = async () => {
-      setLoading(true);
       try {
         const marginPromise = getProfile(did);
         const bskyPromise = fetch(
@@ -122,15 +129,6 @@ export default function Profile({ did }: ProfileProps) {
   useEffect(() => {
     loadPreferences();
   }, []);
-
-  useEffect(() => {
-    setProfile(null);
-    setAnnotations([]);
-    setHighlights([]);
-    setBookmarks([]);
-    setCollections([]);
-    setActiveTab("annotations");
-  }, [did]);
 
   useEffect(() => {
     const loadTabContent = async () => {

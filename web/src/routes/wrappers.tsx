@@ -10,7 +10,7 @@ import UserUrlPage from "../views/content/UserUrl";
 export function ProfileWrapper() {
   const { did } = useParams();
   if (!did) return <Navigate to="/home" replace />;
-  return <Profile did={did} />;
+  return <Profile key={did} did={did} />;
 }
 
 export function SelfProfileWrapper() {
