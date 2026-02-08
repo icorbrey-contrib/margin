@@ -137,14 +137,14 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
     item.target?.title ||
     item.title ||
     (pageUrl ? safeUrlHostname(pageUrl) : null);
-  const pageHostname = pageUrl
-    ? safeUrlHostname(pageUrl)?.replace("www.", "")
-    : null;
   const displayUrl = pageUrl
-    ? pageUrl
-        .replace(/^https?:\/\//, "")
-        .replace(/^www\./, "")
-        .replace(/\/$/, "")
+    ? (() => {
+        const clean = pageUrl
+          .replace(/^https?:\/\//, "")
+          .replace(/^www\./, "")
+          .replace(/\/$/, "");
+        return clean.length > 60 ? clean.slice(0, 57) + "..." : clean;
+      })()
     : null;
   const isBookmark = type === "bookmark";
 
@@ -288,10 +288,10 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => handleExternalClick(e, pageUrl)}
-              className="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline mt-0.5"
+              className="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline mt-0.5 max-w-full"
             >
-              <ExternalLink size={10} />
-              {displayUrl}
+              <ExternalLink size={10} className="flex-shrink-0" />
+              <span className="truncate">{displayUrl}</span>
             </a>
           )}
         </div>
