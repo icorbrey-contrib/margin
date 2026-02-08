@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { X, ShieldAlert } from "lucide-react";
 import {
   updateAnnotation,
@@ -38,15 +38,30 @@ export default function EditItemModal({
   type,
   onSaved,
 }: EditItemModalProps) {
+  if (!isOpen) return null;
+  return (
+    <EditItemModalContent
+      key={item.uri || item.id || JSON.stringify(item)}
+      item={item}
+      type={type}
+      onClose={onClose}
+      onSaved={onSaved}
+    />
+  );
+}
+
+function EditItemModalContent({
+  item,
+  type,
+  onClose,
+  onSaved,
+}: Omit<EditItemModalProps, "isOpen">) {
   const [text, setText] = useState(item.body?.value || "");
   const [tags, setTags] = useState<string[]>(item.tags || []);
   const [tagInput, setTagInput] = useState("");
-
   const [color, setColor] = useState(item.color || "yellow");
-
   const [title, setTitle] = useState(item.title || item.target?.title || "");
   const [description, setDescription] = useState(item.description || "");
-
   const existingLabels = (item.labels || [])
     .filter((l) => l.src === item.author?.did)
     .map((l) => l.val as ContentLabelValue);
@@ -55,27 +70,8 @@ export default function EditItemModal({
   const [showLabelPicker, setShowLabelPicker] = useState(
     existingLabels.length > 0,
   );
-
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setText(item.body?.value || "");
-      setTags(item.tags || []);
-      setTagInput("");
-      setColor(item.color || "yellow");
-      setTitle(item.title || item.target?.title || "");
-      setDescription(item.description || "");
-      const labels = (item.labels || [])
-        .filter((l) => l.src === item.author?.did)
-        .map((l) => l.val as ContentLabelValue);
-      setSelfLabels(labels);
-      setShowLabelPicker(labels.length > 0);
-    }
-  }, [isOpen, item]);
-
-  if (!isOpen) return null;
 
   const addTag = () => {
     const t = tagInput.trim().toLowerCase();

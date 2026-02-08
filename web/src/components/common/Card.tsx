@@ -121,10 +121,16 @@ export default function Card({
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [contentRevealed, setContentRevealed] = useState(false);
+  const [ogData, setOgData] = useState<{
+    title?: string;
+    description?: string;
+    image?: string;
+    icon?: string;
+  } | null>(null);
+  const [imgError, setImgError] = useState(false);
+  const [iconError, setIconError] = useState(false);
 
   const contentWarning = getContentWarning(item.labels, preferences);
-
-  if (contentWarning?.visibility === "hide") return null;
 
   React.useEffect(() => {
     setItem(initialItem);
@@ -144,6 +150,39 @@ export default function Card({
 
   const isSemble =
     item.uri?.includes("network.cosmik") || item.uri?.includes("semble");
+
+  const safeUrlHostname = (url: string | null | undefined) => {
+    if (!url) return null;
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return null;
+    }
+  };
+
+  const pageUrl = item.target?.source || item.source;
+  const isBookmark = type === "bookmark";
+
+  React.useEffect(() => {
+    if (isBookmark && item.uri && !ogData && pageUrl) {
+      const fetchMetadata = async () => {
+        try {
+          const res = await fetch(
+            `/api/url-metadata?url=${encodeURIComponent(pageUrl)}`,
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setOgData(data);
+          }
+        } catch (e) {
+          console.error("Failed to fetch metadata", e);
+        }
+      };
+      fetchMetadata();
+    }
+  }, [isBookmark, item.uri, pageUrl, ogData]);
+
+  if (contentWarning?.visibility === "hide") return null;
 
   const handleLike = async () => {
     const prev = { liked, likes };
@@ -213,16 +252,6 @@ export default function Card({
 
   const detailUrl = `/${item.author?.handle || item.author?.did}/${type}/${(item.uri || "").split("/").pop()}`;
 
-  const safeUrlHostname = (url: string | null | undefined) => {
-    if (!url) return null;
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return null;
-    }
-  };
-
-  const pageUrl = item.target?.source || item.source;
   const pageTitle =
     item.target?.title ||
     item.title ||
@@ -236,36 +265,6 @@ export default function Card({
         return clean.length > 60 ? clean.slice(0, 57) + "..." : clean;
       })()
     : null;
-  const isBookmark = type === "bookmark";
-
-  const [ogData, setOgData] = useState<{
-    title?: string;
-    description?: string;
-    image?: string;
-    icon?: string;
-  } | null>(null);
-
-  const [imgError, setImgError] = useState(false);
-  const [iconError, setIconError] = useState(false);
-
-  React.useEffect(() => {
-    if (isBookmark && item.uri && !ogData && pageUrl) {
-      const fetchMetadata = async () => {
-        try {
-          const res = await fetch(
-            `/api/url-metadata?url=${encodeURIComponent(pageUrl)}`,
-          );
-          if (res.ok) {
-            const data = await res.json();
-            setOgData(data);
-          }
-        } catch (e) {
-          console.error("Failed to fetch metadata", e);
-        }
-      };
-      fetchMetadata();
-    }
-  }, [isBookmark, item.uri, pageUrl, ogData]);
 
   const displayTitle =
     item.title || ogData?.title || pageTitle || "Untitled Bookmark";

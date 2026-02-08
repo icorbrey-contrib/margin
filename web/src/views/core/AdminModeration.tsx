@@ -9,7 +9,7 @@ import {
   adminDeleteLabel,
   adminGetLabels,
 } from "../../api/client";
-import type { ModerationReport } from "../../types";
+import type { ModerationReport, HydratedLabel } from "../../types";
 import {
   Shield,
   CheckCircle,
@@ -57,26 +57,6 @@ const LABEL_OPTIONS = [
   { val: "misleading", label: "Misleading" },
 ];
 
-interface HydratedLabel {
-  id: number;
-  src: string;
-  uri: string;
-  val: string;
-  createdBy: {
-    did: string;
-    handle: string;
-    displayName?: string;
-    avatar?: string;
-  };
-  createdAt: string;
-  subject?: {
-    did: string;
-    handle: string;
-    displayName?: string;
-    avatar?: string;
-  };
-}
-
 type Tab = "reports" | "labels" | "actions";
 
 export default function AdminModeration() {
@@ -100,16 +80,6 @@ export default function AdminModeration() {
   const [labelSubmitting, setLabelSubmitting] = useState(false);
   const [labelSuccess, setLabelSuccess] = useState(false);
 
-  useEffect(() => {
-    const init = async () => {
-      const admin = await checkAdminAccess();
-      setIsAdmin(admin);
-      if (admin) await loadReports("pending");
-      setLoading(false);
-    };
-    init();
-  }, []);
-
   const loadReports = async (status: string) => {
     const data = await getAdminReports(status || undefined);
     setReports(data.items);
@@ -121,6 +91,16 @@ export default function AdminModeration() {
     const data = await adminGetLabels();
     setLabels(data.items || []);
   };
+
+  useEffect(() => {
+    const init = async () => {
+      const admin = await checkAdminAccess();
+      setIsAdmin(admin);
+      if (admin) await loadReports("pending");
+      setLoading(false);
+    };
+    init();
+  }, []);
 
   const handleTabChange = async (tab: Tab) => {
     setActiveTab(tab);

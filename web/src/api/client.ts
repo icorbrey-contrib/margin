@@ -7,6 +7,7 @@ import type {
   NotificationItem,
   Target,
   Selector,
+  HydratedLabel,
 } from "../types";
 export type { Collection } from "../types";
 
@@ -1130,7 +1131,7 @@ export async function checkAdminAccess(): Promise<boolean> {
     if (!res.ok) return false;
     const data = await res.json();
     return data.isAdmin || false;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -1209,7 +1210,7 @@ export async function adminDeleteLabel(id: number): Promise<boolean> {
 export async function adminGetLabels(
   limit = 50,
   offset = 0,
-): Promise<{ items: any[] }> {
+): Promise<{ items: HydratedLabel[] }> {
   try {
     const res = await apiRequest(
       `/api/moderation/admin/labels?limit=${limit}&offset=${offset}`,

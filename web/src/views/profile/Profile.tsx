@@ -7,6 +7,7 @@ import {
   unblockUser,
   muteUser,
   unmuteUser,
+  getModerationRelationship,
 } from "../../api/client";
 import Card from "../../components/common/Card";
 import RichText from "../../components/common/RichText";
@@ -38,7 +39,6 @@ import type {
   Collection,
   ModerationRelationship,
   ContentLabel,
-  LabelVisibility,
 } from "../../types";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
@@ -159,8 +159,6 @@ export default function Profile({ did }: ProfileProps) {
 
         if (user && user.did !== did) {
           try {
-            const { getModerationRelationship } =
-              await import("../../api/client");
             const rel = await getModerationRelationship(did);
             setModRelation(rel);
           } catch {
@@ -174,7 +172,7 @@ export default function Profile({ did }: ProfileProps) {
       }
     };
     if (did) loadProfile();
-  }, [did]);
+  }, [did, user]);
 
   useEffect(() => {
     loadPreferences();

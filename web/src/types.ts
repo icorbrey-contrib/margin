@@ -214,3 +214,23 @@ export interface LabelerInfo {
   name: string;
   labels: LabelDefinition[];
 }
+
+export interface HydratedLabel {
+  id: number;
+  src: string;
+  uri: string;
+  val: string;
+  createdBy: {
+    did: string;
+    handle: string;
+    displayName?: string;
+    avatar?: string;
+  };
+  createdAt: string;
+  subject?: {
+    did: string;
+    handle: string;
+    displayName?: string;
+    avatar?: string;
+  };
+}
