@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getProfile, getFeed, getCollections } from "../../api/client";
 import Card from "../../components/common/Card";
+import RichText from "../../components/common/RichText";
 import {
   Edit2,
   Github,
@@ -121,6 +122,15 @@ export default function Profile({ did }: ProfileProps) {
   useEffect(() => {
     loadPreferences();
   }, []);
+
+  useEffect(() => {
+    setProfile(null);
+    setAnnotations([]);
+    setHighlights([]);
+    setBookmarks([]);
+    setCollections([]);
+    setActiveTab("annotations");
+  }, [did]);
 
   useEffect(() => {
     const loadTabContent = async () => {
@@ -244,8 +254,8 @@ export default function Profile({ did }: ProfileProps) {
             </div>
 
             {profile.description && (
-              <p className="text-surface-600 dark:text-surface-300 text-sm mt-3 line-clamp-2">
-                {profile.description}
+              <p className="text-surface-600 dark:text-surface-300 text-sm mt-3 whitespace-pre-line">
+                <RichText text={profile.description} />
               </p>
             )}
 

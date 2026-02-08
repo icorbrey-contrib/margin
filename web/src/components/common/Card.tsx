@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
+import RichText from "./RichText";
 import {
   MessageSquare,
   Heart,
@@ -138,6 +139,12 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
     (pageUrl ? safeUrlHostname(pageUrl) : null);
   const pageHostname = pageUrl
     ? safeUrlHostname(pageUrl)?.replace("www.", "")
+    : null;
+  const displayUrl = pageUrl
+    ? pageUrl
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .replace(/\/$/, "")
     : null;
   const isBookmark = type === "bookmark";
 
@@ -284,7 +291,7 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
               className="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline mt-0.5"
             >
               <ExternalLink size={10} />
-              {pageHostname}
+              {displayUrl}
             </a>
           )}
         </div>
@@ -334,7 +341,7 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
                   )}
                 </div>
                 <span className="truncate max-w-[200px]">
-                  {pageHostname || pageUrl}
+                  {displayUrl || pageUrl}
                 </span>
               </div>
             </div>
@@ -388,7 +395,7 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
 
         {item.body?.value && (
           <p className="text-surface-900 dark:text-surface-100 whitespace-pre-wrap leading-relaxed text-[15px]">
-            {item.body.value}
+            <RichText text={item.body.value} />
           </p>
         )}
       </div>

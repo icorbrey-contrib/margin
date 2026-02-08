@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../ui/Avatar";
+import RichText from "./RichText";
 import { getProfile } from "../../api/client";
 import type { UserProfile } from "../../types";
 import { Loader2 } from "lucide-react";
@@ -134,8 +135,8 @@ export default function ProfileHoverCard({
               </Link>
 
               {profile.description && (
-                <p className="text-sm text-surface-600 dark:text-surface-300 line-clamp-3">
-                  {profile.description}
+                <p className="text-sm text-surface-600 dark:text-surface-300 whitespace-pre-line line-clamp-3">
+                  <RichText text={profile.description} />
                 </p>
               )}
 
