@@ -52,7 +52,7 @@ export default function ShareMenu({
     if (customUrl) return customUrl;
     if (!uri) return "";
 
-    const uriParts = (uri || "").split("/");
+    const uriParts = uri.split("/");
     const rkey = uriParts[uriParts.length - 1];
     const did = uriParts[2];
 
