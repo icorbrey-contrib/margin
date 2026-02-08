@@ -217,6 +217,7 @@ function normalizeItem(raw: RawItem): AnnotationItem {
     target: target,
     viewer: raw.viewer || { like: raw.viewerHasLiked ? "true" : undefined },
     motivation: raw.motivation || "highlighting",
+    parentUri: (raw as Record<string, unknown>).inReplyTo as string | undefined,
   };
 }
 
@@ -699,7 +700,7 @@ export async function getTrendingTags(limit = 10): Promise<Tag[]> {
 
 export async function getCollections(creator?: string): Promise<Collection[]> {
   try {
-    const query = creator ? `?creator=${encodeURIComponent(creator)}` : "";
+    const query = creator ? `?author=${encodeURIComponent(creator)}` : "";
     const res = await apiRequest(`/api/collections${query}`);
     if (!res.ok) throw new Error("Failed to fetch collections");
     const data = await res.json();

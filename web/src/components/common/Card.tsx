@@ -83,6 +83,15 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
     try {
       const hostname = safeUrlHostname(url);
       if (hostname) {
+        if (
+          hostname === "margin.at" ||
+          hostname.endsWith(".margin.at") ||
+          hostname === "semble.so" ||
+          hostname.endsWith(".semble.so")
+        ) {
+          window.open(url, "_blank", "noopener,noreferrer");
+          return;
+        }
         const skipped = $preferences.get().externalLinkSkippedHostnames;
         if (skipped.includes(hostname)) {
           window.open(url, "_blank", "noopener,noreferrer");
@@ -101,6 +110,7 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
 
   const timestamp = item.createdAt
     ? formatDistanceToNow(new Date(item.createdAt), { addSuffix: false })
+        .replace("less than a minute", "just now")
         .replace("about ", "")
         .replace(" hours", "h")
         .replace(" hour", "h")
@@ -229,16 +239,40 @@ export default function Card({ item, onDelete, hideShare }: CardProps) {
             <span className="text-surface-400 dark:text-surface-500 text-sm">
               {timestamp}
             </span>
-            {isSemble && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-surface-400 dark:text-surface-500 uppercase font-medium tracking-wide">
-                · via{" "}
-                <img
-                  src="/semble-logo.svg"
-                  alt="Semble"
-                  className="h-3 opacity-70"
-                />
-              </span>
-            )}
+            {isSemble &&
+              (() => {
+                const uri = item.uri || "";
+                const parts = uri.replace("at://", "").split("/");
+                const userHandle = item.author?.handle || parts[0] || "";
+                const rkey = parts[2] || "";
+                const targetUrl = item.target?.source || item.source || "";
+                let sembleUrl = `https://semble.so/profile/${userHandle}`;
+                if (uri.includes("network.cosmik.collection"))
+                  sembleUrl = `https://semble.so/profile/${userHandle}/collections/${rkey}`;
+                else if (uri.includes("network.cosmik.card") && targetUrl)
+                  sembleUrl = `https://semble.so/url?id=${encodeURIComponent(targetUrl)}`;
+                return (
+                  <span className="relative inline-flex items-center">
+                    <span className="text-surface-300 dark:text-surface-600">
+                      ·
+                    </span>
+                    <button
+                      onClick={(e) => handleExternalClick(e, sembleUrl)}
+                      className="group/semble relative inline-flex items-center ml-1 cursor-pointer"
+                    >
+                      <img
+                        src="/semble-logo.svg"
+                        alt="Semble"
+                        className="h-3.5"
+                      />
+                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 rounded-lg bg-surface-800 dark:bg-surface-700 text-white text-[11px] font-medium whitespace-nowrap opacity-0 group-hover/semble:opacity-100 transition-opacity shadow-lg">
+                        Open in Semble
+                        <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-surface-800 dark:border-t-surface-700" />
+                      </span>
+                    </button>
+                  </span>
+                );
+              })()}
           </div>
 
           {pageUrl && !isBookmark && (

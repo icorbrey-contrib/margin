@@ -261,7 +261,7 @@ export default function AnnotationDetail() {
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       placeholder="Write a reply..."
-                      className="w-full p-0 border-0 focus:ring-0 text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500 resize-none min-h-[40px] appearance-none bg-transparent leading-relaxed"
+                      className="w-full p-3 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-400 outline-none resize-none min-h-[80px]"
                       rows={2}
                       disabled={posting}
                     />

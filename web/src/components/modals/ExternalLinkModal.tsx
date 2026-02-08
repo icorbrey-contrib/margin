@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "../ui";
-import { ExternalLink, AlertTriangle } from "lucide-react";
+import { ExternalLink, Shield } from "lucide-react";
 import { addSkippedHostname } from "../../store/preferences";
 
 interface ExternalLinkModalProps {
@@ -42,57 +42,71 @@ export default function ExternalLinkModal({
   })();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-surface-900 rounded-2xl shadow-2xl max-w-sm w-full animate-scale-in ring-1 ring-black/5 dark:ring-white/10 p-6">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full flex items-center justify-center mb-4">
-            <AlertTriangle size={24} />
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-surface-900 rounded-xl shadow-2xl max-w-md w-full animate-scale-in ring-1 ring-surface-200 dark:ring-surface-700 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Shield size={18} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-surface-900 dark:text-white">
+                Leaving Margin
+              </h2>
+              <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
+                You're about to visit an external site.
+              </p>
+            </div>
           </div>
 
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white mb-2">
-            You are leaving Margin
-          </h2>
-
-          <p className="text-surface-500 dark:text-surface-400 text-sm mb-6 leading-relaxed">
-            This link will take you to an external website:
-            <br />
-            <span className="font-medium text-sm bg-surface-100 dark:bg-surface-800 text-surface-900 dark:text-surface-100 p-3 rounded-xl mt-3 block break-all border border-surface-200 dark:border-surface-700 shadow-sm">
+          <div className="mt-4 flex items-center gap-2 bg-surface-50 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 rounded-lg px-3 py-2.5">
+            <ExternalLink
+              size={14}
+              className="text-surface-400 dark:text-surface-500 flex-shrink-0"
+            />
+            <span className="text-sm text-surface-700 dark:text-surface-300 break-all line-clamp-2">
               {displayUrl}
             </span>
-          </p>
+          </div>
+        </div>
 
-          <div className="flex items-center gap-2 mb-6 w-full px-1">
+        <div className="px-6 pb-5 pt-2 flex flex-col gap-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none group">
             <input
               type="checkbox"
-              id="dontAskAgain"
               checked={dontAskAgain}
               onChange={(e) => setDontAskAgain(e.target.checked)}
-              className="rounded border-surface-300 text-primary-600 focus:ring-primary-500 w-4 h-4 cursor-pointer"
+              className="rounded border-surface-300 dark:border-surface-600 text-primary-600 focus:ring-primary-500 w-3.5 h-3.5 cursor-pointer"
             />
-            <label
-              htmlFor="dontAskAgain"
-              className="text-sm text-surface-600 dark:text-surface-300 cursor-pointer select-none"
-            >
-              Don't ask again for{" "}
-              <span className="font-medium">{hostname}</span>
-            </label>
-          </div>
+            <span className="text-xs text-surface-500 dark:text-surface-400 group-hover:text-surface-600 dark:group-hover:text-surface-300 transition-colors">
+              Always allow links to{" "}
+              <span className="font-medium text-surface-700 dark:text-surface-200">
+                {hostname}
+              </span>
+            </span>
+          </label>
 
-          <div className="flex flex-col gap-3 w-full">
-            <Button
-              onClick={handleContinue}
-              variant="primary"
-              className="w-full justify-center"
-              icon={<ExternalLink size={16} />}
-            >
-              Continue to Site
-            </Button>
+          <div className="flex gap-2">
             <Button
               onClick={onClose}
               variant="ghost"
-              className="w-full justify-center"
+              className="flex-1 justify-center"
             >
-              Go Back
+              Cancel
+            </Button>
+            <Button
+              onClick={handleContinue}
+              variant="primary"
+              className="flex-1 justify-center"
+              icon={<ExternalLink size={14} />}
+            >
+              Open Link
             </Button>
           </div>
         </div>
