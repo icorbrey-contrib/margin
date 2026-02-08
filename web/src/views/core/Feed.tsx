@@ -217,9 +217,7 @@ export default function Feed({
             </Button>
             <Button
               variant="secondary"
-              onClick={() =>
-                window.open("https://github.com/margin-at", "_blank")
-              }
+              onClick={() => window.open("/about", "_blank")}
             >
               Learn More
             </Button>

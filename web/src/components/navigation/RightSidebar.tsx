@@ -126,12 +126,20 @@ export default function RightSidebar() {
               Terms
             </a>
             <a
-              href="https://github.com/margin-at"
+              href="https://github.com/margin-at/margin"
               target="_blank"
               rel="noreferrer"
               className="hover:underline hover:text-surface-600 dark:hover:text-surface-300"
             >
-              Code
+              GitHub
+            </a>
+            <a
+              href="https://tangled.org/margin.at/margin"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:underline hover:text-surface-600 dark:hover:text-surface-300"
+            >
+              Tangled
             </a>
             <span>© 2026 Margin</span>
           </div>
