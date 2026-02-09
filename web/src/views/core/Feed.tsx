@@ -144,7 +144,7 @@ function FeedContent({
         <div className="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4 animate-fade-in">
           {items.map((item) => (
             <div key={item.uri || item.cid} className="break-inside-avoid mb-4">
-              <Card item={item} onDelete={handleDelete} />
+              <Card item={item} onDelete={handleDelete} layout="mosaic" />
             </div>
           ))}
         </div>

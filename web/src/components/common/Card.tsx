@@ -101,6 +101,7 @@ interface CardProps {
   onDelete?: (uri: string) => void;
   onUpdate?: (item: AnnotationItem) => void;
   hideShare?: boolean;
+  layout?: "list" | "mosaic";
 }
 
 export default function Card({
@@ -108,6 +109,7 @@ export default function Card({
   onDelete,
   onUpdate,
   hideShare,
+  layout = "list",
 }: CardProps) {
   const [item, setItem] = useState(initialItem);
   const user = useStore($user);
@@ -421,7 +423,12 @@ export default function Card({
         </div>
       </div>
 
-      <div className="mt-3 ml-[52px] relative">
+      <div
+        className={clsx(
+          "mt-3 relative",
+          layout === "mosaic" ? "" : "ml-[52px]",
+        )}
+      >
         {contentWarning && !contentRevealed && (
           <div className="absolute inset-0 z-10 rounded-lg bg-surface-100 dark:bg-surface-800 flex flex-col items-center justify-center gap-2 py-4">
             <div className="flex items-center gap-2 text-surface-500 dark:text-surface-400">
@@ -456,21 +463,38 @@ export default function Card({
             }}
             role="button"
             tabIndex={0}
-            className="flex items-stretch bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-all group overflow-hidden cursor-pointer"
+            className={clsx(
+              "flex bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-all group overflow-hidden cursor-pointer",
+              layout === "mosaic"
+                ? "flex-col items-stretch"
+                : "flex-row items-stretch",
+            )}
           >
             {displayImage && !imgError && (
-              <div className="w-[140px] sm:w-[180px] shrink-0 border-r border-surface-200 dark:border-surface-700 bg-surface-200 dark:bg-surface-700 relative">
+              <div
+                className={clsx(
+                  "shrink-0 bg-surface-200 dark:bg-surface-700 relative",
+                  layout === "mosaic"
+                    ? "w-full aspect-video border-b border-surface-200 dark:border-surface-700"
+                    : "w-[140px] sm:w-[180px] border-r border-surface-200 dark:border-surface-700",
+                )}
+              >
                 <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
                   <img
                     src={displayImage}
-                    alt=""
+                    alt={displayTitle || "Link preview"}
+                    className="h-full w-full object-cover"
                     onError={() => setImgError(true)}
-                    className="w-full h-full object-cover"
                   />
                 </div>
               </div>
             )}
-            <div className="p-3 flex-1 min-w-0 flex flex-col justify-center font-sans">
+            <div
+              className={clsx(
+                "p-3 min-w-0 flex flex-col font-sans",
+                layout === "mosaic" ? "w-full" : "flex-1 justify-center",
+              )}
+            >
               <h3 className="font-semibold text-surface-900 dark:text-white text-sm leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-400 mb-1.5 transition-colors line-clamp-2">
                 {displayTitle}
               </h3>
