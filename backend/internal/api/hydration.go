@@ -61,6 +61,12 @@ type APIGenerator struct {
 	Name string `json:"name"`
 }
 
+type APILabel struct {
+	Val   string `json:"val"`
+	Src   string `json:"src"`
+	Scope string `json:"scope"`
+}
+
 type APIAnnotation struct {
 	ID             string        `json:"id"`
 	CID            string        `json:"cid"`
@@ -76,35 +82,40 @@ type APIAnnotation struct {
 	LikeCount      int           `json:"likeCount"`
 	ReplyCount     int           `json:"replyCount"`
 	ViewerHasLiked bool          `json:"viewerHasLiked"`
+	Labels         []APILabel    `json:"labels,omitempty"`
 }
 
 type APIHighlight struct {
-	ID             string    `json:"id"`
-	Type           string    `json:"type"`
-	Author         Author    `json:"creator"`
-	Target         APITarget `json:"target"`
-	Color          string    `json:"color,omitempty"`
-	Tags           []string  `json:"tags,omitempty"`
-	CreatedAt      time.Time `json:"created"`
-	CID            string    `json:"cid,omitempty"`
-	LikeCount      int       `json:"likeCount"`
-	ReplyCount     int       `json:"replyCount"`
-	ViewerHasLiked bool      `json:"viewerHasLiked"`
+	ID             string     `json:"id"`
+	Type           string     `json:"type"`
+	Motivation     string     `json:"motivation"`
+	Author         Author     `json:"creator"`
+	Target         APITarget  `json:"target"`
+	Color          string     `json:"color,omitempty"`
+	Tags           []string   `json:"tags,omitempty"`
+	CreatedAt      time.Time  `json:"created"`
+	CID            string     `json:"cid,omitempty"`
+	LikeCount      int        `json:"likeCount"`
+	ReplyCount     int        `json:"replyCount"`
+	ViewerHasLiked bool       `json:"viewerHasLiked"`
+	Labels         []APILabel `json:"labels,omitempty"`
 }
 
 type APIBookmark struct {
-	ID             string    `json:"id"`
-	Type           string    `json:"type"`
-	Author         Author    `json:"creator"`
-	Source         string    `json:"source"`
-	Title          string    `json:"title,omitempty"`
-	Description    string    `json:"description,omitempty"`
-	Tags           []string  `json:"tags,omitempty"`
-	CreatedAt      time.Time `json:"created"`
-	CID            string    `json:"cid,omitempty"`
-	LikeCount      int       `json:"likeCount"`
-	ReplyCount     int       `json:"replyCount"`
-	ViewerHasLiked bool      `json:"viewerHasLiked"`
+	ID             string     `json:"id"`
+	Type           string     `json:"type"`
+	Motivation     string     `json:"motivation"`
+	Author         Author     `json:"creator"`
+	Source         string     `json:"source"`
+	Title          string     `json:"title,omitempty"`
+	Description    string     `json:"description,omitempty"`
+	Tags           []string   `json:"tags,omitempty"`
+	CreatedAt      time.Time  `json:"created"`
+	CID            string     `json:"cid,omitempty"`
+	LikeCount      int        `json:"likeCount"`
+	ReplyCount     int        `json:"replyCount"`
+	ViewerHasLiked bool       `json:"viewerHasLiked"`
+	Labels         []APILabel `json:"labels,omitempty"`
 }
 
 type APIReply struct {
@@ -206,6 +217,12 @@ func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID 
 	defer cancel()
 	likeCounts, replyCounts, viewerLikes := fetchCounts(ctx, database, uris, viewerDID)
 
+	subscribedLabelers := getSubscribedLabelers(database, viewerDID)
+	authorDIDs := collectDIDs(annotations, func(a db.Annotation) string { return a.AuthorDID })
+	labelerDIDs := appendUnique(subscribedLabelers, authorDIDs)
+	uriLabels, _ := database.GetContentLabelsForURIs(uris, labelerDIDs)
+	didLabels, _ := database.GetContentLabelsForDIDs(authorDIDs, labelerDIDs)
+
 	result := make([]APIAnnotation, len(annotations))
 	for i, a := range annotations {
 		var body *APIBody
@@ -263,6 +280,7 @@ func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID 
 			},
 			CreatedAt: a.CreatedAt,
 			IndexedAt: a.IndexedAt,
+			Labels:    mergeLabels(uriLabels[a.URI], didLabels[a.AuthorDID]),
 		}
 
 		result[i].LikeCount = likeCounts[a.URI]
@@ -290,6 +308,12 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	likeCounts, replyCounts, viewerLikes := fetchCounts(ctx, database, uris, viewerDID)
+
+	subscribedLabelers := getSubscribedLabelers(database, viewerDID)
+	authorDIDs := collectDIDs(highlights, func(h db.Highlight) string { return h.AuthorDID })
+	labelerDIDs := appendUnique(subscribedLabelers, authorDIDs)
+	uriLabels, _ := database.GetContentLabelsForURIs(uris, labelerDIDs)
+	didLabels, _ := database.GetContentLabelsForDIDs(authorDIDs, labelerDIDs)
 
 	result := make([]APIHighlight, len(highlights))
 	for i, h := range highlights {
@@ -320,9 +344,10 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 		}
 
 		result[i] = APIHighlight{
-			ID:     h.URI,
-			Type:   "Highlight",
-			Author: profiles[h.AuthorDID],
+			ID:         h.URI,
+			Type:       "Highlight",
+			Motivation: "highlighting",
+			Author:     profiles[h.AuthorDID],
 			Target: APITarget{
 				Source:   h.TargetSource,
 				Title:    title,
@@ -332,6 +357,7 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 			Tags:      tags,
 			CreatedAt: h.CreatedAt,
 			CID:       cid,
+			Labels:    mergeLabels(uriLabels[h.URI], didLabels[h.AuthorDID]),
 		}
 
 		result[i].LikeCount = likeCounts[h.URI]
@@ -360,6 +386,12 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 	defer cancel()
 	likeCounts, replyCounts, viewerLikes := fetchCounts(ctx, database, uris, viewerDID)
 
+	subscribedLabelers := getSubscribedLabelers(database, viewerDID)
+	authorDIDs := collectDIDs(bookmarks, func(b db.Bookmark) string { return b.AuthorDID })
+	labelerDIDs := appendUnique(subscribedLabelers, authorDIDs)
+	uriLabels, _ := database.GetContentLabelsForURIs(uris, labelerDIDs)
+	didLabels, _ := database.GetContentLabelsForDIDs(authorDIDs, labelerDIDs)
+
 	result := make([]APIBookmark, len(bookmarks))
 	for i, b := range bookmarks {
 		var tags []string
@@ -385,6 +417,7 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 		result[i] = APIBookmark{
 			ID:          b.URI,
 			Type:        "Bookmark",
+			Motivation:  "bookmarking",
 			Author:      profiles[b.AuthorDID],
 			Source:      b.Source,
 			Title:       title,
@@ -392,6 +425,7 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 			Tags:        tags,
 			CreatedAt:   b.CreatedAt,
 			CID:         cid,
+			Labels:      mergeLabels(uriLabels[b.URI], didLabels[b.AuthorDID]),
 		}
 		result[i].LikeCount = likeCounts[b.URI]
 		result[i].ReplyCount = replyCounts[b.URI]
@@ -651,8 +685,8 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 		}
 	}
 
-	result := make([]APICollectionItem, len(items))
-	for i, item := range items {
+	var result []APICollectionItem
+	for _, item := range items {
 		apiItem := APICollectionItem{
 			ID:            item.URI,
 			Type:          "CollectionItem",
@@ -666,12 +700,16 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 			apiItem.Collection = &coll
 		}
 
+		isValid := false
 		if val, ok := annotationsMap[item.AnnotationURI]; ok {
 			apiItem.Annotation = &val
+			isValid = true
 		} else if val, ok := highlightsMap[item.AnnotationURI]; ok {
 			apiItem.Highlight = &val
+			isValid = true
 		} else if val, ok := bookmarksMap[item.AnnotationURI]; ok {
 			apiItem.Bookmark = &val
+			isValid = true
 		} else if strings.Contains(item.AnnotationURI, "network.cosmik.card") {
 			apiItem.Annotation = &APIAnnotation{
 				ID:   item.AnnotationURI,
@@ -683,9 +721,12 @@ func hydrateCollectionItems(database *db.DB, items []db.CollectionItem, viewerDI
 				CreatedAt: item.CreatedAt,
 				Author:    profiles[item.AuthorDID],
 			}
+			isValid = true
 		}
 
-		result[i] = apiItem
+		if isValid && apiItem.Collection != nil {
+			result = append(result, apiItem)
+		}
 	}
 	return result, nil
 }
@@ -750,4 +791,79 @@ func hydrateNotifications(database *db.DB, notifications []db.Notification) ([]A
 	}
 
 	return result, nil
+}
+
+func mergeLabels(uriLabels []db.ContentLabel, didLabels []db.ContentLabel) []APILabel {
+	seen := make(map[string]bool)
+	var labels []APILabel
+	for _, l := range uriLabels {
+		key := l.Val + ":" + l.Src
+		if !seen[key] {
+			labels = append(labels, APILabel{Val: l.Val, Src: l.Src, Scope: "content"})
+			seen[key] = true
+		}
+	}
+	for _, l := range didLabels {
+		key := l.Val + ":" + l.Src
+		if !seen[key] {
+			labels = append(labels, APILabel{Val: l.Val, Src: l.Src, Scope: "account"})
+			seen[key] = true
+		}
+	}
+	return labels
+}
+
+func appendUnique(base []string, extra []string) []string {
+	if base == nil {
+		return nil
+	}
+	seen := make(map[string]bool, len(base))
+	for _, s := range base {
+		seen[s] = true
+	}
+	result := make([]string, len(base))
+	copy(result, base)
+	for _, s := range extra {
+		if !seen[s] {
+			result = append(result, s)
+			seen[s] = true
+		}
+	}
+	return result
+}
+
+func getSubscribedLabelers(database *db.DB, viewerDID string) []string {
+	serviceDID := config.Get().ServiceDID
+
+	if viewerDID == "" {
+		if serviceDID != "" {
+			return []string{serviceDID}
+		}
+		return nil
+	}
+
+	prefs, err := database.GetPreferences(viewerDID)
+	if err != nil || prefs == nil || prefs.SubscribedLabelers == nil {
+		if serviceDID != "" {
+			return []string{serviceDID}
+		}
+		return nil
+	}
+
+	type sub struct {
+		DID string `json:"did"`
+	}
+	var subs []sub
+	if err := json.Unmarshal([]byte(*prefs.SubscribedLabelers), &subs); err != nil || len(subs) == 0 {
+		if serviceDID != "" {
+			return []string{serviceDID}
+		}
+		return nil
+	}
+
+	dids := make([]string, len(subs))
+	for i, s := range subs {
+		dids[i] = s.DID
+	}
+	return dids
 }

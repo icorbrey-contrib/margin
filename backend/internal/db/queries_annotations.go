@@ -13,6 +13,8 @@ func (db *DB) CreateAnnotation(a *Annotation) error {
 			body_value = excluded.body_value,
 			body_format = excluded.body_format,
 			body_uri = excluded.body_uri,
+			target_source = excluded.target_source,
+			target_hash = excluded.target_hash,
 			target_title = excluded.target_title,
 			selector_json = excluded.selector_json,
 			tags_json = excluded.tags_json,
@@ -122,6 +124,50 @@ func (db *DB) GetRecentAnnotations(limit, offset int) ([]Annotation, error) {
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetPopularAnnotations(limit, offset int) ([]Annotation, error) {
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = annotations.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = annotations.uri)
+		) > 0
+		ORDER BY (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = annotations.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = annotations.uri)
+		) DESC, created_at DESC
+		LIMIT ? OFFSET ?
+	`), since, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanAnnotations(rows)
+}
+
+func (db *DB) GetShelvedAnnotations(limit, offset int) ([]Annotation, error) {
+	olderThan := time.Now().AddDate(0, 0, -1)
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, motivation, body_value, body_format, body_uri, target_source, target_hash, target_title, selector_json, tags_json, created_at, indexed_at, cid
+		FROM annotations
+		WHERE created_at < ? AND created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = annotations.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = annotations.uri)
+		) = 0
+		ORDER BY RANDOM()
+		LIMIT ? OFFSET ?
+	`), olderThan, since, limit, offset)
 	if err != nil {
 		return nil, err
 	}

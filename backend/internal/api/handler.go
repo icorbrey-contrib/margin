@@ -27,6 +27,7 @@ type Handler struct {
 	refresher         *TokenRefresher
 	apiKeys           *APIKeyHandler
 	syncService       *internal_sync.Service
+	moderation        *ModerationHandler
 }
 
 func NewHandler(database *db.DB, annotationService *AnnotationService, refresher *TokenRefresher, syncService *internal_sync.Service) *Handler {
@@ -36,6 +37,7 @@ func NewHandler(database *db.DB, annotationService *AnnotationService, refresher
 		refresher:         refresher,
 		apiKeys:           NewAPIKeyHandler(database, refresher),
 		syncService:       syncService,
+		moderation:        NewModerationHandler(database, refresher),
 	}
 }
 
@@ -90,6 +92,26 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 		r.Post("/quick/bookmark", h.apiKeys.QuickBookmark)
 		r.Post("/quick/save", h.apiKeys.QuickSave)
+
+		r.Get("/preferences", h.GetPreferences)
+		r.Put("/preferences", h.UpdatePreferences)
+
+		r.Post("/moderation/block", h.moderation.BlockUser)
+		r.Delete("/moderation/block", h.moderation.UnblockUser)
+		r.Get("/moderation/blocks", h.moderation.GetBlocks)
+		r.Post("/moderation/mute", h.moderation.MuteUser)
+		r.Delete("/moderation/mute", h.moderation.UnmuteUser)
+		r.Get("/moderation/mutes", h.moderation.GetMutes)
+		r.Get("/moderation/relationship", h.moderation.GetRelationship)
+		r.Post("/moderation/report", h.moderation.CreateReport)
+		r.Get("/moderation/admin/check", h.moderation.AdminCheckAccess)
+		r.Get("/moderation/admin/reports", h.moderation.AdminGetReports)
+		r.Get("/moderation/admin/report", h.moderation.AdminGetReport)
+		r.Post("/moderation/admin/action", h.moderation.AdminTakeAction)
+		r.Post("/moderation/admin/label", h.moderation.AdminCreateLabel)
+		r.Delete("/moderation/admin/label", h.moderation.AdminDeleteLabel)
+		r.Get("/moderation/admin/labels", h.moderation.AdminGetLabels)
+		r.Get("/moderation/labeler", h.moderation.GetLabelerInfo)
 	})
 }
 
@@ -148,11 +170,9 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 
 	viewerDID := h.getViewerDID(r)
 
-	if viewerDID != "" && (creator == viewerDID || (creator == "" && tag == "" && feedType == "my-feed")) {
-		if creator == viewerDID {
-			h.serveUserFeedFromPDS(w, r, viewerDID, tag, limit, offset)
-			return
-		}
+	if viewerDID != "" && (feedType == "my-feed" || creator == viewerDID) {
+		h.serveUserFeedFromPDS(w, r, viewerDID, tag, r.URL.Query().Get("motivation"), limit, offset)
+		return
 	}
 
 	var annotations []db.Annotation
@@ -270,6 +290,10 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				annotations, _ = h.db.GetMarginAnnotations(fetchLimit, 0)
 			case "semble":
 				annotations, _ = h.db.GetSembleAnnotations(fetchLimit, 0)
+			case "popular":
+				annotations, _ = h.db.GetPopularAnnotations(fetchLimit, 0)
+			case "shelved":
+				annotations, _ = h.db.GetShelvedAnnotations(fetchLimit, 0)
 			default:
 				annotations, _ = h.db.GetRecentAnnotations(fetchLimit, 0)
 			}
@@ -280,6 +304,10 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				highlights, _ = h.db.GetMarginHighlights(fetchLimit, 0)
 			case "semble":
 				highlights, _ = h.db.GetSembleHighlights(fetchLimit, 0)
+			case "popular":
+				highlights, _ = h.db.GetPopularHighlights(fetchLimit, 0)
+			case "shelved":
+				highlights, _ = h.db.GetShelvedHighlights(fetchLimit, 0)
 			default:
 				highlights, _ = h.db.GetRecentHighlights(fetchLimit, 0)
 			}
@@ -290,12 +318,23 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				bookmarks, _ = h.db.GetMarginBookmarks(fetchLimit, 0)
 			case "semble":
 				bookmarks, _ = h.db.GetSembleBookmarks(fetchLimit, 0)
+			case "popular":
+				bookmarks, _ = h.db.GetPopularBookmarks(fetchLimit, 0)
+			case "shelved":
+				bookmarks, _ = h.db.GetShelvedBookmarks(fetchLimit, 0)
 			default:
 				bookmarks, _ = h.db.GetRecentBookmarks(fetchLimit, 0)
 			}
 		}
 		if motivation == "" {
-			collectionItems, err = h.db.GetRecentCollectionItems(fetchLimit, 0)
+			switch feedType {
+			case "popular":
+				collectionItems, err = h.db.GetPopularCollectionItems(fetchLimit, 0)
+			case "shelved":
+				collectionItems, err = h.db.GetShelvedCollectionItems(fetchLimit, 0)
+			default:
+				collectionItems, err = h.db.GetRecentCollectionItems(fetchLimit, 0)
+			}
 			if err != nil {
 				log.Printf("Error fetching collection items: %v\n", err)
 			}
@@ -322,14 +361,38 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 
 	authCollectionItems, _ := hydrateCollectionItems(h.db, collectionItems, viewerDID)
 
+	collectionItemURIs := make(map[string]string)
+	for _, ci := range authCollectionItems {
+		var annotationURI string
+		if ci.Annotation != nil {
+			annotationURI = ci.Annotation.ID
+		} else if ci.Highlight != nil {
+			annotationURI = ci.Highlight.ID
+		} else if ci.Bookmark != nil {
+			annotationURI = ci.Bookmark.ID
+		}
+		if annotationURI != "" {
+			collectionItemURIs[annotationURI] = ci.Author.DID
+		}
+	}
+
 	var feed []interface{}
 	for _, a := range authAnnos {
+		if addedBy, exists := collectionItemURIs[a.ID]; exists && addedBy == a.Author.DID {
+			continue
+		}
 		feed = append(feed, a)
 	}
 	for _, h := range authHighs {
+		if addedBy, exists := collectionItemURIs[h.ID]; exists && addedBy == h.Author.DID {
+			continue
+		}
 		feed = append(feed, h)
 	}
 	for _, b := range authBooks {
+		if addedBy, exists := collectionItemURIs[b.ID]; exists && addedBy == b.Author.DID {
+			continue
+		}
 		feed = append(feed, b)
 	}
 	for _, ci := range authCollectionItems {
@@ -349,7 +412,15 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 			case APIBookmark:
 				uri = v.ID
 			case APICollectionItem:
-				uri = v.ID
+				if v.Annotation != nil {
+					uri = v.Annotation.ID
+				} else if v.Highlight != nil {
+					uri = v.Highlight.ID
+				} else if v.Bookmark != nil {
+					uri = v.Bookmark.ID
+				} else {
+					uri = v.ID
+				}
 			}
 			if strings.Contains(uri, "network.cosmik") {
 				isSemble = true
@@ -364,24 +435,31 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 				if !isSemble {
 					filtered = append(filtered, item)
 				}
-			case "popular":
+			case "popular", "shelved":
 				filtered = append(filtered, item)
-			case "shelved":
-				createdAt := getCreatedAt(item)
-				popularity := getPopularity(item)
-				if time.Since(createdAt) > 24*time.Hour && popularity == 0 {
-					filtered = append(filtered, item)
-				}
 			}
 		}
 		feed = filtered
 	}
+
+	feed = h.filterFeedByModeration(feed, viewerDID)
 
 	switch feedType {
 	case "popular":
 		sortFeedByPopularity(feed)
 	default:
 		sortFeed(feed)
+	}
+
+	log.Printf("[DEBUG] FeedType: %s, Total Items before slice: %d", feedType, len(feed))
+	if len(feed) > 0 {
+		first := feed[0]
+		switch v := first.(type) {
+		case APIAnnotation:
+			log.Printf("[DEBUG] First Item (Annotation): %s, Likes: %d, Replies: %d", v.ID, v.LikeCount, v.ReplyCount)
+		case APIHighlight:
+			log.Printf("[DEBUG] First Item (Highlight): %s, Likes: %d, Replies: %d", v.ID, v.LikeCount, v.ReplyCount)
+		}
 	}
 
 	if offset < len(feed) {
@@ -403,7 +481,7 @@ func (h *Handler) GetFeed(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, did, tag string, limit, offset int) {
+func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, did, tag, motivation string, limit, offset int) {
 	var wg sync.WaitGroup
 	var rawAnnos, rawHighs, rawBooks []interface{}
 	var errAnnos, errHighs, errBooks error
@@ -413,19 +491,27 @@ func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, d
 		fetchLimit = 50
 	}
 
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		rawAnnos, errAnnos = h.FetchLatestUserRecords(r, did, xrpc.CollectionAnnotation, fetchLimit)
-	}()
-	go func() {
-		defer wg.Done()
-		rawHighs, errHighs = h.FetchLatestUserRecords(r, did, xrpc.CollectionHighlight, fetchLimit)
-	}()
-	go func() {
-		defer wg.Done()
-		rawBooks, errBooks = h.FetchLatestUserRecords(r, did, xrpc.CollectionBookmark, fetchLimit)
-	}()
+	if motivation == "" || motivation == "commenting" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawAnnos, errAnnos = h.FetchLatestUserRecords(r, did, xrpc.CollectionAnnotation, fetchLimit)
+		}()
+	}
+	if motivation == "" || motivation == "highlighting" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawHighs, errHighs = h.FetchLatestUserRecords(r, did, xrpc.CollectionHighlight, fetchLimit)
+		}()
+	}
+	if motivation == "" || motivation == "bookmarking" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rawBooks, errBooks = h.FetchLatestUserRecords(r, did, xrpc.CollectionBookmark, fetchLimit)
+		}()
+	}
 	wg.Wait()
 
 	if errAnnos != nil {
@@ -477,7 +563,7 @@ func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, d
 	}()
 
 	collectionItems := []db.CollectionItem{}
-	if tag == "" {
+	if tag == "" && motivation == "" {
 		items, err := h.db.GetCollectionItemsByAuthor(did)
 		if err != nil {
 			log.Printf("Error fetching collection items for user feed: %v", err)
@@ -515,8 +601,10 @@ func (h *Handler) serveUserFeedFromPDS(w http.ResponseWriter, r *http.Request, d
 	for _, b := range authBooks {
 		feed = append(feed, b)
 	}
-	for _, ci := range authCollectionItems {
-		feed = append(feed, ci)
+	if motivation == "" {
+		for _, ci := range authCollectionItems {
+			feed = append(feed, ci)
+		}
 	}
 
 	sortFeed(feed)
@@ -584,7 +672,12 @@ func sortFeedByPopularity(feed []interface{}) {
 	sort.Slice(feed, func(i, j int) bool {
 		p1 := getPopularity(feed[i])
 		p2 := getPopularity(feed[j])
-		return p1 > p2
+		if p1 != p2 {
+			return p1 > p2
+		}
+		t1 := getCreatedAt(feed[i])
+		t2 := getCreatedAt(feed[j])
+		return t1.After(t2)
 	})
 }
 
@@ -1235,14 +1328,14 @@ func parseIntParam(r *http.Request, name string, defaultVal int) int {
 }
 
 func (h *Handler) GetURLMetadata(w http.ResponseWriter, r *http.Request) {
-	url := r.URL.Query().Get("url")
-	if url == "" {
+	targetURL := r.URL.Query().Get("url")
+	if targetURL == "" {
 		http.Error(w, "url parameter required", http.StatusBadRequest)
 		return
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(url)
+	resp, err := client.Get(targetURL)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"title": "", "error": "failed to fetch"})
@@ -1250,24 +1343,122 @@ func (h *Handler) GetURLMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 100*1024))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 500*1024))
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"title": ""})
 		return
 	}
 
-	title := ""
-	htmlStr := string(body)
-	if idx := strings.Index(strings.ToLower(htmlStr), "<title>"); idx != -1 {
-		start := idx + 7
-		if endIdx := strings.Index(strings.ToLower(htmlStr[start:]), "</title>"); endIdx != -1 {
-			title = strings.TrimSpace(htmlStr[start : start+endIdx])
+	content := string(body)
+
+	extract := func(key string) string {
+		attr := fmt.Sprintf("property=\"og:%s\"", key)
+		if idx := strings.Index(content, attr); idx != -1 {
+			rest := content[idx:]
+			if contentIdx := strings.Index(rest, "content=\""); contentIdx != -1 {
+				start := contentIdx + 9
+				if end := strings.Index(rest[start:], "\""); end != -1 {
+					return rest[start : start+end]
+				}
+			}
+		}
+
+		attr = fmt.Sprintf("name=\"%s\"", key)
+		if idx := strings.Index(content, attr); idx != -1 {
+			rest := content[idx:]
+			if contentIdx := strings.Index(rest, "content=\""); contentIdx != -1 {
+				start := contentIdx + 9
+				if end := strings.Index(rest[start:], "\""); end != -1 {
+					return rest[start : start+end]
+				}
+			}
+		}
+		return ""
+	}
+
+	title := extract("title")
+	if title == "" {
+		if idx := strings.Index(content, "<title>"); idx != -1 {
+			start := idx + 7
+			if end := strings.Index(content[start:], "</title>"); end != -1 {
+				title = content[start : start+end]
+			}
 		}
 	}
 
+	description := extract("description")
+	image := extract("image")
+
+	var favicon string
+	findIcon := func(rel string) string {
+		search := fmt.Sprintf("rel=\"%s\"", rel)
+		if idx := strings.Index(content, search); idx != -1 {
+			startTag := strings.LastIndex(content[:idx], "<link")
+			if startTag != -1 {
+				endTag := strings.Index(content[startTag:], ">")
+				if endTag != -1 {
+					tag := content[startTag : startTag+endTag]
+					if hrefIdx := strings.Index(tag, "href=\""); hrefIdx != -1 {
+						start := hrefIdx + 6
+						if end := strings.Index(tag[start:], "\""); end != -1 {
+							return tag[start : start+end]
+						}
+					}
+				}
+			}
+		}
+		return ""
+	}
+
+	favicon = findIcon("icon")
+	if favicon == "" {
+		favicon = findIcon("shortcut icon")
+	}
+	if favicon == "" {
+		favicon = findIcon("apple-touch-icon")
+	}
+
+	resolveURL := func(base, target string) string {
+		if target == "" {
+			return ""
+		}
+		if strings.HasPrefix(target, "http") {
+			return target
+		}
+		if strings.HasPrefix(target, "//") {
+			return "https:" + target
+		}
+		u, err := url.Parse(base)
+		if err != nil {
+			return target
+		}
+		t, err := url.Parse(target)
+		if err != nil {
+			return target
+		}
+		return u.ResolveReference(t).String()
+	}
+
+	image = resolveURL(targetURL, image)
+	favicon = resolveURL(targetURL, favicon)
+
+	if favicon == "" {
+		u, err := url.Parse(targetURL)
+		if err == nil {
+			favicon = fmt.Sprintf("%s://%s/favicon.ico", u.Scheme, u.Host)
+		}
+	}
+
+	data := map[string]string{
+		"title":       title,
+		"description": description,
+		"image":       image,
+		"icon":        favicon,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"title": title, "url": url})
+	json.NewEncoder(w).Encode(data)
 }
 
 func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
@@ -1341,4 +1532,40 @@ func (h *Handler) getViewerDID(r *http.Request) string {
 		return ""
 	}
 	return did
+}
+
+func getItemAuthorDID(item interface{}) string {
+	switch v := item.(type) {
+	case APIAnnotation:
+		return v.Author.DID
+	case APIHighlight:
+		return v.Author.DID
+	case APIBookmark:
+		return v.Author.DID
+	case APICollectionItem:
+		return v.Author.DID
+	default:
+		return ""
+	}
+}
+
+func (h *Handler) filterFeedByModeration(feed []interface{}, viewerDID string) []interface{} {
+	if viewerDID == "" {
+		return feed
+	}
+
+	hiddenDIDs, err := h.db.GetAllHiddenDIDs(viewerDID)
+	if err != nil || len(hiddenDIDs) == 0 {
+		return feed
+	}
+
+	var filtered []interface{}
+	for _, item := range feed {
+		authorDID := getItemAuthorDID(item)
+		if authorDID != "" && hiddenDIDs[authorDID] {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
 }

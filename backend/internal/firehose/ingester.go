@@ -27,6 +27,8 @@ const (
 	CollectionCollection       = "at.margin.collection"
 	CollectionCollectionItem   = "at.margin.collectionItem"
 	CollectionProfile          = "at.margin.profile"
+	CollectionAPIKey           = "at.margin.apikey"
+	CollectionPreferences      = "at.margin.preferences"
 	CollectionSembleCard       = "network.cosmik.card"
 	CollectionSembleCollection = "network.cosmik.collection"
 )
@@ -64,6 +66,8 @@ func NewIngester(database *db.DB, syncService *internal_sync.Service) *Ingester 
 	i.RegisterHandler(CollectionCollection, i.handleCollection)
 	i.RegisterHandler(CollectionCollectionItem, i.handleCollectionItem)
 	i.RegisterHandler(CollectionProfile, i.handleProfile)
+	i.RegisterHandler(CollectionAPIKey, i.handleAPIKey)
+	i.RegisterHandler(CollectionPreferences, i.handlePreferences)
 	i.RegisterHandler(CollectionSembleCard, i.handleSembleCard)
 	i.RegisterHandler(CollectionSembleCollection, i.handleSembleCollection)
 	i.RegisterHandler(xrpc.CollectionSembleCollectionLink, i.handleSembleCollectionLink)
@@ -272,6 +276,10 @@ func (i *Ingester) handleDelete(collection, uri string) {
 		i.db.RemoveFromCollection(uri)
 	case CollectionProfile:
 		i.db.DeleteProfile(uri)
+	case CollectionAPIKey:
+		i.db.DeleteAPIKeyByURI(uri)
+	case CollectionPreferences:
+		i.db.DeletePreferences(uri)
 	case CollectionSembleCard:
 		i.db.DeleteAnnotation(uri)
 		i.db.DeleteBookmark(uri)
@@ -342,11 +350,8 @@ func (i *Ingester) handleAnnotation(event *FirehoseEvent) {
 		targetSource = record.URL
 	}
 
-	targetHash := record.Target.SourceHash
-	if targetHash == "" {
-		targetHash = record.URLHash
-	}
-	if targetHash == "" && targetSource != "" {
+	var targetHash string
+	if targetSource != "" {
 		targetHash = db.HashURL(targetSource)
 	}
 
@@ -501,8 +506,8 @@ func (i *Ingester) handleHighlight(event *FirehoseEvent) {
 		createdAt = time.Now()
 	}
 
-	targetHash := record.Target.SourceHash
-	if targetHash == "" && record.Target.Source != "" {
+	var targetHash string
+	if record.Target.Source != "" {
 		targetHash = db.HashURL(record.Target.Source)
 	}
 
@@ -564,8 +569,8 @@ func (i *Ingester) handleBookmark(event *FirehoseEvent) {
 		createdAt = time.Now()
 	}
 
-	sourceHash := record.SourceHash
-	if sourceHash == "" && record.Source != "" {
+	var sourceHash string
+	if record.Source != "" {
 		sourceHash = db.HashURL(record.Source)
 	}
 
@@ -736,6 +741,112 @@ func (i *Ingester) handleProfile(event *FirehoseEvent) {
 		log.Printf("Failed to index profile: %v", err)
 	} else {
 		log.Printf("Indexed profile from %s", event.Repo)
+	}
+}
+
+func (i *Ingester) handleAPIKey(event *FirehoseEvent) {
+	var record struct {
+		Name      string `json:"name"`
+		KeyHash   string `json:"keyHash"`
+		CreatedAt string `json:"createdAt"`
+	}
+
+	if err := json.Unmarshal(event.Record, &record); err != nil {
+		return
+	}
+
+	uri := fmt.Sprintf("at://%s/%s/%s", event.Repo, event.Collection, event.Rkey)
+
+	createdAt, err := time.Parse(time.RFC3339, record.CreatedAt)
+	if err != nil {
+		createdAt = time.Now()
+	}
+
+	var cidPtr *string
+	if event.CID != "" {
+		cidPtr = &event.CID
+	}
+
+	apiKey := &db.APIKey{
+		ID:        event.Rkey,
+		OwnerDID:  event.Repo,
+		Name:      record.Name,
+		KeyHash:   record.KeyHash,
+		CreatedAt: createdAt,
+		URI:       uri,
+		CID:       cidPtr,
+		IndexedAt: time.Now(),
+	}
+
+	if err := i.db.CreateAPIKey(apiKey); err != nil {
+		log.Printf("Failed to index API key: %v", err)
+	} else {
+		log.Printf("Indexed API key from %s: %s", event.Repo, record.Name)
+	}
+}
+
+func (i *Ingester) handlePreferences(event *FirehoseEvent) {
+	if event.Rkey != "self" {
+		return
+	}
+
+	var record struct {
+		ExternalLinkSkippedHostnames []string        `json:"externalLinkSkippedHostnames"`
+		SubscribedLabelers           json.RawMessage `json:"subscribedLabelers"`
+		LabelPreferences             json.RawMessage `json:"labelPreferences"`
+		CreatedAt                    string          `json:"createdAt"`
+	}
+
+	if err := json.Unmarshal(event.Record, &record); err != nil {
+		return
+	}
+
+	uri := fmt.Sprintf("at://%s/%s/%s", event.Repo, event.Collection, event.Rkey)
+
+	createdAt, err := time.Parse(time.RFC3339, record.CreatedAt)
+	if err != nil {
+		createdAt = time.Now()
+	}
+
+	var cidPtr *string
+	if event.CID != "" {
+		cidPtr = &event.CID
+	}
+
+	var skippedHostnamesPtr *string
+	if len(record.ExternalLinkSkippedHostnames) > 0 {
+		hostnamesBytes, _ := json.Marshal(record.ExternalLinkSkippedHostnames)
+		hostnamesStr := string(hostnamesBytes)
+		skippedHostnamesPtr = &hostnamesStr
+	}
+
+	var subscribedLabelersPtr *string
+	if len(record.SubscribedLabelers) > 0 && string(record.SubscribedLabelers) != "null" {
+		s := string(record.SubscribedLabelers)
+		subscribedLabelersPtr = &s
+	}
+
+	var labelPrefsPtr *string
+	if len(record.LabelPreferences) > 0 && string(record.LabelPreferences) != "null" {
+		s := string(record.LabelPreferences)
+		labelPrefsPtr = &s
+	}
+
+	prefs := &db.Preferences{
+		URI:                          uri,
+		AuthorDID:                    event.Repo,
+		ExternalLinkSkippedHostnames: skippedHostnamesPtr,
+		SubscribedLabelers:           subscribedLabelersPtr,
+		LabelPreferences:             labelPrefsPtr,
+		CreatedAt:                    createdAt,
+		IndexedAt:                    time.Now(),
+		CID:                          cidPtr,
+	}
+
+	if err := i.db.UpsertPreferences(prefs); err != nil {
+		log.Printf("Failed to index preferences: %v", err)
+	} else {
+		log.Printf("Indexed preferences from %s", event.Repo)
 	}
 }
 

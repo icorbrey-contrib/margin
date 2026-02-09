@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"margin.at/internal/config"
 	"margin.at/internal/db"
 	"margin.at/internal/xrpc"
 )
@@ -139,18 +140,33 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	resp := struct {
 		URI         string   `json:"uri"`
 		DID         string   `json:"did"`
+		Handle      string   `json:"handle,omitempty"`
 		DisplayName string   `json:"displayName,omitempty"`
 		Avatar      string   `json:"avatar,omitempty"`
-		Bio         string   `json:"bio"`
-		Website     string   `json:"website"`
+		Description string   `json:"description,omitempty"`
+		Website     string   `json:"website,omitempty"`
 		Links       []string `json:"links"`
 		CreatedAt   string   `json:"createdAt"`
 		IndexedAt   string   `json:"indexedAt"`
+		Labels      []struct {
+			Val string `json:"val"`
+			Src string `json:"src"`
+		} `json:"labels,omitempty"`
+		Viewer *struct {
+			Blocking  bool `json:"blocking"`
+			Muting    bool `json:"muting"`
+			BlockedBy bool `json:"blockedBy"`
+		} `json:"viewer,omitempty"`
 	}{
 		URI:       profile.URI,
 		DID:       profile.AuthorDID,
 		CreatedAt: profile.CreatedAt.Format(time.RFC3339),
 		IndexedAt: profile.IndexedAt.Format(time.RFC3339),
+	}
+
+	var handle string
+	if err := h.db.QueryRow("SELECT handle FROM sessions WHERE did = $1 LIMIT 1", profile.AuthorDID).Scan(&handle); err == nil {
+		resp.Handle = handle
 	}
 
 	if profile.DisplayName != nil {
@@ -160,7 +176,7 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		resp.Avatar = *profile.Avatar
 	}
 	if profile.Bio != nil {
-		resp.Bio = *profile.Bio
+		resp.Description = *profile.Bio
 	}
 	if profile.Website != nil {
 		resp.Website = *profile.Website
@@ -170,6 +186,40 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	if resp.Links == nil {
 		resp.Links = []string{}
+	}
+
+	viewerDID := h.getViewerDID(r)
+	if viewerDID != "" && viewerDID != profile.AuthorDID {
+		blocking, muting, blockedBy, err := h.db.GetViewerRelationship(viewerDID, profile.AuthorDID)
+		if err == nil {
+			resp.Viewer = &struct {
+				Blocking  bool `json:"blocking"`
+				Muting    bool `json:"muting"`
+				BlockedBy bool `json:"blockedBy"`
+			}{
+				Blocking:  blocking,
+				Muting:    muting,
+				BlockedBy: blockedBy,
+			}
+		}
+	}
+
+	subscribedLabelers := getSubscribedLabelers(h.db, viewerDID)
+	if subscribedLabelers == nil {
+		serviceDID := config.Get().ServiceDID
+		if serviceDID != "" {
+			subscribedLabelers = []string{serviceDID}
+		}
+	}
+	if didLabels, err := h.db.GetContentLabelsForDIDs([]string{profile.AuthorDID}, subscribedLabelers); err == nil {
+		if labels, ok := didLabels[profile.AuthorDID]; ok {
+			for _, l := range labels {
+				resp.Labels = append(resp.Labels, struct {
+					Val string `json:"val"`
+					Src string `json:"src"`
+				}{Val: l.Val, Src: l.Src})
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

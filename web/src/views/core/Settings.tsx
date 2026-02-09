@@ -1,0 +1,642 @@
+import React, { useEffect, useState } from "react";
+import { useStore } from "@nanostores/react";
+import { $user, logout } from "../../store/auth";
+import { $theme, setTheme, type Theme } from "../../store/theme";
+import {
+  $preferences,
+  loadPreferences,
+  addLabeler,
+  removeLabeler,
+  setLabelVisibility,
+  getLabelVisibility,
+} from "../../store/preferences";
+import {
+  getAPIKeys,
+  createAPIKey,
+  deleteAPIKey,
+  getBlocks,
+  getMutes,
+  unblockUser,
+  unmuteUser,
+  getLabelerInfo,
+  type APIKey,
+} from "../../api/client";
+import type {
+  BlockedUser,
+  MutedUser,
+  LabelerInfo,
+  LabelVisibility as LabelVisibilityType,
+  ContentLabelValue,
+} from "../../types";
+import {
+  Copy,
+  Trash2,
+  Key,
+  Plus,
+  Check,
+  Sun,
+  Moon,
+  Monitor,
+  LogOut,
+  ChevronRight,
+  ShieldBan,
+  VolumeX,
+  ShieldOff,
+  Volume2,
+  Shield,
+  Eye,
+  EyeOff,
+  XCircle,
+} from "lucide-react";
+import {
+  Avatar,
+  Button,
+  Input,
+  Skeleton,
+  EmptyState,
+} from "../../components/ui";
+import { AppleIcon } from "../../components/common/Icons";
+import { Link } from "react-router-dom";
+
+export default function Settings() {
+  const user = useStore($user);
+  const theme = useStore($theme);
+  const [keys, setKeys] = useState<APIKey[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [justCopied, setJustCopied] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [blocks, setBlocks] = useState<BlockedUser[]>([]);
+  const [mutes, setMutes] = useState<MutedUser[]>([]);
+  const [modLoading, setModLoading] = useState(true);
+  const [labelerInfo, setLabelerInfo] = useState<LabelerInfo | null>(null);
+  const [newLabelerDid, setNewLabelerDid] = useState("");
+  const [addingLabeler, setAddingLabeler] = useState(false);
+  const preferences = useStore($preferences);
+
+  useEffect(() => {
+    const loadKeys = async () => {
+      setLoading(true);
+      const data = await getAPIKeys();
+      setKeys(data);
+      setLoading(false);
+    };
+    loadKeys();
+
+    const loadModeration = async () => {
+      setModLoading(true);
+      const [blocksData, mutesData] = await Promise.all([
+        getBlocks(),
+        getMutes(),
+      ]);
+      setBlocks(blocksData);
+      setMutes(mutesData);
+      setModLoading(false);
+    };
+    loadModeration();
+
+    loadPreferences();
+    getLabelerInfo().then(setLabelerInfo);
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newKeyName.trim()) return;
+
+    setCreating(true);
+    const res = await createAPIKey(newKeyName);
+    if (res) {
+      setKeys([res, ...keys]);
+      setCreatedKey(res.key || null);
+      setNewKeyName("");
+    }
+    setCreating(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Revoke this key? Apps using it will stop working.")) {
+      const success = await deleteAPIKey(id);
+      if (success) {
+        setKeys((prev) => prev.filter((k) => k.id !== id));
+      }
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setJustCopied(true);
+    setTimeout(() => setJustCopied(false), 2000);
+  };
+
+  if (!user) return null;
+
+  const themeOptions: { value: Theme; label: string; icon: typeof Sun }[] = [
+    { value: "light", label: "Light", icon: Sun },
+    { value: "dark", label: "Dark", icon: Moon },
+    { value: "system", label: "System", icon: Monitor },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto animate-slide-up">
+      <h1 className="text-3xl font-display font-bold text-surface-900 dark:text-white mb-8">
+        Settings
+      </h1>
+
+      <div className="space-y-6">
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-4">
+            Profile
+          </h2>
+          <div className="flex gap-4 items-center">
+            <Avatar did={user.did} avatar={user.avatar} size="lg" />
+            <div className="flex-1">
+              <p className="font-semibold text-surface-900 dark:text-white text-lg">
+                {user.displayName || user.handle}
+              </p>
+              <p className="text-surface-500 dark:text-surface-400">
+                @{user.handle}
+              </p>
+            </div>
+            <ChevronRight
+              className="text-surface-300 dark:text-surface-600"
+              size={20}
+            />
+          </div>
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-4">
+            Appearance
+          </h2>
+          <div className="flex gap-2">
+            {themeOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setTheme(opt.value)}
+                className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  theme === opt.value
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
+                    : "border-surface-200 dark:border-surface-700 hover:border-surface-300 dark:hover:border-surface-600"
+                }`}
+              >
+                <opt.icon
+                  size={24}
+                  className={
+                    theme === opt.value
+                      ? "text-primary-600 dark:text-primary-400"
+                      : "text-surface-400 dark:text-surface-500"
+                  }
+                />
+                <span
+                  className={`text-sm font-medium ${theme === opt.value ? "text-primary-600 dark:text-primary-400" : "text-surface-600 dark:text-surface-400"}`}
+                >
+                  {opt.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">
+            API Keys
+          </h2>
+          <p className="text-sm text-surface-400 dark:text-surface-500 mb-5">
+            For the browser extension and other apps
+          </p>
+
+          <form onSubmit={handleCreate} className="flex gap-2 mb-5">
+            <div className="flex-1">
+              <Input
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="Key name, e.g. Chrome Extension"
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={!newKeyName.trim()}
+              loading={creating}
+              icon={<Plus size={16} />}
+            >
+              Generate
+            </Button>
+          </form>
+
+          {createdKey && (
+            <div className="mb-5 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl animate-scale-in">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                  <Key
+                    size={16}
+                    className="text-green-600 dark:text-green-400"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-green-800 dark:text-green-200 text-sm font-medium mb-2">
+                    Copy now - you won't see this again!
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white dark:bg-surface-900 border border-green-200 dark:border-green-800 px-3 py-2 rounded-lg text-xs font-mono text-green-900 dark:text-green-100 break-all">
+                      {createdKey}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(createdKey)}
+                      icon={
+                        justCopied ? <Check size={16} /> : <Copy size={16} />
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+            </div>
+          ) : keys.length === 0 ? (
+            <EmptyState
+              icon={<Key size={40} />}
+              message="No API keys yet. Create one to use with the browser extension."
+            />
+          ) : (
+            <div className="space-y-2">
+              {keys.map((key) => (
+                <div
+                  key={key.id}
+                  className="flex items-center justify-between p-4 bg-surface-50 dark:bg-surface-800 rounded-xl group transition-all hover:bg-surface-100 dark:hover:bg-surface-700"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-surface-200 dark:bg-surface-700 rounded-lg">
+                      <Key
+                        size={16}
+                        className="text-surface-500 dark:text-surface-400"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-surface-900 dark:text-white">
+                        {key.name}
+                      </p>
+                      <p className="text-xs text-surface-500 dark:text-surface-400">
+                        Created {new Date(key.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(key.id)}
+                    className="p-2 text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">
+            Moderation
+          </h2>
+          <p className="text-sm text-surface-400 dark:text-surface-500 mb-5">
+            Manage blocked and muted accounts
+          </p>
+
+          {modLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-14 rounded-xl" />
+              <Skeleton className="h-14 rounded-xl" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2 flex items-center gap-2">
+                  <ShieldBan size={14} />
+                  Blocked accounts ({blocks.length})
+                </h3>
+                {blocks.length === 0 ? (
+                  <p className="text-sm text-surface-400 dark:text-surface-500 pl-6">
+                    No blocked accounts
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {blocks.map((b) => (
+                      <div
+                        key={b.did}
+                        className="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-xl group hover:bg-surface-100 dark:hover:bg-surface-700 transition-all"
+                      >
+                        <Link
+                          to={`/profile/${b.did}`}
+                          className="flex items-center gap-3 min-w-0 flex-1"
+                        >
+                          <Avatar
+                            did={b.did}
+                            avatar={b.author?.avatar}
+                            size="sm"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-medium text-surface-900 dark:text-white text-sm truncate">
+                              {b.author?.displayName ||
+                                b.author?.handle ||
+                                b.did}
+                            </p>
+                            {b.author?.handle && (
+                              <p className="text-xs text-surface-400 dark:text-surface-500 truncate">
+                                @{b.author.handle}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            await unblockUser(b.did);
+                            setBlocks((prev) =>
+                              prev.filter((x) => x.did !== b.did),
+                            );
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-surface-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <ShieldOff size={12} />
+                          Unblock
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2 flex items-center gap-2">
+                  <VolumeX size={14} />
+                  Muted accounts ({mutes.length})
+                </h3>
+                {mutes.length === 0 ? (
+                  <p className="text-sm text-surface-400 dark:text-surface-500 pl-6">
+                    No muted accounts
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {mutes.map((m) => (
+                      <div
+                        key={m.did}
+                        className="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-xl group hover:bg-surface-100 dark:hover:bg-surface-700 transition-all"
+                      >
+                        <Link
+                          to={`/profile/${m.did}`}
+                          className="flex items-center gap-3 min-w-0 flex-1"
+                        >
+                          <Avatar
+                            did={m.did}
+                            avatar={m.author?.avatar}
+                            size="sm"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-medium text-surface-900 dark:text-white text-sm truncate">
+                              {m.author?.displayName ||
+                                m.author?.handle ||
+                                m.did}
+                            </p>
+                            {m.author?.handle && (
+                              <p className="text-xs text-surface-400 dark:text-surface-500 truncate">
+                                @{m.author.handle}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                        <button
+                          onClick={async () => {
+                            await unmuteUser(m.did);
+                            setMutes((prev) =>
+                              prev.filter((x) => x.did !== m.did),
+                            );
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-surface-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Volume2 size={12} />
+                          Unmute
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">
+            Content Filtering
+          </h2>
+          <p className="text-sm text-surface-400 dark:text-surface-500 mb-5">
+            Subscribe to labelers and configure how labeled content appears
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-3 flex items-center gap-2">
+                <Shield size={14} />
+                Subscribed Labelers
+              </h3>
+
+              {preferences.subscribedLabelers.length === 0 ? (
+                <p className="text-sm text-surface-400 dark:text-surface-500 pl-6 mb-3">
+                  No labelers subscribed
+                </p>
+              ) : (
+                <div className="space-y-1.5 mb-3">
+                  {preferences.subscribedLabelers.map((labeler) => (
+                    <div
+                      key={labeler.did}
+                      className="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-xl group hover:bg-surface-100 dark:hover:bg-surface-700 transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                          <Shield
+                            size={14}
+                            className="text-primary-600 dark:text-primary-400"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-surface-900 dark:text-white text-sm truncate">
+                            {labelerInfo?.did === labeler.did
+                              ? labelerInfo.name
+                              : labeler.did}
+                          </p>
+                          <p className="text-xs text-surface-400 dark:text-surface-500 truncate font-mono">
+                            {labeler.did}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeLabeler(labeler.did)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-surface-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <XCircle size={12} />
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!newLabelerDid.trim()) return;
+                  setAddingLabeler(true);
+                  await addLabeler(newLabelerDid.trim());
+                  setNewLabelerDid("");
+                  setAddingLabeler(false);
+                }}
+                className="flex gap-2"
+              >
+                <div className="flex-1">
+                  <Input
+                    value={newLabelerDid}
+                    onChange={(e) => setNewLabelerDid(e.target.value)}
+                    placeholder="did:plc:... (labeler DID)"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={!newLabelerDid.trim()}
+                  loading={addingLabeler}
+                  icon={<Plus size={16} />}
+                >
+                  Add
+                </Button>
+              </form>
+            </div>
+
+            {preferences.subscribedLabelers.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-3 flex items-center gap-2">
+                  <Eye size={14} />
+                  Label Visibility
+                </h3>
+                <p className="text-xs text-surface-400 dark:text-surface-500 mb-3 pl-6">
+                  Choose how to handle each label type: <strong>Warn</strong>{" "}
+                  shows a blur overlay, <strong>Hide</strong> removes content
+                  entirely, <strong>Ignore</strong> shows content normally.
+                </p>
+
+                <div className="space-y-4">
+                  {preferences.subscribedLabelers.map((labeler) => {
+                    const labels: ContentLabelValue[] = [
+                      "sexual",
+                      "nudity",
+                      "violence",
+                      "gore",
+                      "spam",
+                      "misleading",
+                    ];
+                    return (
+                      <div
+                        key={labeler.did}
+                        className="bg-surface-50 dark:bg-surface-800 rounded-xl p-4"
+                      >
+                        <p className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-3 truncate">
+                          {labelerInfo?.did === labeler.did
+                            ? labelerInfo.name
+                            : labeler.did}
+                        </p>
+                        <div className="space-y-2">
+                          {labels.map((label) => {
+                            const current = getLabelVisibility(
+                              labeler.did,
+                              label,
+                            );
+                            const options: {
+                              value: LabelVisibilityType;
+                              label: string;
+                              icon: typeof Eye;
+                            }[] = [
+                              { value: "warn", label: "Warn", icon: EyeOff },
+                              { value: "hide", label: "Hide", icon: XCircle },
+                              { value: "ignore", label: "Ignore", icon: Eye },
+                            ];
+                            return (
+                              <div
+                                key={label}
+                                className="flex items-center justify-between py-1.5"
+                              >
+                                <span className="text-sm text-surface-600 dark:text-surface-400 capitalize">
+                                  {label}
+                                </span>
+                                <div className="flex gap-1">
+                                  {options.map((opt) => (
+                                    <button
+                                      key={opt.value}
+                                      onClick={() =>
+                                        setLabelVisibility(
+                                          labeler.did,
+                                          label,
+                                          opt.value,
+                                        )
+                                      }
+                                      className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 ${
+                                        current === opt.value
+                                          ? opt.value === "hide"
+                                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                                            : opt.value === "warn"
+                                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                                              : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                                          : "text-surface-400 dark:text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700"
+                                      }`}
+                                    >
+                                      <opt.icon size={12} />
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1">
+            iOS Shortcut
+          </h2>
+          <p className="text-sm text-surface-400 dark:text-surface-500 mb-4">
+            Save pages to Margin from Safari on iPhone and iPad
+          </p>
+          <a
+            href="https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-surface-900 dark:bg-white text-white dark:text-surface-900 rounded-xl font-medium text-sm transition-all hover:opacity-90"
+          >
+            <AppleIcon size={16} />
+            Get iOS Shortcut
+          </a>
+        </section>
+
+        <section className="card p-5">
+          <button
+            onClick={logout}
+            className="flex items-center gap-3 w-full text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-3 -m-3 rounded-xl transition-colors"
+          >
+            <LogOut size={20} />
+            <span className="font-medium">Log out</span>
+          </button>
+        </section>
+      </div>
+    </div>
+  );
+}

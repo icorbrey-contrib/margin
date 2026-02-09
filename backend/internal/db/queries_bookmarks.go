@@ -9,6 +9,8 @@ func (db *DB) CreateBookmark(b *Bookmark) error {
 		INSERT INTO bookmarks (uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(uri) DO UPDATE SET
+			source = excluded.source,
+			source_hash = excluded.source_hash,
 			title = excluded.title,
 			description = excluded.description,
 			tags_json = excluded.tags_json,
@@ -38,6 +40,66 @@ func (db *DB) GetRecentBookmarks(limit, offset int) ([]Bookmark, error) {
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetPopularBookmarks(limit, offset int) ([]Bookmark, error) {
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = bookmarks.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = bookmarks.uri)
+		) > 0
+		ORDER BY (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = bookmarks.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = bookmarks.uri)
+		) DESC, created_at DESC
+		LIMIT ? OFFSET ?
+	`), since, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookmarks []Bookmark
+	for rows.Next() {
+		var b Bookmark
+		if err := rows.Scan(&b.URI, &b.AuthorDID, &b.Source, &b.SourceHash, &b.Title, &b.Description, &b.TagsJSON, &b.CreatedAt, &b.IndexedAt, &b.CID); err != nil {
+			return nil, err
+		}
+		bookmarks = append(bookmarks, b)
+	}
+	return bookmarks, nil
+}
+
+func (db *DB) GetShelvedBookmarks(limit, offset int) ([]Bookmark, error) {
+	olderThan := time.Now().AddDate(0, 0, -1)
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, source, source_hash, title, description, tags_json, created_at, indexed_at, cid
+		FROM bookmarks
+		WHERE created_at < ? AND created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = bookmarks.uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = bookmarks.uri)
+		) = 0
+		ORDER BY RANDOM()
+		LIMIT ? OFFSET ?
+	`), olderThan, since, limit, offset)
 	if err != nil {
 		return nil, err
 	}

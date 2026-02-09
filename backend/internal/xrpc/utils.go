@@ -18,7 +18,7 @@ var SlingshotClient = slingshot.NewClient()
 
 var (
 	didPattern  = regexp.MustCompile(`^did:[a-z]+:[a-zA-Z0-9._:%-]+$`)
-	nsidPattern = regexp.MustCompile(`^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)+$`)
+	nsidPattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$`)
 	rkeyPattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 )
 

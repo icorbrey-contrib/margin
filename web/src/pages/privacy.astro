@@ -1,0 +1,132 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Privacy Policy - Margin" description="Margin Privacy Policy">
+	<div class="max-w-3xl mx-auto py-12 px-4">
+		<a href="/home" class="inline-flex items-center gap-2 text-sm font-medium text-surface-500 hover:text-surface-900 dark:hover:text-white transition-colors mb-8">
+			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+			<span>Home</span>
+		</a>
+
+		<div class="prose prose-surface dark:prose-invert max-w-none">
+			<h1 class="font-display font-bold text-3xl mb-2 text-surface-900 dark:text-white">Privacy Policy</h1>
+			<p class="text-surface-500 dark:text-surface-400 mb-8">Last updated: February 8, 2026</p>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">Overview</h2>
+				<p class="text-surface-700 dark:text-surface-300 leading-relaxed">
+					Margin ("we", "our", or "us") is a web annotation tool that lets you highlight, annotate, and bookmark any webpage. Your data is stored on the decentralized AT Protocol network, giving you ownership and control over your content.
+				</p>
+			</section>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">Data We Collect</h2>
+				<h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-2">Account Information</h3>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">
+					When you log in with your Bluesky/AT Protocol account, we access your:
+				</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li>Decentralized Identifier (DID)</li>
+					<li>Handle (username)</li>
+					<li>Display name and avatar (for showing your profile)</li>
+				</ul>
+
+				<h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-2">Annotations & Content</h3>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">When you use Margin, we store:</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li>URLs of pages you annotate</li>
+					<li>Text you highlight or select</li>
+					<li>Annotations and comments you create</li>
+					<li>Bookmarks you save</li>
+					<li>Collections you organize content into</li>
+				</ul>
+
+				<h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-2">Authentication</h3>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">
+					We store OAuth session tokens locally in your browser to keep you logged in. These tokens are used solely for authenticating API requests.
+				</p>
+			</section>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">How We Use Your Data</h2>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">Your data is used exclusively to:</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li>Display your annotations on webpages</li>
+					<li>Sync your content across devices</li>
+					<li>Show your public annotations to other users</li>
+					<li>Enable social features like replies and likes</li>
+				</ul>
+			</section>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">Data Storage</h2>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">
+					Your annotations are stored on the AT Protocol network through your Personal Data Server (PDS). This means:
+				</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li>You own your data</li>
+					<li>You can export or delete it at any time</li>
+					<li>Your data is portable across AT Protocol services</li>
+				</ul>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">
+					We also maintain a local index of annotations to provide faster search and discovery features.
+				</p>
+
+				<h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-2">Margin PDS (margin.cafe)</h3>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">
+					We operate a Personal Data Server at <strong>margin.cafe</strong>. If you create an account on this PDS, we additionally store:
+				</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li>Your account credentials (password hashed, never stored in plain text)</li>
+					<li>Your email address (for account recovery)</li>
+					<li>All AT Protocol data repositories you create on this server</li>
+				</ul>
+				<p class="text-surface-700 dark:text-surface-300">
+					You can migrate your account and data to a different PDS at any time using standard AT Protocol account migration. Using the margin.cafe PDS is entirely optional as you can use Margin with any AT Protocol PDS.
+				</p>
+			</section>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">Data Sharing</h2>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">
+					<strong>We do not sell your data.</strong> We do not share your data with third parties for advertising or marketing purposes.
+				</p>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">Your public annotations may be visible to:</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li>Other Margin users viewing the same webpage</li>
+					<li>Anyone on the AT Protocol network (for public content)</li>
+				</ul>
+			</section>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">Browser Extension Permissions</h2>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">The Margin browser extension requires certain permissions:</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li><strong>All URLs:</strong> To display and create annotations on any webpage</li>
+					<li><strong>Storage:</strong> To save your preferences and session locally</li>
+					<li><strong>Cookies:</strong> To maintain your logged-in session</li>
+					<li><strong>Tabs:</strong> To know which page you're viewing</li>
+				</ul>
+			</section>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">Your Rights</h2>
+				<p class="text-surface-700 dark:text-surface-300 mb-4">You can:</p>
+				<ul class="list-disc pl-5 mb-4 text-surface-700 dark:text-surface-300 space-y-1">
+					<li>Delete any annotation, highlight, or bookmark you've created</li>
+					<li>Delete your collections</li>
+					<li>Export your data from your PDS</li>
+					<li>Revoke the extension's access at any time</li>
+				</ul>
+			</section>
+
+			<section class="mb-8">
+				<h2 class="text-xl font-bold text-surface-900 dark:text-white mb-4">Contact</h2>
+				<p class="text-surface-700 dark:text-surface-300">
+					For privacy questions or concerns, contact us at <a href="mailto:hello@margin.at" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">hello@margin.at</a>
+				</p>
+			</section>
+		</div>
+	</div>
+</BaseLayout>

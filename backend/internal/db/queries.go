@@ -42,11 +42,14 @@ func (db *DB) AnnotationExists(uri string) bool {
 
 func HashURL(rawURL string) string {
 	parsed, err := url.Parse(rawURL)
-	if err != nil {
+	if err != nil || parsed.Host == "" {
 		return hashString(rawURL)
 	}
 
-	normalized := strings.ToLower(parsed.Host) + parsed.Path
+	host := strings.ToLower(parsed.Host)
+	host = strings.TrimPrefix(host, "www.")
+
+	normalized := host + parsed.Path
 	if parsed.RawQuery != "" {
 		normalized += "?" + parsed.RawQuery
 	}

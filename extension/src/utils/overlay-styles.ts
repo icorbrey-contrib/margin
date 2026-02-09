@@ -1,21 +1,21 @@
 export const overlayStyles = /* css */ `
 :host { 
   all: initial; 
-  --bg-primary: #0a0a0d;
-  --bg-secondary: #121216;
-  --bg-tertiary: #1a1a1f;
-  --bg-card: #0f0f13;
-  --bg-elevated: #18181d;
-  --bg-hover: #1e1e24;
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-card: #0f172a;
+  --bg-elevated: #1e293b;
+  --bg-hover: #334155;
   
-  --text-primary: #eaeaee;
-  --text-secondary: #b7b6c5;
-  --text-tertiary: #6e6d7a;
-  --border: rgba(183, 182, 197, 0.12);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --border: rgba(148, 163, 184, 0.12);
   
-  --accent: #957a86;
-  --accent-hover: #a98d98;
-  --accent-subtle: rgba(149, 122, 134, 0.15);
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --accent-subtle: rgba(139, 92, 246, 0.15);
   
   --highlight-yellow: #fbbf24;
   --highlight-green: #34d399;
@@ -25,21 +25,21 @@ export const overlayStyles = /* css */ `
 }
 
 :host(.light) {
-  --bg-primary: #f8f8fa;
+  --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f0f0f4;
+  --bg-tertiary: #f1f5f9;
   --bg-card: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-hover: #eeeef2;
+  --bg-hover: #e2e8f0;
   
-  --text-primary: #18171c;
-  --text-secondary: #5c495a;
-  --text-tertiary: #8a8494;
-  --border: rgba(92, 73, 90, 0.12);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --border: rgba(100, 116, 139, 0.15);
   
-  --accent: #7a5f6d;
-  --accent-hover: #664e5b;
-  --accent-subtle: rgba(149, 122, 134, 0.12);
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-subtle: rgba(124, 58, 237, 0.12);
 }
 
 .margin-overlay {
@@ -63,7 +63,7 @@ export const overlayStyles = /* css */ `
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255,255,255,0.05);
   z-index: 2147483647;
   pointer-events: auto;
-  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   opacity: 0;
   transform: translateY(8px) scale(0.95);
   animation: toolbar-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -161,7 +161,7 @@ export const overlayStyles = /* css */ `
   flex-direction: column;
   pointer-events: auto;
   z-index: 2147483647;
-  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-primary);
   opacity: 0;
   transform: translateY(-8px) scale(0.96);
@@ -369,7 +369,7 @@ export const overlayStyles = /* css */ `
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.05);
   z-index: 2147483647;
   pointer-events: auto;
-  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-primary);
   animation: modal-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   overflow: hidden;
@@ -539,7 +539,7 @@ export const overlayStyles = /* css */ `
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);

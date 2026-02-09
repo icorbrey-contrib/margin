@@ -1,5 +1,7 @@
 package db
 
+import "time"
+
 func (db *DB) CreateCollection(c *Collection) error {
 	_, err := db.Exec(db.Rebind(`
 		INSERT INTO collections (uri, author_did, name, description, icon, created_at, indexed_at)
@@ -102,6 +104,66 @@ func (db *DB) GetRecentCollectionItems(limit, offset int) ([]CollectionItem, err
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []CollectionItem
+	for rows.Next() {
+		var item CollectionItem
+		if err := rows.Scan(&item.URI, &item.AuthorDID, &item.CollectionURI, &item.AnnotationURI, &item.Position, &item.CreatedAt, &item.IndexedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func (db *DB) GetPopularCollectionItems(limit, offset int) ([]CollectionItem, error) {
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, collection_uri, annotation_uri, position, created_at, indexed_at
+		FROM collection_items
+		WHERE created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = collection_items.annotation_uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = collection_items.annotation_uri)
+		) > 0
+		ORDER BY (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = collection_items.annotation_uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = collection_items.annotation_uri)
+		) DESC, created_at DESC
+		LIMIT ? OFFSET ?
+	`), since, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []CollectionItem
+	for rows.Next() {
+		var item CollectionItem
+		if err := rows.Scan(&item.URI, &item.AuthorDID, &item.CollectionURI, &item.AnnotationURI, &item.Position, &item.CreatedAt, &item.IndexedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func (db *DB) GetShelvedCollectionItems(limit, offset int) ([]CollectionItem, error) {
+	olderThan := time.Now().AddDate(0, 0, -1)
+	since := time.Now().AddDate(0, 0, -14)
+	rows, err := db.Query(db.Rebind(`
+		SELECT uri, author_did, collection_uri, annotation_uri, position, created_at, indexed_at
+		FROM collection_items
+		WHERE created_at < ? AND created_at > ? AND (
+			(SELECT COUNT(*) FROM likes WHERE subject_uri = collection_items.annotation_uri) +
+			(SELECT COUNT(*) FROM replies WHERE root_uri = collection_items.annotation_uri)
+		) = 0
+		ORDER BY RANDOM()
+		LIMIT ? OFFSET ?
+	`), olderThan, since, limit, offset)
 	if err != nil {
 		return nil, err
 	}

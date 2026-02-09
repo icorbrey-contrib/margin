@@ -1,0 +1,236 @@
+export interface UserProfile {
+  did: string;
+  handle: string;
+  displayName?: string;
+  description?: string;
+  avatar?: string;
+  banner?: string;
+  website?: string;
+  links?: string[];
+  followersCount?: number;
+  followsCount?: number;
+  postsCount?: number;
+  labels?: ContentLabel[];
+}
+
+export interface Selector {
+  type?: string;
+  exact: string;
+  prefix?: string;
+  suffix?: string;
+  start?: number;
+  end?: number;
+}
+
+export interface Target {
+  source: string;
+  title?: string;
+  selector?: Selector;
+}
+
+export interface AnnotationBody {
+  type: "TextualBody";
+  value: string;
+  format: "text/plain";
+}
+
+export interface Param {
+  id: string;
+  value: string;
+}
+
+export interface AnnotationItem {
+  uri: string;
+  id?: string;
+  cid: string;
+  author: UserProfile;
+  creator?: UserProfile;
+  target?: Target;
+  source?: string;
+  body?: AnnotationBody;
+  motivation: "highlighting" | "commenting" | "bookmarking" | string;
+  type?: string;
+  createdAt: string;
+  text?: string;
+  title?: string;
+  description?: string;
+  color?: string;
+  tags?: string[];
+  likeCount?: number;
+  replyCount?: number;
+  repostCount?: number;
+  children?: AnnotationItem[];
+  viewer?: {
+    like?: string;
+  };
+  collection?: {
+    uri: string;
+    name: string;
+    icon?: string;
+  };
+  addedBy?: UserProfile;
+  collectionItemUri?: string;
+  reply?: {
+    parent?: {
+      uri: string;
+      cid: string;
+    };
+    root?: {
+      uri: string;
+      cid: string;
+    };
+  };
+  parentUri?: string;
+  labels?: ContentLabel[];
+}
+
+export type ActorSearchItem = UserProfile;
+
+export interface FeedResponse {
+  cursor?: string;
+  items: AnnotationItem[];
+}
+
+export interface NotificationItem {
+  id: number;
+  recipient: UserProfile;
+  actor: UserProfile;
+  type:
+    | "reply"
+    | "quote"
+    | "highlight"
+    | "bookmark"
+    | "annotation"
+    | "like"
+    | "follow";
+  subjectUri: string;
+  subject?: AnnotationItem | unknown;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface Collection {
+  id: string;
+  uri: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  creator: UserProfile;
+  createdAt: string;
+  itemCount: number;
+  items?: AnnotationItem[];
+}
+
+export interface CollectionItem {
+  id: string;
+  collectionId: string;
+  subjectUri: string;
+  createdAt: string;
+  annotation?: AnnotationItem;
+}
+
+export interface EditHistoryItem {
+  uri: string;
+  cid: string;
+  author: UserProfile;
+  text: string;
+  createdAt: string;
+}
+
+export interface ModerationRelationship {
+  blocking: boolean;
+  muting: boolean;
+  blockedBy: boolean;
+}
+
+export interface BlockedUser {
+  did: string;
+  author: UserProfile;
+  createdAt: string;
+}
+
+export interface MutedUser {
+  did: string;
+  author: UserProfile;
+  createdAt: string;
+}
+
+export interface ModerationReport {
+  id: number;
+  reporter: UserProfile;
+  subject: UserProfile;
+  subjectUri?: string;
+  reasonType: string;
+  reasonText?: string;
+  status: string;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+}
+
+export type ReportReasonType =
+  | "spam"
+  | "violation"
+  | "misleading"
+  | "sexual"
+  | "rude"
+  | "other";
+
+export interface ContentLabel {
+  val: string;
+  src: string;
+  scope?: "account" | "content";
+}
+
+export type ContentLabelValue =
+  | "sexual"
+  | "nudity"
+  | "violence"
+  | "gore"
+  | "spam"
+  | "misleading";
+
+export type LabelVisibility = "hide" | "warn" | "ignore";
+
+export interface LabelerSubscription {
+  did: string;
+}
+
+export interface LabelPreference {
+  labelerDid: string;
+  label: string;
+  visibility: LabelVisibility;
+}
+
+export interface LabelDefinition {
+  identifier: string;
+  severity: string;
+  blurs: string;
+  description: string;
+}
+
+export interface LabelerInfo {
+  did: string;
+  name: string;
+  labels: LabelDefinition[];
+}
+
+export interface HydratedLabel {
+  id: number;
+  src: string;
+  uri: string;
+  val: string;
+  createdBy: {
+    did: string;
+    handle: string;
+    displayName?: string;
+    avatar?: string;
+  };
+  createdAt: string;
+  subject?: {
+    did: string;
+    handle: string;
+    displayName?: string;
+    avatar?: string;
+  };
+}

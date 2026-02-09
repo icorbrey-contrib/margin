@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -59,15 +60,39 @@ func (h *APIKeyHandler) CreateKey(w http.ResponseWriter, r *http.Request) {
 	keyHash := hashAPIKey(rawKey)
 	keyID := generateKeyID()
 
+	record := xrpc.NewAPIKeyRecord(req.Name, keyHash)
+	if err := record.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var result *xrpc.CreateRecordOutput
+	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+		var createErr error
+		result, createErr = client.CreateRecord(r.Context(), did, xrpc.CollectionAPIKey, record)
+		return createErr
+	})
+	if err != nil {
+		log.Printf("[ERROR] Failed to create API key record on PDS: %v", err)
+		http.Error(w, "Failed to create key record: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	cid := result.CID
+
 	apiKey := &db.APIKey{
 		ID:        keyID,
 		OwnerDID:  session.DID,
 		Name:      req.Name,
 		KeyHash:   keyHash,
 		CreatedAt: time.Now(),
+		URI:       result.URI,
+		CID:       &cid,
+		IndexedAt: time.Now(),
 	}
 
 	if err := h.db.CreateAPIKey(apiKey); err != nil {
+		log.Printf("[ERROR] Failed to insert API key into DB: %v", err)
 		http.Error(w, "Failed to create key", http.StatusInternalServerError)
 		return
 	}
@@ -115,9 +140,16 @@ func (h *APIKeyHandler) DeleteKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.db.DeleteAPIKey(keyID, session.DID); err != nil {
+	uri, err := h.db.DeleteAPIKey(keyID, session.DID)
+	if err != nil {
 		http.Error(w, "Failed to delete key", http.StatusInternalServerError)
 		return
+	}
+
+	if uri != "" {
+		h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
+			return client.DeleteRecord(r.Context(), did, xrpc.CollectionAPIKey, strings.Split(uri, "/")[len(strings.Split(uri, "/"))-1])
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
