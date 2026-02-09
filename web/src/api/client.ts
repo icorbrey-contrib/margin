@@ -177,7 +177,7 @@ function normalizeItem(raw: RawItem): AnnotationItem {
           }
         : undefined,
       context: raw.context
-        ? raw.context.map((c: any) => ({
+        ? raw.context.map((c) => ({
             uri: c.uri,
             name: c.name,
             icon: c.icon,
@@ -294,10 +294,12 @@ export async function getFeed({
     return {
       cursor: data.cursor,
       items: groupedItems,
+      hasMore: normalizedItems.length >= limit,
+      fetchedCount: normalizedItems.length,
     };
   } catch (e) {
     console.error(e);
-    return { items: [] };
+    return { items: [], hasMore: false, fetchedCount: 0 };
   }
 }
 

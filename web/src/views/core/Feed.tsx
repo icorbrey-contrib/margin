@@ -53,8 +53,12 @@ function FeedContent({
         if (cancelled) return;
         const fetched = data?.items || [];
         setItems(fetched);
-        setHasMore(fetched.length >= LIMIT);
-        setOffset(fetched.length);
+        if (data?.hasMore !== undefined) {
+          setHasMore(data.hasMore);
+        } else {
+          setHasMore(fetched.length >= LIMIT);
+        }
+        setOffset(data?.fetchedCount ?? fetched.length);
         setLoading(false);
       })
       .catch((e) => {
@@ -82,8 +86,12 @@ function FeedContent({
       });
       const fetched = data?.items || [];
       setItems((prev) => [...prev, ...fetched]);
-      setHasMore(fetched.length >= LIMIT);
-      setOffset((prev) => prev + fetched.length);
+      if (data?.hasMore !== undefined) {
+        setHasMore(data.hasMore);
+      } else {
+        setHasMore(fetched.length >= LIMIT);
+      }
+      setOffset((prev) => prev + (data?.fetchedCount ?? fetched.length));
     } catch (e) {
       console.error(e);
     } finally {
