@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getFeed } from "../../api/client";
 import Card from "../../components/common/Card";
 import {
@@ -28,11 +29,13 @@ function FeedContent({
   motivation,
   emptyMessage,
   layout,
+  tag,
 }: {
   type: string;
   motivation?: string;
   emptyMessage: string;
   layout: "list" | "mosaic";
+  tag?: string;
 }) {
   const [items, setItems] = useState<AnnotationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +48,7 @@ function FeedContent({
   useEffect(() => {
     let cancelled = false;
 
-    getFeed({ type, motivation, limit: LIMIT, offset: 0 })
+    getFeed({ type, motivation, tag, limit: LIMIT, offset: 0 })
       .then((data) => {
         if (cancelled) return;
         const fetched = data?.items || [];
@@ -65,12 +68,18 @@ function FeedContent({
     return () => {
       cancelled = true;
     };
-  }, [type, motivation]);
+  }, [type, motivation, tag]);
 
   const loadMore = useCallback(async () => {
     setLoadingMore(true);
     try {
-      const data = await getFeed({ type, motivation, limit: LIMIT, offset });
+      const data = await getFeed({
+        type,
+        motivation,
+        tag,
+        limit: LIMIT,
+        offset,
+      });
       const fetched = data?.items || [];
       setItems((prev) => [...prev, ...fetched]);
       setHasMore(fetched.length >= LIMIT);
@@ -80,7 +89,7 @@ function FeedContent({
     } finally {
       setLoadingMore(false);
     }
-  }, [type, motivation, offset]);
+  }, [type, motivation, tag, offset]);
 
   const handleDelete = (uri: string) => {
     setItems((prev) => prev.filter((i) => i.uri !== uri));
@@ -166,6 +175,8 @@ export default function Feed({
   showTabs = true,
   emptyMessage = "No items found.",
 }: FeedProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tag = searchParams.get("tag") || undefined;
   const user = useStore($user);
   const layout = useStore($feedLayout);
   const [activeTab, setActiveTab] = useState(initialType);
@@ -176,6 +187,11 @@ export default function Feed({
   const handleTabChange = (id: string) => {
     if (id === activeTab) return;
     setActiveTab(id);
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete("tag");
+      return newParams;
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -183,6 +199,11 @@ export default function Feed({
     const next = id === "all" ? undefined : id;
     if (next === activeFilter) return;
     setActiveFilter(next);
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete("tag");
+      return newParams;
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -227,7 +248,37 @@ export default function Feed({
 
       {showTabs && (
         <div className="sticky top-0 z-10 bg-surface-50/95 dark:bg-surface-950/95 backdrop-blur-sm pb-3 mb-2 -mx-1 px-1 pt-1 space-y-2">
-          <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
+          {!tag && (
+            <Tabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={handleTabChange}
+            />
+          )}
+          {tag && (
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <span className="text-surface-500 font-normal">
+                  Items with tag:
+                </span>
+                <span className="bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-2 py-0.5 rounded-lg">
+                  #{tag}
+                </span>
+              </h2>
+              <button
+                onClick={() => {
+                  setSearchParams((prev) => {
+                    const newParams = new URLSearchParams(prev);
+                    newParams.delete("tag");
+                    return newParams;
+                  });
+                }}
+                className="text-sm text-surface-500 hover:text-surface-900 dark:hover:text-white"
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 flex-wrap">
             {filters.map((f) => {
               const isActive =
@@ -256,9 +307,10 @@ export default function Feed({
       )}
 
       <FeedContent
-        key={`${activeTab}-${activeFilter || "all"}`}
+        key={`${activeTab}-${activeFilter || "all"}-${tag || ""}`}
         type={activeTab}
         motivation={activeFilter}
+        tag={tag}
         emptyMessage={emptyMessage}
         layout={layout}
       />

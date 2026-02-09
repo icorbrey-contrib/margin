@@ -16,6 +16,7 @@ import {
   Flag,
   EyeOff,
   Eye,
+  Tag,
 } from "lucide-react";
 import ShareMenu from "../modals/ShareMenu";
 import AddToCollectionModal from "../modals/AddToCollectionModal";
@@ -523,6 +524,22 @@ export default function Card({
           <p className="text-surface-900 dark:text-surface-100 whitespace-pre-wrap leading-relaxed text-[15px]">
             <RichText text={item.body.value} />
           </p>
+        )}
+
+        {item.tags && item.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {item.tags.map((tag) => (
+              <Link
+                key={tag}
+                to={`/home?tag=${encodeURIComponent(tag)}`}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-100 dark:bg-surface-800 text-xs font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Tag size={10} />
+                <span>{tag}</span>
+              </Link>
+            ))}
+          </div>
         )}
       </div>
 
