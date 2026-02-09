@@ -254,7 +254,7 @@ export default function Profile({ did }: ProfileProps) {
   }
 
   const tabs = [
-    { id: "annotations", label: "Notes" },
+    { id: "annotations", label: "Annotations" },
     { id: "highlights", label: "Highlights" },
     { id: "bookmarks", label: "Bookmarks" },
     { id: "collections", label: "Collections" },
