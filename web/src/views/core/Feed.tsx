@@ -6,8 +6,8 @@ import {
   Loader2,
   Clock,
   Bookmark,
-  MessageSquare,
   Highlighter,
+  MessageSquareText,
 } from "lucide-react";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
@@ -225,7 +225,7 @@ export default function Feed({
 
   const filters = [
     { id: "all", label: "All", icon: null },
-    { id: "commenting", label: "Annotations", icon: MessageSquare },
+    { id: "commenting", label: "Annotations", icon: MessageSquareText },
     { id: "highlighting", label: "Highlights", icon: Highlighter },
     { id: "bookmarking", label: "Bookmarks", icon: Bookmark },
   ];

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   Home,
   Bookmark,
-  PenTool,
   Settings,
   LogOut,
   Bell,
@@ -12,6 +11,8 @@ import {
   Folder,
   LogIn,
   PenSquare,
+  MessageSquareText,
+  Highlighter,
 } from "lucide-react";
 import { useStore } from "@nanostores/react";
 import { $user, logout } from "../../store/auth";
@@ -43,13 +44,19 @@ export default function Sidebar() {
   const publicNavItems = [
     { icon: Home, label: "Feed", href: "/home", badge: undefined },
     {
+      icon: MessageSquareText,
+      label: "Annotations",
+      href: "/annotations",
+      badge: undefined,
+    },
+    {
       icon: Bookmark,
       label: "Bookmarks",
       href: "/bookmarks",
       badge: undefined,
     },
     {
-      icon: PenTool,
+      icon: Highlighter,
       label: "Highlights",
       href: "/highlights",
       badge: undefined,
@@ -64,8 +71,9 @@ export default function Sidebar() {
       href: "/notifications",
       badge: unreadCount,
     },
+    { icon: MessageSquareText, label: "Annotations", href: "/annotations" },
     { icon: Bookmark, label: "Bookmarks", href: "/bookmarks" },
-    { icon: PenTool, label: "Highlights", href: "/highlights" },
+    { icon: Highlighter, label: "Highlights", href: "/highlights" },
     { icon: Folder, label: "Collections", href: "/collections" },
   ];
 
