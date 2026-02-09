@@ -50,15 +50,15 @@ export default function Sidebar() {
       badge: undefined,
     },
     {
-      icon: Bookmark,
-      label: "Bookmarks",
-      href: "/bookmarks",
-      badge: undefined,
-    },
-    {
       icon: Highlighter,
       label: "Highlights",
       href: "/highlights",
+      badge: undefined,
+    },
+    {
+      icon: Bookmark,
+      label: "Bookmarks",
+      href: "/bookmarks",
       badge: undefined,
     },
   ];
@@ -72,8 +72,8 @@ export default function Sidebar() {
       badge: unreadCount,
     },
     { icon: MessageSquareText, label: "Annotations", href: "/annotations" },
-    { icon: Bookmark, label: "Bookmarks", href: "/bookmarks" },
     { icon: Highlighter, label: "Highlights", href: "/highlights" },
+    { icon: Bookmark, label: "Bookmarks", href: "/bookmarks" },
     { icon: Folder, label: "Collections", href: "/collections" },
   ];
 
