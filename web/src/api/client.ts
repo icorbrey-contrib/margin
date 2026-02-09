@@ -173,7 +173,7 @@ function normalizeItem(raw: RawItem): AnnotationItem {
         : undefined,
       addedBy: raw.creator || raw.author,
       createdAt: raw.created || raw.createdAt || new Date().toISOString(),
-      collectionItemUri: raw.uri,
+      collectionItemUri: raw.id || raw.uri,
     };
   }
 

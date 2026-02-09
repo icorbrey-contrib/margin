@@ -41,9 +41,19 @@ export default function Sidebar() {
   }, [user]);
 
   const publicNavItems = [
-    { icon: Home, label: "Feed", href: "/home" },
-    { icon: Bookmark, label: "Bookmarks", href: "/bookmarks" },
-    { icon: PenTool, label: "Highlights", href: "/highlights" },
+    { icon: Home, label: "Feed", href: "/home", badge: undefined },
+    {
+      icon: Bookmark,
+      label: "Bookmarks",
+      href: "/bookmarks",
+      badge: undefined,
+    },
+    {
+      icon: PenTool,
+      label: "Highlights",
+      href: "/highlights",
+      badge: undefined,
+    },
   ];
 
   const authNavItems = [

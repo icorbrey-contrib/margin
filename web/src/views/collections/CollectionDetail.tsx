@@ -178,10 +178,11 @@ export default function CollectionDetail({
               <Card item={item} hideShare />
               {isOwner && item.collectionItemUri && (
                 <button
-                  className="absolute top-3 right-3 p-1.5 bg-white/90 dark:bg-surface-800/90 backdrop-blur text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute top-3 right-3 p-1.5 bg-white/90 dark:bg-surface-800/90 backdrop-blur text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 rounded-lg shadow-sm transition-all"
                   onClick={() => handleRemoveItem(item)}
+                  title="Remove from collection"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={16} />
                 </button>
               )}
             </div>
