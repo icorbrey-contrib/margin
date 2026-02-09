@@ -274,8 +274,8 @@ export default function Card({
 
   return (
     <article className="card p-4 hover:ring-black/10 dark:hover:ring-white/10 transition-all relative">
-      {item.collection && (
-        <div className="flex items-center gap-1.5 text-xs text-surface-400 dark:text-surface-500 mb-2">
+      {(item.collection || (item.context && item.context.length > 0)) && (
+        <div className="flex items-center gap-1.5 text-xs text-surface-400 dark:text-surface-500 mb-2 flex-wrap">
           {item.addedBy && item.addedBy.did !== item.author?.did ? (
             <>
               <ProfileHoverCard did={item.addedBy.did}>
@@ -298,13 +298,36 @@ export default function Card({
           ) : (
             <span>Added to</span>
           )}
-          <Link
-            to={`/${item.addedBy?.handle || ""}/collection/${(item.collection.uri || "").split("/").pop()}`}
-            className="inline-flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-          >
-            <CollectionIcon icon={item.collection.icon} size={14} />
-            <span className="font-medium">{item.collection.name}</span>
-          </Link>
+
+          {item.context && item.context.length > 0 ? (
+            item.context.map((col, index) => (
+              <React.Fragment key={col.uri}>
+                {index > 0 && index < item.context!.length - 1 && (
+                  <span className="text-surface-300 dark:text-surface-600">
+                    ,
+                  </span>
+                )}
+                {index > 0 && index === item.context!.length - 1 && (
+                  <span>and</span>
+                )}
+                <Link
+                  to={`/${item.addedBy?.handle || ""}/collection/${(col.uri || "").split("/").pop()}`}
+                  className="inline-flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  <CollectionIcon icon={col.icon} size={14} />
+                  <span className="font-medium">{col.name}</span>
+                </Link>
+              </React.Fragment>
+            ))
+          ) : (
+            <Link
+              to={`/${item.addedBy?.handle || ""}/collection/${(item.collection!.uri || "").split("/").pop()}`}
+              className="inline-flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
+              <CollectionIcon icon={item.collection!.icon} size={14} />
+              <span className="font-medium">{item.collection!.name}</span>
+            </Link>
+          )}
         </div>
       )}
 
@@ -426,45 +449,49 @@ export default function Card({
           </button>
         )}
         {isBookmark && (
-          <a
-            href={pageUrl || "#"}
-            target={pageUrl ? "_blank" : undefined}
-            rel="noopener noreferrer"
-            onClick={(e) => pageUrl && handleExternalClick(e, pageUrl)}
-            className="block bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-all group overflow-hidden"
+          <div
+            onClick={(e) => {
+              e.preventDefault();
+              if (pageUrl) handleExternalClick(e, pageUrl);
+            }}
+            role="button"
+            tabIndex={0}
+            className="flex items-stretch bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-all group overflow-hidden cursor-pointer"
           >
             {displayImage && !imgError && (
-              <div className="h-32 w-full overflow-hidden bg-surface-200 dark:bg-surface-700 border-b border-surface-200 dark:border-surface-700">
-                <img
-                  src={displayImage}
-                  alt=""
-                  onError={() => setImgError(true)}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+              <div className="w-[140px] sm:w-[180px] shrink-0 border-r border-surface-200 dark:border-surface-700 bg-surface-200 dark:bg-surface-700 relative">
+                <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={displayImage}
+                    alt=""
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
             )}
-            <div className="p-4">
-              <h3 className="font-semibold text-surface-900 dark:text-white text-base leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-400 mb-2 transition-colors">
+            <div className="p-3 flex-1 min-w-0 flex flex-col justify-center font-sans">
+              <h3 className="font-semibold text-surface-900 dark:text-white text-sm leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-400 mb-1.5 transition-colors line-clamp-2">
                 {displayTitle}
               </h3>
 
               {displayDescription && (
-                <p className="text-surface-600 dark:text-surface-400 text-sm leading-relaxed mb-3 line-clamp-2">
+                <p className="text-surface-600 dark:text-surface-400 text-xs leading-relaxed mb-2 line-clamp-2">
                   {displayDescription}
                 </p>
               )}
 
-              <div className="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-500">
-                <div className="w-5 h-5 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="flex items-center gap-2 text-[11px] text-surface-500 dark:text-surface-500 mt-auto">
+                <div className="w-4 h-4 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center shrink-0 overflow-hidden">
                   {ogData?.icon && !iconError ? (
                     <img
                       src={ogData.icon}
                       alt=""
                       onError={() => setIconError(true)}
-                      className="w-3.5 h-3.5 object-contain"
+                      className="w-3 h-3 object-contain"
                     />
                   ) : (
-                    <Globe size={10} />
+                    <Globe size={9} />
                   )}
                 </div>
                 <span className="truncate max-w-[200px]">
@@ -472,7 +499,7 @@ export default function Card({
                 </span>
               </div>
             </div>
-          </a>
+          </div>
         )}
 
         {item.target?.selector?.exact && (

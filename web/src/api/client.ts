@@ -139,6 +139,11 @@ interface RawItem {
     name: string;
     icon?: string;
   };
+  context?: {
+    uri: string;
+    name: string;
+    icon?: string;
+  }[];
   created?: string;
   createdAt?: string;
   target?: string | { source?: string; title?: string; selector?: Selector };
@@ -171,8 +176,19 @@ function normalizeItem(raw: RawItem): AnnotationItem {
             icon: raw.collection.icon,
           }
         : undefined,
+      context: raw.context
+        ? raw.context.map((c: any) => ({
+            uri: c.uri,
+            name: c.name,
+            icon: c.icon,
+          }))
+        : undefined,
       addedBy: raw.creator || raw.author,
-      createdAt: raw.created || raw.createdAt || new Date().toISOString(),
+      createdAt:
+        normalizedInner.createdAt ||
+        raw.created ||
+        raw.createdAt ||
+        new Date().toISOString(),
       collectionItemUri: raw.id || raw.uri,
     };
   }
@@ -248,9 +264,36 @@ export async function getFeed({
     });
     if (!res.ok) throw new Error("Failed to fetch feed");
     const data = await res.json();
+    const normalizedItems = (data.items || []).map(normalizeItem);
+
+    const groupedItems: AnnotationItem[] = [];
+    if (normalizedItems.length > 0) {
+      groupedItems.push(normalizedItems[0]);
+
+      for (let i = 1; i < normalizedItems.length; i++) {
+        const prev = groupedItems[groupedItems.length - 1];
+        const curr = normalizedItems[i];
+
+        if (prev.collection && curr.collection) {
+          if (
+            prev.uri === curr.uri &&
+            prev.addedBy?.did === curr.addedBy?.did
+          ) {
+            if (!prev.context) {
+              prev.context = [prev.collection];
+            }
+            prev.context.push(curr.collection);
+            groupedItems[groupedItems.length - 1] = prev;
+            continue;
+          }
+        }
+        groupedItems.push(curr);
+      }
+    }
+
     return {
       cursor: data.cursor,
-      items: (data.items || []).map(normalizeItem),
+      items: groupedItems,
     };
   } catch (e) {
     console.error(e);

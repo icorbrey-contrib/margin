@@ -68,6 +68,11 @@ export interface AnnotationItem {
     name: string;
     icon?: string;
   };
+  context?: {
+    uri: string;
+    name: string;
+    icon?: string;
+  }[];
   addedBy?: UserProfile;
   collectionItemUri?: string;
   reply?: {

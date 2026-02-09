@@ -84,7 +84,7 @@ export default function RightSidebar() {
               {tags.map((t) => (
                 <a
                   key={t.tag}
-                  href={`/search?q=${t.tag}`}
+                  href={`/home?tag=${encodeURIComponent(t.tag)}`}
                   className="px-2 py-2.5 hover:bg-surface-100 dark:hover:bg-surface-800/60 rounded-lg transition-colors group"
                 >
                   <div className="font-semibold text-sm text-surface-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
