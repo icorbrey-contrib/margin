@@ -249,7 +249,7 @@ export default function Feed({
               );
             })}
             <div className="ml-auto">
-              <LayoutToggle />
+              <LayoutToggle className="hidden sm:inline-flex" />
             </div>
           </div>
         </div>
