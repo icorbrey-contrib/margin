@@ -23,14 +23,8 @@
             "type": "array",
             "description": "List of labeler services the user subscribes to for content moderation.",
             "items": {
-              "type": "object",
-              "required": ["did"],
-              "properties": {
-                "did": {
-                  "type": "string",
-                  "description": "DID of the labeler service."
-                }
-              }
+              "type": "ref",
+              "ref": "#labelerSubscription"
             },
             "maxLength": 50
           },
@@ -38,23 +32,8 @@
             "type": "array",
             "description": "Per-label visibility preferences for subscribed labelers.",
             "items": {
-              "type": "object",
-              "required": ["labelerDid", "label", "visibility"],
-              "properties": {
-                "labelerDid": {
-                  "type": "string",
-                  "description": "DID of the labeler service."
-                },
-                "label": {
-                  "type": "string",
-                  "description": "The label identifier (e.g. sexual, violence, spam)."
-                },
-                "visibility": {
-                  "type": "string",
-                  "description": "How to handle content with this label: hide, warn, or ignore.",
-                  "knownValues": ["hide", "warn", "ignore"]
-                }
-              }
+              "type": "ref",
+              "ref": "#labelPreference"
             },
             "maxLength": 500
           },
@@ -62,6 +41,35 @@
             "type": "string",
             "format": "datetime"
           }
+        }
+      }
+    },
+    "labelerSubscription": {
+      "type": "object",
+      "required": ["did"],
+      "properties": {
+        "did": {
+          "type": "string",
+          "description": "DID of the labeler service."
+        }
+      }
+    },
+    "labelPreference": {
+      "type": "object",
+      "required": ["labelerDid", "label", "visibility"],
+      "properties": {
+        "labelerDid": {
+          "type": "string",
+          "description": "DID of the labeler service."
+        },
+        "label": {
+          "type": "string",
+          "description": "The label identifier (e.g. sexual, violence, spam)."
+        },
+        "visibility": {
+          "type": "string",
+          "description": "How to handle content with this label: hide, warn, or ignore.",
+          "knownValues": ["hide", "warn", "ignore"]
         }
       }
     }

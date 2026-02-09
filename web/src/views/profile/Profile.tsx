@@ -138,12 +138,12 @@ export default function Profile({ did }: ProfileProps) {
         ]);
 
         const merged: UserProfile = {
-          did: bskyData?.did || marginData?.did || did,
-          handle: bskyData?.handle || marginData?.handle || "",
-          displayName: bskyData?.displayName || marginData?.displayName,
-          avatar: bskyData?.avatar || marginData?.avatar,
-          description: bskyData?.description || marginData?.description,
-          banner: bskyData?.banner || marginData?.banner,
+          did: marginData?.did || bskyData?.did || did,
+          handle: marginData?.handle || bskyData?.handle || "",
+          displayName: marginData?.displayName || bskyData?.displayName,
+          avatar: marginData?.avatar || bskyData?.avatar,
+          description: marginData?.description || bskyData?.description,
+          banner: marginData?.banner || bskyData?.banner,
           website: marginData?.website,
           links: marginData?.links || [],
           followersCount:
@@ -429,7 +429,7 @@ export default function Profile({ did }: ProfileProps) {
             </div>
 
             {profile.description && (
-              <p className="text-surface-600 dark:text-surface-300 text-sm mt-3 whitespace-pre-line">
+              <p className="text-surface-600 dark:text-surface-300 text-sm mt-3 whitespace-pre-line break-words">
                 <RichText text={profile.description} />
               </p>
             )}

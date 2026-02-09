@@ -88,11 +88,15 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 
 	var xrpcLabelers []xrpc.LabelerSubscription
 	for _, l := range input.SubscribedLabelers {
-		xrpcLabelers = append(xrpcLabelers, xrpc.LabelerSubscription{DID: l.DID})
+		xrpcLabelers = append(xrpcLabelers, xrpc.LabelerSubscription{
+			Type: "at.margin.preferences#labelerSubscription",
+			DID:  l.DID,
+		})
 	}
 	var xrpcLabelPrefs []xrpc.LabelPreference
 	for _, lp := range input.LabelPreferences {
 		xrpcLabelPrefs = append(xrpcLabelPrefs, xrpc.LabelPreference{
+			Type:       "at.margin.preferences#labelPreference",
 			LabelerDID: lp.LabelerDID,
 			Label:      lp.Label,
 			Visibility: lp.Visibility,

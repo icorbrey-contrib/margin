@@ -462,10 +462,12 @@ func (r *MarginProfileRecord) Validate() error {
 }
 
 type LabelerSubscription struct {
-	DID string `json:"did"`
+	Type string `json:"$type,omitempty"`
+	DID  string `json:"did"`
 }
 
 type LabelPreference struct {
+	Type       string `json:"$type,omitempty"`
 	LabelerDID string `json:"labelerDid"`
 	Label      string `json:"label"`
 	Visibility string `json:"visibility"`
