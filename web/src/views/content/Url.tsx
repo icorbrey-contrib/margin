@@ -17,7 +17,7 @@ import {
   Globe,
 } from "lucide-react";
 
-import { EmptyState, Tabs } from "../../components/ui";
+import { EmptyState, Tabs, Input, Button } from "../../components/ui";
 
 export default function UrlPage() {
   const user = useStore($user);
@@ -187,9 +187,31 @@ export default function UrlPage() {
             Explore
           </h1>
           <p className="text-surface-500 dark:text-surface-400 max-w-md mx-auto mb-8">
-            Search for any URL in the sidebar to specific see annotations and
+            Search for any URL in the sidebar to see specific annotations and
             highlights.
           </p>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const q = formData.get("q") as string;
+              if (q?.trim()) {
+                navigate(`/url?q=${encodeURIComponent(q.trim())}`);
+              }
+            }}
+            className="max-w-md mx-auto mb-8 flex gap-2"
+          >
+            <div className="flex-1">
+              <Input
+                name="q"
+                placeholder="https://example.com"
+                className="w-full bg-surface-50 dark:bg-surface-800"
+                autoFocus
+              />
+            </div>
+            <Button type="submit">Search</Button>
+          </form>
 
           {recentSearches.length > 0 && (
             <div className="text-left max-w-lg mx-auto bg-surface-50 dark:bg-surface-800/50 rounded-2xl p-6 border border-surface-100 dark:border-surface-800">
@@ -259,7 +281,7 @@ export default function UrlPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-900 dark:text-white text-sm font-medium rounded-lg transition-colors"
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? "Copied" : "Share"}
+                {copied ? "Copied" : "Share your thoughts on this URL"}
               </button>
             )}
           </div>

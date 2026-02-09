@@ -107,7 +107,7 @@ function MasonryContent({
   }
 
   return (
-    <div className="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4 animate-fade-in">
+    <div className="columns-1 sm:columns-2 md:columns-3 xl:columns-4 gap-4 animate-fade-in">
       {items.map((item) => (
         <div key={item.uri || item.cid} className="break-inside-avoid mb-4">
           <Card item={item} onDelete={handleDelete} />
@@ -158,14 +158,14 @@ export default function MasonryFeed({
                 onChange={handleTabChange}
               />
             </div>
-            <LayoutToggle />
+            <LayoutToggle className="hidden sm:inline-flex" />
           </div>
         </div>
       )}
 
       {!showTabs && (
         <div className="flex justify-end mb-4">
-          <LayoutToggle />
+          <LayoutToggle className="hidden sm:inline-flex" />
         </div>
       )}
 

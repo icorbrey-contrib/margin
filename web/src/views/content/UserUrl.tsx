@@ -135,7 +135,7 @@ export default function UserUrlPage() {
 
   return (
     <div className="max-w-3xl mx-auto pb-20">
-      <header className="flex items-center gap-6 mb-8 p-6 bg-white rounded-2xl border border-surface-200 shadow-sm">
+      <header className="flex items-center gap-6 mb-8 p-6 bg-white dark:bg-surface-800 rounded-2xl border border-surface-200 dark:border-surface-700 shadow-sm">
         <a
           href={bskyProfileUrl}
           target="_blank"
@@ -146,16 +146,16 @@ export default function UserUrlPage() {
             <img
               src={avatarUrl}
               alt={displayName}
-              className="w-20 h-20 rounded-full object-cover border-4 border-surface-50"
+              className="w-20 h-20 rounded-full object-cover border-4 border-surface-50 dark:border-surface-700"
             />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-surface-100 flex items-center justify-center text-2xl font-bold text-surface-500 border-4 border-surface-50">
+            <div className="w-20 h-20 rounded-full bg-surface-100 dark:bg-surface-700 flex items-center justify-center text-2xl font-bold text-surface-500 dark:text-surface-400 border-4 border-surface-50 dark:border-surface-700">
               {getInitial()}
             </div>
           )}
         </a>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-surface-900 mb-1">
+          <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1">
             {displayName}
           </h1>
           {displayHandle && (
@@ -163,7 +163,7 @@ export default function UserUrlPage() {
               href={bskyProfileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-surface-500 hover:text-primary-600 transition-colors bg-surface-50 hover:bg-primary-50 px-2 py-1 rounded-md text-sm inline-flex items-center gap-1"
+              className="text-surface-500 dark:text-surface-400 hover:text-primary-600 transition-colors bg-surface-50 dark:bg-surface-700 hover:bg-primary-50 dark:hover:bg-primary-900/30 px-2 py-1 rounded-md text-sm inline-flex items-center gap-1"
             >
               @{displayHandle} <ExternalLink size={12} />
             </a>
@@ -171,8 +171,8 @@ export default function UserUrlPage() {
         </div>
       </header>
 
-      <div className="mb-8 p-4 bg-surface-50 border border-surface-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-4">
-        <span className="text-sm font-semibold text-surface-500 uppercase tracking-wide">
+      <div className="mb-8 p-4 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl flex flex-col sm:flex-row sm:items-center gap-4">
+        <span className="text-sm font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wide">
           Annotations on:
         </span>
         <a
@@ -199,14 +199,14 @@ export default function UserUrlPage() {
       )}
 
       {!loading && !error && totalItems === 0 && (
-        <div className="text-center py-16 bg-surface-50 rounded-2xl border border-dashed border-surface-200">
-          <div className="w-12 h-12 bg-surface-100 rounded-full flex items-center justify-center mx-auto mb-4 text-surface-400">
+        <div className="text-center py-16 bg-surface-50 dark:bg-surface-800 rounded-2xl border border-dashed border-surface-200 dark:border-surface-700">
+          <div className="w-12 h-12 bg-surface-100 dark:bg-surface-700 rounded-full flex items-center justify-center mx-auto mb-4 text-surface-400">
             <PenTool size={24} />
           </div>
-          <h3 className="text-lg font-bold text-surface-900 mb-1">
+          <h3 className="text-lg font-bold text-surface-900 dark:text-white mb-1">
             No items found
           </h3>
-          <p className="text-surface-500">
+          <p className="text-surface-500 dark:text-surface-400">
             {displayName} hasn&apos;t annotated this page yet.
           </p>
         </div>
@@ -215,16 +215,16 @@ export default function UserUrlPage() {
       {!loading && !error && totalItems > 0 && (
         <div className="animate-fade-in">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-bold text-surface-900">
+            <h2 className="text-xl font-bold text-surface-900 dark:text-white">
               {totalItems} item{totalItems !== 1 ? "s" : ""}
             </h2>
-            <div className="flex bg-surface-100 p-1 rounded-xl self-start md:self-auto">
+            <div className="flex bg-surface-100 dark:bg-surface-800 p-1 rounded-xl self-start md:self-auto">
               <button
                 className={clsx(
                   "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
                   activeTab === "all"
-                    ? "bg-white text-surface-900 shadow-sm"
-                    : "text-surface-500 hover:text-surface-700",
+                    ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                    : "text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200",
                 )}
                 onClick={() => setActiveTab("all")}
               >
@@ -234,8 +234,8 @@ export default function UserUrlPage() {
                 className={clsx(
                   "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
                   activeTab === "annotations"
-                    ? "bg-white text-surface-900 shadow-sm"
-                    : "text-surface-500 hover:text-surface-700",
+                    ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                    : "text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200",
                 )}
                 onClick={() => setActiveTab("annotations")}
               >
@@ -245,8 +245,8 @@ export default function UserUrlPage() {
                 className={clsx(
                   "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
                   activeTab === "highlights"
-                    ? "bg-white text-surface-900 shadow-sm"
-                    : "text-surface-500 hover:text-surface-700",
+                    ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                    : "text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200",
                 )}
                 onClick={() => setActiveTab("highlights")}
               >

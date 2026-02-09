@@ -17,6 +17,7 @@ import {
   Highlighter,
   X,
 } from "lucide-react";
+import { AppleIcon } from "../common/Icons";
 
 export default function MobileNav() {
   const user = useStore($user);
@@ -118,6 +119,19 @@ export default function MobileNav() {
                   <Settings size={20} />
                   <span>Settings</span>
                 </Link>
+
+                <div className="h-px bg-surface-200 dark:bg-surface-700 my-2" />
+
+                <a
+                  href="https://www.icloud.com/shortcuts/21c87edf29b046db892c9e57dac6d1fd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-700 dark:text-surface-200"
+                  onClick={closeMenu}
+                >
+                  <AppleIcon size={20} />
+                  <span>iOS Shortcut</span>
+                </a>
 
                 <div className="h-px bg-surface-200 dark:bg-surface-700 my-2" />
 
