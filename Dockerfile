@@ -1,10 +1,10 @@
-FROM node:20-alpine AS frontend-builder
+FROM oven/bun:1 AS frontend-builder
 
 WORKDIR /app/web
-COPY web/package*.json ./
-RUN npm ci
+COPY web/package.json web/bun.lock ./
+RUN bun install
 COPY web/ ./
-RUN npm run build
+RUN bun run build
 
 FROM golang:1.24-alpine AS backend-builder
 
@@ -28,6 +28,7 @@ COPY --from=frontend-builder /app/web/dist ./dist
 
 ENV PORT=8080
 ENV DATABASE_URL=margin.db
+ENV STATIC_DIR=/app/dist
 
 EXPOSE 8080
 
