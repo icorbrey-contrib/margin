@@ -132,7 +132,7 @@ function FeedContent({
   if (layout === "mosaic") {
     return (
       <>
-        <div className="columns-1 sm:columns-2 gap-4 animate-fade-in">
+        <div className="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4 animate-fade-in">
           {items.map((item) => (
             <div key={item.uri || item.cid} className="break-inside-avoid mb-4">
               <Card item={item} onDelete={handleDelete} />
@@ -202,7 +202,7 @@ export default function Feed({
   ];
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl xl:max-w-none">
       {!user && (
         <div className="text-center py-10 px-6 mb-4 animate-fade-in">
           <h1 className="text-2xl font-display font-bold mb-2 tracking-tight text-surface-900 dark:text-white">

@@ -107,7 +107,7 @@ function MasonryContent({
   }
 
   return (
-    <div className="columns-1 sm:columns-2 gap-4 animate-fade-in">
+    <div className="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4 animate-fade-in">
       {items.map((item) => (
         <div key={item.uri || item.cid} className="break-inside-avoid mb-4">
           <Card item={item} onDelete={handleDelete} />
@@ -141,7 +141,7 @@ export default function MasonryFeed({
     : [{ id: "global", label: "Global" }];
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl xl:max-w-none">
       {title && (
         <h1 className="text-3xl font-display font-bold text-surface-900 dark:text-white mb-6 text-center lg:text-left">
           {title}
