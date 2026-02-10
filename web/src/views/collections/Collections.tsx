@@ -9,6 +9,8 @@ import CollectionIcon from "../../components/common/CollectionIcon";
 import { ICON_MAP } from "../../components/common/iconMap";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
+import EmojiPicker, { Theme } from "emoji-picker-react";
+import { $theme } from "../../store/theme";
 import type { Collection } from "../../types";
 import { formatDistanceToNow } from "date-fns";
 import { clsx } from "clsx";
@@ -16,12 +18,14 @@ import { Button, Input, EmptyState, Skeleton } from "../../components/ui";
 
 export default function Collections() {
   const user = useStore($user);
+  const theme = useStore($theme);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemDesc, setNewItemDesc] = useState("");
   const [newItemIcon, setNewItemIcon] = useState("folder");
+  const [activeTab, setActiveTab] = useState<"icon" | "emoji">("icon");
   const [creating, setCreating] = useState(false);
 
   const fetchCollections = async () => {
@@ -45,13 +49,18 @@ export default function Collections() {
     if (!newItemName.trim()) return;
 
     setCreating(true);
-    const res = await createCollection(newItemName, newItemDesc);
+    const finalIcon = ICON_MAP[newItemIcon]
+      ? `icon:${newItemIcon}`
+      : newItemIcon;
+
+    const res = await createCollection(newItemName, newItemDesc, finalIcon);
     if (res) {
       setCollections([res, ...collections]);
       setShowCreateModal(false);
       setNewItemName("");
       setNewItemDesc("");
       setNewItemIcon("folder");
+      setActiveTab("icon");
       fetchCollections();
     }
     setCreating(false);
@@ -187,26 +196,77 @@ export default function Collections() {
                 <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                   Icon
                 </label>
-                <div className="grid grid-cols-7 gap-1.5 p-3 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl max-h-28 overflow-y-auto">
-                  {Object.keys(ICON_MAP).map((key) => {
-                    const Icon = ICON_MAP[key];
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setNewItemIcon(key)}
-                        className={clsx(
-                          "p-2 rounded-lg flex items-center justify-center transition-all",
-                          newItemIcon === key
-                            ? "bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 ring-2 ring-primary-500"
-                            : "hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500 dark:text-surface-400",
-                        )}
-                      >
-                        <Icon size={18} />
-                      </button>
-                    );
-                  })}
+
+                <div className="flex gap-2 mb-3 bg-surface-100 dark:bg-surface-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("icon")}
+                    className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                      activeTab === "icon"
+                        ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                        : "text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200"
+                    }`}
+                  >
+                    Icons
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("emoji")}
+                    className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                      activeTab === "emoji"
+                        ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                        : "text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200"
+                    }`}
+                  >
+                    Emojis
+                  </button>
                 </div>
+
+                {activeTab === "icon" ? (
+                  <div className="grid grid-cols-7 gap-1.5 p-3 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl max-h-48 overflow-y-auto custom-scrollbar">
+                    {Object.keys(ICON_MAP).map((key) => {
+                      const Icon = ICON_MAP[key];
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setNewItemIcon(key)}
+                          className={clsx(
+                            "p-2 rounded-lg flex items-center justify-center transition-all",
+                            newItemIcon === key
+                              ? "bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 ring-2 ring-primary-500"
+                              : "hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500 dark:text-surface-400",
+                          )}
+                        >
+                          <Icon size={18} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="w-full bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 overflow-hidden">
+                    <EmojiPicker
+                      className="custom-emoji-picker"
+                      onEmojiClick={(emojiData) =>
+                        setNewItemIcon(emojiData.emoji)
+                      }
+                      autoFocusSearch={false}
+                      width="100%"
+                      height={300}
+                      previewConfig={{ showPreview: false }}
+                      skinTonesDisabled
+                      lazyLoadEmojis
+                      theme={
+                        theme === "dark" ||
+                        (theme === "system" &&
+                          window.matchMedia("(prefers-color-scheme: dark)")
+                            .matches)
+                          ? (Theme.DARK as Theme)
+                          : (Theme.LIGHT as Theme)
+                      }
+                    />
+                  </div>
+                )}
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">

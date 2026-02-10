@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 import CollectionIcon from "../common/CollectionIcon";
 import { ICON_MAP } from "../common/iconMap";
+import EmojiPicker, { Theme } from "emoji-picker-react";
 import { updateCollection, type Collection } from "../../api/client";
+import { useStore } from "@nanostores/react";
+import { $theme } from "../../store/theme";
 
 interface EditCollectionModalProps {
   isOpen: boolean;
@@ -19,15 +22,26 @@ export default function EditCollectionModal({
 }: EditCollectionModalProps) {
   const [name, setName] = useState(collection.name);
   const [description, setDescription] = useState(collection.description || "");
-  const [icon, setIcon] = useState(collection.icon?.replace("icon:", "") || "");
+  const initialIsIcon = collection.icon?.startsWith("icon:") ?? false;
+  const initialIconValue = collection.icon?.replace("icon:", "") || "";
+
+  const [activeTab, setActiveTab] = useState<"icon" | "emoji">(
+    initialIsIcon || !collection.icon ? "icon" : "emoji",
+  );
+  const [icon, setIcon] = useState(initialIconValue);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const theme = useStore($theme);
 
   useEffect(() => {
     if (isOpen) {
       setName(collection.name);
       setDescription(collection.description || "");
+
+      const isIcon = collection.icon?.startsWith("icon:") ?? false;
+      setActiveTab(isIcon || !collection.icon ? "icon" : "emoji");
       setIcon(collection.icon?.replace("icon:", "") || "");
+
       setError(null);
       document.body.style.overflow = "hidden";
     }
@@ -43,7 +57,11 @@ export default function EditCollectionModal({
     try {
       setLoading(true);
       setError(null);
-      const iconValue = icon ? `icon:${icon}` : undefined;
+      const iconValue = icon
+        ? ICON_MAP[icon]
+          ? `icon:${icon}`
+          : icon
+        : undefined;
       const updated = await updateCollection(
         collection.uri,
         name.trim(),
@@ -121,29 +139,85 @@ export default function EditCollectionModal({
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 Icon
               </label>
-              <div className="grid grid-cols-8 gap-1.5 max-h-32 overflow-y-auto p-2 bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700">
-                {Object.keys(ICON_MAP).map((iconName) => {
-                  const isSelected = icon === iconName;
-                  return (
-                    <button
-                      key={iconName}
-                      type="button"
-                      onClick={() => setIcon(isSelected ? "" : iconName)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
-                        isSelected
-                          ? "bg-primary-600 text-white"
-                          : "hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-600 dark:text-surface-400"
-                      }`}
-                      title={iconName}
-                    >
-                      <CollectionIcon icon={`icon:${iconName}`} size={16} />
-                    </button>
-                  );
-                })}
+
+              <div className="flex gap-2 mb-3 bg-surface-100 dark:bg-surface-800 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("icon")}
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "icon"
+                      ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                      : "text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200"
+                  }`}
+                >
+                  Icons
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("emoji")}
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "emoji"
+                      ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                      : "text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200"
+                  }`}
+                >
+                  Emojis
+                </button>
               </div>
+
+              {activeTab === "icon" ? (
+                <div className="grid grid-cols-8 gap-1.5 max-h-60 overflow-y-auto p-2 bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 custom-scrollbar">
+                  {Object.keys(ICON_MAP).map((iconName) => {
+                    const isSelected = icon === iconName;
+                    return (
+                      <button
+                        key={iconName}
+                        type="button"
+                        onClick={() => setIcon(isSelected ? "" : iconName)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
+                          isSelected
+                            ? "bg-primary-600 text-white"
+                            : "hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-600 dark:text-surface-400"
+                        }`}
+                        title={iconName}
+                      >
+                        <CollectionIcon icon={`icon:${iconName}`} size={16} />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="w-full bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 overflow-hidden">
+                  <EmojiPicker
+                    className="custom-emoji-picker"
+                    onEmojiClick={(emojiData) => setIcon(emojiData.emoji)}
+                    autoFocusSearch={false}
+                    width="100%"
+                    height={300}
+                    previewConfig={{ showPreview: false }}
+                    skinTonesDisabled
+                    lazyLoadEmojis
+                    theme={
+                      theme === "dark" ||
+                      (theme === "system" &&
+                        window.matchMedia("(prefers-color-scheme: dark)")
+                          .matches)
+                        ? (Theme.DARK as Theme)
+                        : (Theme.LIGHT as Theme)
+                    }
+                  />
+                </div>
+              )}
+
               {icon && (
-                <p className="mt-1 text-xs text-surface-500">
-                  Selected: {icon}
+                <p className="mt-2 text-sm text-surface-600 dark:text-surface-300 flex items-center gap-2">
+                  Selected:
+                  <span className="inline-flex items-center justify-center w-8 h-8 bg-surface-100 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700">
+                    <CollectionIcon
+                      icon={ICON_MAP[icon] ? `icon:${icon}` : icon}
+                      size={18}
+                    />
+                  </span>
                 </p>
               )}
             </div>

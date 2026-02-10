@@ -71,6 +71,69 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-surface-300 dark:bg-surface-700 rounded-full hover:bg-surface-400 dark:hover:bg-surface-600 transition-colors;
   }
+
+  .custom-emoji-picker {
+    --epr-bg-color: transparent !important;
+    --epr-category-label-bg-color: transparent !important;
+    --epr-text-color: theme("colors.surface.900") !important;
+    --epr-picker-border-color: theme("colors.surface.200") !important;
+
+    --epr-search-input-bg-color: theme("colors.surface.50") !important;
+    --epr-search-input-text-color: theme("colors.surface.900") !important;
+
+    --epr-hover-bg-color: theme("colors.surface.200") !important;
+    --epr-focus-bg-color: theme("colors.primary.100") !important;
+    --epr-highlight-color: theme("colors.primary.500") !important;
+
+    font-family: inherit !important;
+    border: none !important;
+  }
+
+  [data-theme="dark"] .custom-emoji-picker {
+    --epr-text-color: theme("colors.white") !important;
+    --epr-picker-border-color: theme("colors.surface.700") !important;
+
+    --epr-search-input-bg-color: theme("colors.surface.800") !important;
+    --epr-search-input-text-color: theme("colors.white") !important;
+
+    --epr-hover-bg-color: theme("colors.surface.700") !important;
+    --epr-focus-bg-color: theme("colors.primary.900") !important;
+  }
+
+  .custom-emoji-picker .epr-search-container input {
+    border-radius: 0.5rem !important;
+    border: 1px solid theme("colors.surface.200") !important;
+    background-color: theme("colors.surface.50") !important;
+  }
+
+  [data-theme="dark"] .custom-emoji-picker .epr-search-container input {
+    border: 1px solid theme("colors.surface.700") !important;
+    background-color: theme("colors.surface.800") !important;
+  }
+
+  .custom-emoji-picker .epr-header-overlay {
+    padding: 0 !important;
+  }
+
+  .custom-emoji-picker .epr-emoji-category-label {
+    position: static !important;
+    background-color: transparent !important;
+    height: 32px !important;
+    line-height: 32px !important;
+  }
+
+  .custom-emoji-picker .epr-body::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-emoji-picker .epr-body::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-emoji-picker .epr-body::-webkit-scrollbar-thumb {
+    @apply bg-surface-300 dark:bg-surface-700 rounded-full hover:bg-surface-400 dark:hover:bg-surface-600 transition-colors;
+  }
 }
 
 @keyframes fadeIn {
