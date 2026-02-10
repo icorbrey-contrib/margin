@@ -46,6 +46,19 @@ export default function App() {
         <Route path="/my-feed" element={<Navigate to="/home" replace />} />
 
         <Route
+          path="/annotations"
+          element={
+            <AppLayout>
+              <MasonryFeed
+                motivation="commenting"
+                emptyMessage="You haven't annotated anything yet."
+                showTabs={true}
+                title="Annotations"
+              />
+            </AppLayout>
+          }
+        />
+        <Route
           path="/bookmarks"
           element={
             <AppLayout>

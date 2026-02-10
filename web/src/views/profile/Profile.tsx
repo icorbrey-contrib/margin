@@ -61,13 +61,14 @@ interface ProfileProps {
   did: string;
 }
 
-type Tab = "annotations" | "highlights" | "bookmarks" | "collections";
+type Tab = "all" | "annotations" | "highlights" | "bookmarks" | "collections";
 
 export default function Profile({ did }: ProfileProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>("annotations");
+  const [activeTab, setActiveTab] = useState<Tab>("all");
 
+  const [all, setAll] = useState<AnnotationItem[]>([]);
   const [annotations, setAnnotations] = useState<AnnotationItem[]>([]);
   const [highlights, setHighlights] = useState<AnnotationItem[]>([]);
   const [bookmarks, setBookmarks] = useState<AnnotationItem[]>([]);
@@ -116,11 +117,12 @@ export default function Profile({ did }: ProfileProps) {
 
   useEffect(() => {
     setProfile(null);
+    setAll([]);
     setAnnotations([]);
     setHighlights([]);
     setBookmarks([]);
     setCollections([]);
-    setActiveTab("annotations");
+    setActiveTab("all");
     setLoading(true);
 
     const loadProfile = async () => {
@@ -188,7 +190,13 @@ export default function Profile({ did }: ProfileProps) {
 
       setDataLoading(true);
       try {
-        if (activeTab === "annotations") {
+        if (activeTab === "all") {
+          const res = await getFeed({
+            creator: resolvedDid,
+            limit: 50,
+          });
+          setAll(res.items || []);
+        } else if (activeTab === "annotations") {
           const res = await getFeed({
             creator: resolvedDid,
             motivation: "commenting",
@@ -254,7 +262,8 @@ export default function Profile({ did }: ProfileProps) {
   }
 
   const tabs = [
-    { id: "annotations", label: "Notes" },
+    { id: "all", label: "All" },
+    { id: "annotations", label: "Annotations" },
     { id: "highlights", label: "Highlights" },
     { id: "bookmarks", label: "Bookmarks" },
     { id: "collections", label: "Collections" },
@@ -265,7 +274,9 @@ export default function Profile({ did }: ProfileProps) {
       ? annotations
       : activeTab === "highlights"
         ? highlights
-        : bookmarks;
+        : activeTab === "all"
+          ? all
+          : bookmarks;
 
   const LABEL_DESCRIPTIONS: Record<string, string> = {
     sexual: "Sexual Content",
