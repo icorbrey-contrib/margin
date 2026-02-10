@@ -19,6 +19,26 @@ export default function EditHistoryModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchHistory = async () => {
+      if (!item.uri) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(
+          `/api/annotations/history?uri=${encodeURIComponent(item.uri)}`,
+        );
+        if (!res.ok) throw new Error("Failed to fetch history");
+        const data = await res.json();
+        setHistory(data);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load edit history");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (isOpen && item.uri) {
       fetchHistory();
       document.body.style.overflow = "hidden";
@@ -27,24 +47,6 @@ export default function EditHistoryModal({
       document.body.style.overflow = "unset";
     };
   }, [isOpen, item.uri]);
-
-  const fetchHistory = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(
-        `/api/annotations/history?uri=${encodeURIComponent(item.uri)}`,
-      );
-      if (!res.ok) throw new Error("Failed to fetch history");
-      const data = await res.json();
-      setHistory(data);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load edit history");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!isOpen) return null;
 
