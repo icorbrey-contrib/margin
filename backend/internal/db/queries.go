@@ -43,7 +43,7 @@ func (db *DB) AnnotationExists(uri string) bool {
 func HashURL(rawURL string) string {
 	parsed, err := url.Parse(rawURL)
 	if err != nil || parsed.Host == "" {
-		return hashString(rawURL)
+		return HashString(rawURL)
 	}
 
 	host := strings.ToLower(parsed.Host)
@@ -55,10 +55,10 @@ func HashURL(rawURL string) string {
 	}
 	normalized = strings.TrimSuffix(normalized, "/")
 
-	return hashString(normalized)
+	return HashString(normalized)
 }
 
-func hashString(s string) string {
+func HashString(s string) string {
 	h := sha256.New()
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))

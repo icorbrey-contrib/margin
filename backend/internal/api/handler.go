@@ -895,10 +895,21 @@ func (h *Handler) GetByTarget(w http.ResponseWriter, r *http.Request) {
 	offset := parseIntParam(r, "offset", 0)
 
 	urlHash := db.HashURL(source)
+	rawHash := db.HashString(source)
 
 	annotations, _ := h.db.GetAnnotationsByTargetHash(urlHash, limit, offset)
 	highlights, _ := h.db.GetHighlightsByTargetHash(urlHash, limit, offset)
 	bookmarks, _ := h.db.GetBookmarksByTargetHash(urlHash, limit, offset)
+
+	if rawHash != urlHash {
+		rawAnnotations, _ := h.db.GetAnnotationsByTargetHash(rawHash, limit, offset)
+		rawHighlights, _ := h.db.GetHighlightsByTargetHash(rawHash, limit, offset)
+		rawBookmarks, _ := h.db.GetBookmarksByTargetHash(rawHash, limit, offset)
+
+		annotations = mergeAnnotations(annotations, rawAnnotations)
+		highlights = mergeHighlights(highlights, rawHighlights)
+		bookmarks = mergeBookmarks(bookmarks, rawBookmarks)
+	}
 
 	enrichedAnnotations, _ := hydrateAnnotations(h.db, annotations, h.getViewerDID(r))
 	enrichedHighlights, _ := hydrateHighlights(h.db, highlights, h.getViewerDID(r))
@@ -1568,4 +1579,58 @@ func (h *Handler) filterFeedByModeration(feed []interface{}, viewerDID string) [
 		filtered = append(filtered, item)
 	}
 	return filtered
+}
+
+func mergeAnnotations(a, b []db.Annotation) []db.Annotation {
+	seen := make(map[string]bool)
+	var result []db.Annotation
+	for _, item := range a {
+		if !seen[item.URI] {
+			seen[item.URI] = true
+			result = append(result, item)
+		}
+	}
+	for _, item := range b {
+		if !seen[item.URI] {
+			seen[item.URI] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func mergeHighlights(a, b []db.Highlight) []db.Highlight {
+	seen := make(map[string]bool)
+	var result []db.Highlight
+	for _, item := range a {
+		if !seen[item.URI] {
+			seen[item.URI] = true
+			result = append(result, item)
+		}
+	}
+	for _, item := range b {
+		if !seen[item.URI] {
+			seen[item.URI] = true
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func mergeBookmarks(a, b []db.Bookmark) []db.Bookmark {
+	seen := make(map[string]bool)
+	var result []db.Bookmark
+	for _, item := range a {
+		if !seen[item.URI] {
+			seen[item.URI] = true
+			result = append(result, item)
+		}
+	}
+	for _, item := range b {
+		if !seen[item.URI] {
+			seen[item.URI] = true
+			result = append(result, item)
+		}
+	}
+	return result
 }
