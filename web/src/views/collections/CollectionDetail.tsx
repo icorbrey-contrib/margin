@@ -13,6 +13,8 @@ import Card from "../../components/common/Card";
 import { useStore } from "@nanostores/react";
 import { $user } from "../../store/auth";
 import type { Collection, AnnotationItem } from "../../types";
+import EditCollectionModal from "../../components/modals/EditCollectionModal";
+import { Edit3 } from "lucide-react";
 
 interface CollectionDetailProps {
   handle?: string;
@@ -30,6 +32,7 @@ export default function CollectionDetail({
   const [items, setItems] = useState<AnnotationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -152,16 +155,33 @@ export default function CollectionDetail({
               text={collection.name}
             />
             {isOwner && (
-              <button
-                onClick={handleDelete}
-                className="p-2 text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-              >
-                <Trash2 size={18} />
-              </button>
+              <>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="p-2 text-surface-400 dark:text-surface-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                  title="Edit collection"
+                >
+                  <Edit3 size={18} />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-2 text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title="Delete collection"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </>
             )}
           </div>
         </div>
       </div>
+
+      <EditCollectionModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        collection={collection}
+        onUpdate={(updated) => setCollection(updated)}
+      />
 
       <div className="space-y-2">
         {items.length === 0 ? (

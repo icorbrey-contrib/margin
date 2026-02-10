@@ -56,6 +56,7 @@ export interface AnnotationItem {
   description?: string;
   color?: string;
   tags?: string[];
+  editedAt?: string;
   likeCount?: number;
   replyCount?: number;
   repostCount?: number;
@@ -240,4 +241,12 @@ export interface HydratedLabel {
     displayName?: string;
     avatar?: string;
   };
+}
+export interface EditHistoryItem {
+  id: number;
+  uri: string;
+  recordType: string;
+  previousContent: string;
+  previousCid?: string;
+  editedAt: string;
 }

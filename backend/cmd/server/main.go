@@ -183,7 +183,7 @@ func serveStatic(r chi.Router, staticDir string) {
 	r.Get("/*", func(w http.ResponseWriter, req *http.Request) {
 		path := req.URL.Path
 
-		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/auth/") {
+		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/auth/") || strings.HasPrefix(path, "/.well-known/") {
 			http.NotFound(w, req)
 			return
 		}

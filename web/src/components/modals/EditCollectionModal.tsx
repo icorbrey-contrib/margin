@@ -1,0 +1,179 @@
+import React, { useState, useEffect } from "react";
+import { X, Loader2 } from "lucide-react";
+import CollectionIcon from "../common/CollectionIcon";
+import { ICON_MAP } from "../common/iconMap";
+import { updateCollection, type Collection } from "../../api/client";
+
+interface EditCollectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  collection: Collection;
+  onUpdate: (updatedCollection: Collection) => void;
+}
+
+export default function EditCollectionModal({
+  isOpen,
+  onClose,
+  collection,
+  onUpdate,
+}: EditCollectionModalProps) {
+  const [name, setName] = useState(collection.name);
+  const [description, setDescription] = useState(collection.description || "");
+  const [icon, setIcon] = useState(collection.icon?.replace("icon:", "") || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(collection.name);
+      setDescription(collection.description || "");
+      setIcon(collection.icon?.replace("icon:", "") || "");
+      setError(null);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, collection]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const iconValue = icon ? `icon:${icon}` : undefined;
+      const updated = await updateCollection(
+        collection.uri,
+        name.trim(),
+        description.trim() || undefined,
+        iconValue,
+      );
+
+      if (updated) {
+        onUpdate(updated);
+        onClose();
+      } else {
+        setError("Failed to update collection");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("An error occurred while updating");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-white dark:bg-surface-900 rounded-3xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4 flex justify-between items-center border-b border-surface-100 dark:border-surface-800">
+          <h2 className="text-xl font-display font-bold text-surface-900 dark:text-white">
+            Edit Collection
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-50 dark:hover:bg-surface-800 rounded-full transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                Collection name
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl focus:border-primary-500 dark:focus:border-primary-400 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="My Collection"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                Description (optional)
+              </label>
+              <textarea
+                className="w-full px-4 py-3 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl focus:border-primary-500 dark:focus:border-primary-400 focus:ring-4 focus:ring-primary-500/10 outline-none transition-all text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 resize-none"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What's this collection about?"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                Icon
+              </label>
+              <div className="grid grid-cols-8 gap-1.5 max-h-32 overflow-y-auto p-2 bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700">
+                {Object.keys(ICON_MAP).map((iconName) => {
+                  const isSelected = icon === iconName;
+                  return (
+                    <button
+                      key={iconName}
+                      type="button"
+                      onClick={() => setIcon(isSelected ? "" : iconName)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
+                        isSelected
+                          ? "bg-primary-600 text-white"
+                          : "hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-600 dark:text-surface-400"
+                      }`}
+                      title={iconName}
+                    >
+                      <CollectionIcon icon={`icon:${iconName}`} size={16} />
+                    </button>
+                  );
+                })}
+              </div>
+              {icon && (
+                <p className="mt-1 text-xs text-surface-500">
+                  Selected: {icon}
+                </p>
+              )}
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                className="flex-1 py-3 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-700 dark:text-surface-200 font-semibold rounded-xl hover:bg-surface-50 dark:hover:bg-surface-700 transition-colors"
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                disabled={!name.trim() || loading}
+              >
+                {loading && <Loader2 size={16} className="animate-spin" />}
+                {loading ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

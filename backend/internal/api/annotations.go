@@ -328,7 +328,14 @@ func (s *AnnotationService) UpdateAnnotation(w http.ResponseWriter, r *http.Requ
 
 	if annotation.BodyValue != nil {
 		previousContent := *annotation.BodyValue
-		s.db.SaveEditHistory(uri, "annotation", previousContent, annotation.CID)
+		log.Printf("[DEBUG] Saving edit history for %s. Previous content: %s", uri, previousContent)
+		if err := s.db.SaveEditHistory(uri, "annotation", previousContent, annotation.CID); err != nil {
+			log.Printf("Failed to save edit history for %s: %v", uri, err)
+		} else {
+			log.Printf("[DEBUG] Successfully saved edit history for %s", uri)
+		}
+	} else {
+		log.Printf("[DEBUG] Annotation BodyValue is nil for %s", uri)
 	}
 
 	var result *xrpc.PutRecordOutput

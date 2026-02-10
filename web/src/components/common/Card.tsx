@@ -23,6 +23,7 @@ import AddToCollectionModal from "../modals/AddToCollectionModal";
 import ExternalLinkModal from "../modals/ExternalLinkModal";
 import ReportModal from "../modals/ReportModal";
 import EditItemModal from "../modals/EditItemModal";
+import EditHistoryModal from "../modals/EditHistoryModal";
 import { clsx } from "clsx";
 import {
   likeItem,
@@ -123,6 +124,7 @@ export default function Card({
   const [externalLinkUrl, setExternalLinkUrl] = useState<string | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showEditHistory, setShowEditHistory] = useState(false);
   const [contentRevealed, setContentRevealed] = useState(false);
   const [ogData, setOgData] = useState<{
     title?: string;
@@ -371,7 +373,21 @@ export default function Card({
             <span className="text-surface-300 dark:text-surface-600">·</span>
             <span className="text-surface-400 dark:text-surface-500 text-sm">
               {timestamp}
+              {item.editedAt && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowEditHistory(true);
+                  }}
+                  className="ml-1 text-surface-400 dark:text-surface-500 hover:text-surface-600 dark:hover:text-surface-400 hover:underline cursor-pointer"
+                  title={`Edited ${new Date(item.editedAt).toLocaleString()}`}
+                >
+                  (edited)
+                </button>
+              )}
             </span>
+
             {isSemble &&
               (() => {
                 const uri = item.uri || "";
@@ -730,6 +746,11 @@ export default function Card({
           setItem(updated);
           onUpdate?.(updated);
         }}
+      />
+      <EditHistoryModal
+        isOpen={showEditHistory}
+        onClose={() => setShowEditHistory(false)}
+        item={item}
       />
     </article>
   );

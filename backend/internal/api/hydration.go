@@ -83,6 +83,7 @@ type APIAnnotation struct {
 	ReplyCount     int           `json:"replyCount"`
 	ViewerHasLiked bool          `json:"viewerHasLiked"`
 	Labels         []APILabel    `json:"labels,omitempty"`
+	EditedAt       *time.Time    `json:"editedAt,omitempty"`
 }
 
 type APIHighlight struct {
@@ -99,6 +100,7 @@ type APIHighlight struct {
 	ReplyCount     int        `json:"replyCount"`
 	ViewerHasLiked bool       `json:"viewerHasLiked"`
 	Labels         []APILabel `json:"labels,omitempty"`
+	EditedAt       *time.Time `json:"editedAt,omitempty"`
 }
 
 type APIBookmark struct {
@@ -116,6 +118,7 @@ type APIBookmark struct {
 	ReplyCount     int        `json:"replyCount"`
 	ViewerHasLiked bool       `json:"viewerHasLiked"`
 	Labels         []APILabel `json:"labels,omitempty"`
+	EditedAt       *time.Time `json:"editedAt,omitempty"`
 }
 
 type APIReply struct {
@@ -222,6 +225,7 @@ func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID 
 	labelerDIDs := appendUnique(subscribedLabelers, authorDIDs)
 	uriLabels, _ := database.GetContentLabelsForURIs(uris, labelerDIDs)
 	didLabels, _ := database.GetContentLabelsForDIDs(authorDIDs, labelerDIDs)
+	editTimes, _ := database.GetLatestEditTimes(uris)
 
 	result := make([]APIAnnotation, len(annotations))
 	for i, a := range annotations {
@@ -283,6 +287,10 @@ func hydrateAnnotations(database *db.DB, annotations []db.Annotation, viewerDID 
 			Labels:    mergeLabels(uriLabels[a.URI], didLabels[a.AuthorDID]),
 		}
 
+		if t, ok := editTimes[a.URI]; ok {
+			result[i].EditedAt = &t
+		}
+
 		result[i].LikeCount = likeCounts[a.URI]
 		result[i].ReplyCount = replyCounts[a.URI]
 		if viewerLikes != nil && viewerLikes[a.URI] {
@@ -314,6 +322,7 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 	labelerDIDs := appendUnique(subscribedLabelers, authorDIDs)
 	uriLabels, _ := database.GetContentLabelsForURIs(uris, labelerDIDs)
 	didLabels, _ := database.GetContentLabelsForDIDs(authorDIDs, labelerDIDs)
+	editTimes, _ := database.GetLatestEditTimes(uris)
 
 	result := make([]APIHighlight, len(highlights))
 	for i, h := range highlights {
@@ -360,6 +369,10 @@ func hydrateHighlights(database *db.DB, highlights []db.Highlight, viewerDID str
 			Labels:    mergeLabels(uriLabels[h.URI], didLabels[h.AuthorDID]),
 		}
 
+		if t, ok := editTimes[h.URI]; ok {
+			result[i].EditedAt = &t
+		}
+
 		result[i].LikeCount = likeCounts[h.URI]
 		result[i].ReplyCount = replyCounts[h.URI]
 		if viewerLikes != nil && viewerLikes[h.URI] {
@@ -391,6 +404,7 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 	labelerDIDs := appendUnique(subscribedLabelers, authorDIDs)
 	uriLabels, _ := database.GetContentLabelsForURIs(uris, labelerDIDs)
 	didLabels, _ := database.GetContentLabelsForDIDs(authorDIDs, labelerDIDs)
+	editTimes, _ := database.GetLatestEditTimes(uris)
 
 	result := make([]APIBookmark, len(bookmarks))
 	for i, b := range bookmarks {
@@ -426,6 +440,9 @@ func hydrateBookmarks(database *db.DB, bookmarks []db.Bookmark, viewerDID string
 			CreatedAt:   b.CreatedAt,
 			CID:         cid,
 			Labels:      mergeLabels(uriLabels[b.URI], didLabels[b.AuthorDID]),
+		}
+		if t, ok := editTimes[b.URI]; ok {
+			result[i].EditedAt = &t
 		}
 		result[i].LikeCount = likeCounts[b.URI]
 		result[i].ReplyCount = replyCounts[b.URI]
