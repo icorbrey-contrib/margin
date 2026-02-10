@@ -412,9 +412,11 @@ export async function updateProfile(updates: {
   links?: string[];
 }): Promise<boolean> {
   try {
+    const { description, ...rest } = updates;
+    const body = { ...rest, bio: description };
     const res = await apiRequest("/api/profile", {
       method: "PUT",
-      body: JSON.stringify(updates),
+      body: JSON.stringify(body),
     });
     return res.ok;
   } catch (e) {
