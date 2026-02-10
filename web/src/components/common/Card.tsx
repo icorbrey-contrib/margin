@@ -610,7 +610,7 @@ export default function Card({
         )}
       </div>
 
-      <div className="flex items-center gap-1 mt-3 ml-[52px]">
+      <div className="flex items-center gap-1 mt-3 ml-[52px] md:ml-0 md:gap-0">
         <button
           onClick={handleLike}
           className={clsx(
