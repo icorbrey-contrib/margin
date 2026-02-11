@@ -41,3 +41,6 @@ backend/vendor/
 # other
 NOTES.md
 extension.zip
+
+# PDF.js build exception
+!extension/public/pdfjs/build/
