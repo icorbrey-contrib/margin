@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   getCollection,
   getCollectionItems,
@@ -143,7 +144,13 @@ export default function CollectionDetail({
                 {items.length} items
               </span>
               <span>
-                by {collection.creator.displayName || collection.creator.handle}
+                by{" "}
+                <Link
+                  to={`/profile/${collection.creator.did}`}
+                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                >
+                  {collection.creator.displayName || collection.creator.handle}
+                </Link>
               </span>
             </div>
           </div>

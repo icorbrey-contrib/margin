@@ -228,6 +228,12 @@ func (s *CollectionService) GetCollections(w http.ResponseWriter, r *http.Reques
 	profiles := fetchProfilesForDIDs(s.db, []string{authorDID})
 	creator := profiles[authorDID]
 
+	collectionURIs := make([]string, len(collections))
+	for i, c := range collections {
+		collectionURIs[i] = c.URI
+	}
+	itemCounts, _ := s.db.GetCollectionItemCounts(collectionURIs)
+
 	apiCollections := make([]APICollection, len(collections))
 	for i, c := range collections {
 		icon := ""
@@ -246,6 +252,7 @@ func (s *CollectionService) GetCollections(w http.ResponseWriter, r *http.Reques
 			Creator:     creator,
 			CreatedAt:   c.CreatedAt,
 			IndexedAt:   c.IndexedAt,
+			ItemsCount:  itemCounts[c.URI],
 		}
 	}
 
@@ -472,6 +479,8 @@ func (s *CollectionService) GetCollection(w http.ResponseWriter, r *http.Request
 	profiles := fetchProfilesForDIDs(s.db, []string{collection.AuthorDID})
 	creator := profiles[collection.AuthorDID]
 
+	itemCounts, _ := s.db.GetCollectionItemCounts([]string{collection.URI})
+
 	icon := ""
 	if collection.Icon != nil {
 		icon = *collection.Icon
@@ -489,6 +498,7 @@ func (s *CollectionService) GetCollection(w http.ResponseWriter, r *http.Request
 		Creator:     creator,
 		CreatedAt:   collection.CreatedAt,
 		IndexedAt:   collection.IndexedAt,
+		ItemsCount:  itemCounts[collection.URI],
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -223,6 +223,41 @@ func (db *DB) GetCollectionURIsForAnnotation(annotationURI string) ([]string, er
 	return uris, nil
 }
 
+func (db *DB) GetCollectionItemCounts(uris []string) (map[string]int, error) {
+	if len(uris) == 0 {
+		return map[string]int{}, nil
+	}
+
+	query := db.Rebind(`
+		SELECT collection_uri, COUNT(*)
+		FROM collection_items
+		WHERE collection_uri IN (` + buildPlaceholders(len(uris)) + `)
+		GROUP BY collection_uri
+	`)
+
+	args := make([]interface{}, len(uris))
+	for i, uri := range uris {
+		args[i] = uri
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var uri string
+		var count int
+		if err := rows.Scan(&uri, &count); err != nil {
+			return nil, err
+		}
+		counts[uri] = count
+	}
+	return counts, nil
+}
+
 func (db *DB) GetCollectionsByURIs(uris []string) ([]Collection, error) {
 	if len(uris) == 0 {
 		return []Collection{}, nil

@@ -176,10 +176,11 @@ export default function Settings() {
               <button
                 key={opt.value}
                 onClick={() => setTheme(opt.value)}
-                className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${theme === opt.value
+                className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  theme === opt.value
                     ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                     : "border-surface-200 dark:border-surface-700 hover:border-surface-300 dark:hover:border-surface-600"
-                  }`}
+                }`}
               >
                 <opt.icon
                   size={24}
@@ -574,10 +575,10 @@ export default function Settings() {
                               label: string;
                               icon: typeof Eye;
                             }[] = [
-                                { value: "warn", label: "Warn", icon: EyeOff },
-                                { value: "hide", label: "Hide", icon: XCircle },
-                                { value: "ignore", label: "Ignore", icon: Eye },
-                              ];
+                              { value: "warn", label: "Warn", icon: EyeOff },
+                              { value: "hide", label: "Hide", icon: XCircle },
+                              { value: "ignore", label: "Ignore", icon: Eye },
+                            ];
                             return (
                               <div
                                 key={label}
@@ -597,14 +598,15 @@ export default function Settings() {
                                           opt.value,
                                         )
                                       }
-                                      className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 ${current === opt.value
+                                      className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 ${
+                                        current === opt.value
                                           ? opt.value === "hide"
                                             ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                                             : opt.value === "warn"
                                               ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
                                               : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                                           : "text-surface-400 dark:text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700"
-                                        }`}
+                                      }`}
                                     >
                                       <opt.icon size={12} />
                                       {opt.label}

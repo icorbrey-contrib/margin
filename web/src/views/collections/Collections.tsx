@@ -140,7 +140,7 @@ export default function Collections() {
                 href={`/${collection.creator?.handle || user?.handle}/collection/${(collection.uri || "").split("/").pop()}`}
                 className="group card p-4 hover:ring-primary-300 dark:hover:ring-primary-600 transition-all flex items-center gap-4"
               >
-                <div className="p-2.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-xl">
+                <div className="w-10 h-10 flex items-center justify-center shrink-0 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-xl">
                   <CollectionIcon icon={collection.icon} size={20} />
                 </div>
                 <div className="flex-1 min-w-0">

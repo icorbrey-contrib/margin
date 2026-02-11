@@ -141,6 +141,7 @@ type APICollection struct {
 	Creator     Author    `json:"creator"`
 	CreatedAt   time.Time `json:"createdAt"`
 	IndexedAt   time.Time `json:"indexedAt"`
+	ItemsCount  int       `json:"itemCount"`
 }
 
 type APICollectionItem struct {
