@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Home,
   Bookmark,
@@ -80,13 +80,16 @@ export default function Sidebar() {
   const navItems = user ? authNavItems : publicNavItems;
 
   return (
-    <aside className="sticky top-0 h-screen hidden md:flex flex-col justify-between py-6 px-2 lg:px-4 z-50 w-[68px] lg:w-[260px] transition-all duration-200">
+    <aside className="sticky top-0 h-screen hidden md:flex flex-col justify-between py-6 px-2 lg:px-3 z-50 border-r border-surface-200/60 dark:border-surface-800/60 w-[68px] lg:w-[220px] transition-all duration-200">
       <div className="flex flex-col gap-6">
         <Link
           to="/home"
           className="px-3 hover:opacity-80 transition-opacity w-fit flex items-center gap-2.5"
         >
           <img src="/logo.svg" alt="Margin" className="w-8 h-8" />
+          <span className="font-display font-bold text-lg text-surface-900 dark:text-white tracking-tight hidden lg:inline">
+            Margin
+          </span>
         </Link>
 
         <nav className="flex flex-col gap-0.5">
@@ -102,7 +105,7 @@ export default function Sidebar() {
                 className={`flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg transition-all duration-150 text-[14px] group ${
                   isActive
                     ? "font-semibold text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/40"
-                    : "font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 hover:text-surface-900 dark:hover:text-white"
+                    : "font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800/60 hover:text-surface-900 dark:hover:text-white"
                 }`}
               >
                 <item.icon
@@ -137,7 +140,7 @@ export default function Sidebar() {
           title={
             theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System"
           }
-          className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-[13px] font-medium text-surface-500 dark:text-surface-400 w-full transition-colors"
+          className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/60 text-[13px] font-medium text-surface-500 dark:text-surface-400 w-full transition-colors"
         >
           {theme === "light" ? (
             <Sun size={18} />
@@ -156,7 +159,7 @@ export default function Sidebar() {
             <Link
               to="/settings"
               title="Settings"
-              className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-[13px] font-medium text-surface-500 dark:text-surface-400 transition-colors"
+              className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/60 text-[13px] font-medium text-surface-500 dark:text-surface-400 transition-colors"
             >
               <Settings size={18} />
               <span className="hidden lg:inline">Settings</span>
@@ -167,7 +170,7 @@ export default function Sidebar() {
             <Link
               to={`/profile/${user.did}`}
               title={user.displayName || user.handle}
-              className="flex items-center justify-center lg:justify-start gap-2.5 p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors w-full"
+              className="flex items-center justify-center lg:justify-start gap-2.5 p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/60 transition-colors w-full"
             >
               <Avatar did={user.did} avatar={user.avatar} size="sm" />
               <div className="flex-1 min-w-0 hidden lg:block">

@@ -1,7 +1,6 @@
-import React from "react";
 import { useStore } from "@nanostores/react";
-import Sidebar from "../components/navigation/Sidebar";
-import RightSidebar from "../components/navigation/RightSidebar";
+import Navigation from "../components/navigation/Navigation";
+import RightSidebar from "../features/sidebar/Sidebar";
 import MobileNav from "../components/navigation/MobileNav";
 import { $theme } from "../store/theme";
 
@@ -14,7 +13,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-surface-100 dark:bg-surface-900 flex">
-      <Sidebar />
+      <Navigation />
 
       <div className="flex-1 min-w-0 transition-all duration-200">
         <div className="flex w-full max-w-[1800px] mx-auto">
