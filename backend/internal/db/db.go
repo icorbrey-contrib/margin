@@ -151,6 +151,7 @@ type Preferences struct {
 	ExternalLinkSkippedHostnames *string   `json:"externalLinkSkippedHostnames,omitempty"`
 	SubscribedLabelers           *string   `json:"subscribedLabelers,omitempty"`
 	LabelPreferences             *string   `json:"labelPreferences,omitempty"`
+	DisableExternalLinkWarning   *bool     `json:"disableExternalLinkWarning,omitempty"`
 	CreatedAt                    time.Time `json:"createdAt"`
 	IndexedAt                    time.Time `json:"indexedAt"`
 	CID                          *string   `json:"cid,omitempty"`
@@ -422,6 +423,9 @@ func (db *DB) Migrate() error {
 		uri TEXT PRIMARY KEY,
 		author_did TEXT NOT NULL,
 		external_link_skipped_hostnames TEXT,
+		subscribed_labelers TEXT,
+		label_preferences TEXT,
+		disable_external_link_warning BOOLEAN,
 		created_at ` + dateType + ` NOT NULL,
 		indexed_at ` + dateType + ` NOT NULL,
 		cid TEXT
@@ -618,8 +622,8 @@ func (db *DB) DeleteAPIKey(id, ownerDID string) (string, error) {
 
 func (db *DB) GetPreferences(did string) (*Preferences, error) {
 	var p Preferences
-	err := db.QueryRow("SELECT uri, author_did, external_link_skipped_hostnames, subscribed_labelers, label_preferences, created_at, indexed_at, cid FROM preferences WHERE author_did = $1", did).Scan(
-		&p.URI, &p.AuthorDID, &p.ExternalLinkSkippedHostnames, &p.SubscribedLabelers, &p.LabelPreferences, &p.CreatedAt, &p.IndexedAt, &p.CID,
+	err := db.QueryRow("SELECT uri, author_did, external_link_skipped_hostnames, subscribed_labelers, label_preferences, disable_external_link_warning, created_at, indexed_at, cid FROM preferences WHERE author_did = $1", did).Scan(
+		&p.URI, &p.AuthorDID, &p.ExternalLinkSkippedHostnames, &p.SubscribedLabelers, &p.LabelPreferences, &p.DisableExternalLinkWarning, &p.CreatedAt, &p.IndexedAt, &p.CID,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -632,16 +636,17 @@ func (db *DB) GetPreferences(did string) (*Preferences, error) {
 
 func (db *DB) UpsertPreferences(p *Preferences) error {
 	query := `
-		INSERT INTO preferences (uri, author_did, external_link_skipped_hostnames, subscribed_labelers, label_preferences, created_at, indexed_at, cid) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+		INSERT INTO preferences (uri, author_did, external_link_skipped_hostnames, subscribed_labelers, label_preferences, disable_external_link_warning, created_at, indexed_at, cid) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
 		ON CONFLICT(uri) DO UPDATE SET 
 			external_link_skipped_hostnames = EXCLUDED.external_link_skipped_hostnames,
 			subscribed_labelers = EXCLUDED.subscribed_labelers,
 			label_preferences = EXCLUDED.label_preferences,
+			disable_external_link_warning = EXCLUDED.disable_external_link_warning,
 			indexed_at = EXCLUDED.indexed_at,
 			cid = EXCLUDED.cid
 	`
-	_, err := db.Exec(db.Rebind(query), p.URI, p.AuthorDID, p.ExternalLinkSkippedHostnames, p.SubscribedLabelers, p.LabelPreferences, p.CreatedAt, p.IndexedAt, p.CID)
+	_, err := db.Exec(db.Rebind(query), p.URI, p.AuthorDID, p.ExternalLinkSkippedHostnames, p.SubscribedLabelers, p.LabelPreferences, p.DisableExternalLinkWarning, p.CreatedAt, p.IndexedAt, p.CID)
 	return err
 }
 
@@ -729,6 +734,7 @@ func (db *DB) runMigrations() {
 
 	db.Exec(`ALTER TABLE preferences ADD COLUMN subscribed_labelers TEXT`)
 	db.Exec(`ALTER TABLE preferences ADD COLUMN label_preferences TEXT`)
+	db.Exec(`ALTER TABLE preferences ADD COLUMN disable_external_link_warning BOOLEAN`)
 }
 
 func (db *DB) migrateModeration(dateType string) {

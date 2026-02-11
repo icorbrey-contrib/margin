@@ -478,6 +478,7 @@ type PreferencesRecord struct {
 	ExternalLinkSkippedHostnames []string              `json:"externalLinkSkippedHostnames,omitempty"`
 	SubscribedLabelers           []LabelerSubscription `json:"subscribedLabelers,omitempty"`
 	LabelPreferences             []LabelPreference     `json:"labelPreferences,omitempty"`
+	DisableExternalLinkWarning   *bool                 `json:"disableExternalLinkWarning,omitempty"`
 	CreatedAt                    string                `json:"createdAt"`
 }
 
@@ -499,10 +500,11 @@ func (r *PreferencesRecord) Validate() error {
 	return nil
 }
 
-func NewPreferencesRecord(skippedHostnames []string, labelers interface{}, labelPrefs interface{}) *PreferencesRecord {
+func NewPreferencesRecord(skippedHostnames []string, labelers interface{}, labelPrefs interface{}, disableExternalLinkWarning *bool) *PreferencesRecord {
 	record := &PreferencesRecord{
 		Type:                         CollectionPreferences,
 		ExternalLinkSkippedHostnames: skippedHostnames,
+		DisableExternalLinkWarning:   disableExternalLinkWarning,
 		CreatedAt:                    time.Now().UTC().Format(time.RFC3339),
 	}
 

@@ -10,12 +10,14 @@ export interface Preferences {
   externalLinkSkippedHostnames: string[];
   subscribedLabelers: LabelerSubscription[];
   labelPreferences: LabelPreference[];
+  disableExternalLinkWarning: boolean;
 }
 
 export const $preferences = atom<Preferences>({
   externalLinkSkippedHostnames: [],
   subscribedLabelers: [],
   labelPreferences: [],
+  disableExternalLinkWarning: false,
 });
 
 export async function loadPreferences() {
@@ -24,6 +26,7 @@ export async function loadPreferences() {
     externalLinkSkippedHostnames: prefs.externalLinkSkippedHostnames || [],
     subscribedLabelers: prefs.subscribedLabelers || [],
     labelPreferences: prefs.labelPreferences || [],
+    disableExternalLinkWarning: !!prefs.disableExternalLinkWarning,
   });
 }
 
@@ -91,4 +94,16 @@ export function getLabelVisibility(
     (p) => p.labelerDid === labelerDid && p.label === label,
   );
   return pref?.visibility || "warn";
+}
+
+export async function setDisableExternalLinkWarning(disabled: boolean) {
+  const current = $preferences.get();
+  if (current.disableExternalLinkWarning === disabled) return;
+
+  const updated = {
+    ...current,
+    disableExternalLinkWarning: disabled,
+  };
+  $preferences.set(updated);
+  await updatePreferences(updated);
 }

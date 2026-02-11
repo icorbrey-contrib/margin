@@ -78,6 +78,12 @@ export default function RichText({ text, className }: RichTextProps) {
           window.open(url, "_blank", "noopener,noreferrer");
           return;
         }
+
+        if (preferences.disableExternalLinkWarning) {
+          window.open(url, "_blank", "noopener,noreferrer");
+          return;
+        }
+
         const skipped = preferences.externalLinkSkippedHostnames || [];
         if (skipped.includes(hostname)) {
           window.open(url, "_blank", "noopener,noreferrer");

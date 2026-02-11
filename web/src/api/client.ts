@@ -1007,6 +1007,7 @@ export interface PreferencesResponse {
   externalLinkSkippedHostnames?: string[];
   subscribedLabelers?: LabelerSubscription[];
   labelPreferences?: LabelPreference[];
+  disableExternalLinkWarning?: boolean;
 }
 
 export async function getPreferences(): Promise<PreferencesResponse> {
@@ -1026,6 +1027,7 @@ export async function updatePreferences(prefs: {
   externalLinkSkippedHostnames?: string[];
   subscribedLabelers?: LabelerSubscription[];
   labelPreferences?: LabelPreference[];
+  disableExternalLinkWarning?: boolean;
 }): Promise<boolean> {
   try {
     const res = await apiRequest("/api/preferences", {

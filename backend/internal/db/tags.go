@@ -18,11 +18,11 @@ func (db *DB) GetTrendingTags(limit int) ([]TrendingTag, error) {
 				AND tags_json != '[]'
 				AND created_at > NOW() - INTERVAL '7 days'
 			GROUP BY tag
-			HAVING count > 2
-			ORDER BY count DESC
-			LIMIT ?
+			HAVING COUNT(*) > 2
+			ORDER BY COUNT(*) DESC
+			LIMIT $1
 		`
-		rows, err := db.Query(db.Rebind(query), limit)
+		rows, err := db.Query(query, limit)
 		if err != nil {
 			return nil, err
 		}

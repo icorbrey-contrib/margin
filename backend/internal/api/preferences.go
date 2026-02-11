@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,6 +26,7 @@ type PreferencesResponse struct {
 	ExternalLinkSkippedHostnames []string              `json:"externalLinkSkippedHostnames"`
 	SubscribedLabelers           []LabelerSubscription `json:"subscribedLabelers"`
 	LabelPreferences             []LabelPreference     `json:"labelPreferences"`
+	DisableExternalLinkWarning   bool                  `json:"disableExternalLinkWarning"`
 }
 
 func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
@@ -65,11 +67,17 @@ func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
 		labelPrefs = []LabelPreference{}
 	}
 
+	disableWarning := false
+	if prefs != nil && prefs.DisableExternalLinkWarning != nil {
+		disableWarning = *prefs.DisableExternalLinkWarning
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(PreferencesResponse{
 		ExternalLinkSkippedHostnames: hostnames,
 		SubscribedLabelers:           labelers,
 		LabelPreferences:             labelPrefs,
+		DisableExternalLinkWarning:   disableWarning,
 	})
 }
 
@@ -103,21 +111,21 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	record := xrpc.NewPreferencesRecord(input.ExternalLinkSkippedHostnames, xrpcLabelers, xrpcLabelPrefs)
+	record := xrpc.NewPreferencesRecord(input.ExternalLinkSkippedHostnames, xrpcLabelers, xrpcLabelPrefs, &input.DisableExternalLinkWarning)
 	if err := record.Validate(); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid record: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	err = h.refresher.ExecuteWithAutoRefresh(r, session, func(client *xrpc.Client, did string) error {
-		_, err := client.PutRecord(r.Context(), did, xrpc.CollectionPreferences, "self", record)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, err := client.PutRecord(ctx, did, xrpc.CollectionPreferences, "self", record)
 		return err
 	})
 
 	if err != nil {
 		fmt.Printf("[UpdatePreferences] PDS write failed: %v\n", err)
-		http.Error(w, fmt.Sprintf("Failed to update preferences: %v", err), http.StatusInternalServerError)
-		return
 	}
 
 	createdAt, _ := time.Parse(time.RFC3339, record.CreatedAt)
@@ -144,6 +152,7 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 		ExternalLinkSkippedHostnames: &hostnamesStr,
 		SubscribedLabelers:           subscribedLabelersPtr,
 		LabelPreferences:             labelPrefsPtr,
+		DisableExternalLinkWarning:   &input.DisableExternalLinkWarning,
 		CreatedAt:                    createdAt,
 		IndexedAt:                    time.Now(),
 	})

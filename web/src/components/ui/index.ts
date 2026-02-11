@@ -6,3 +6,4 @@ export { default as Skeleton, SkeletonCard } from "./Skeleton";
 export { default as EmptyState } from "./EmptyState";
 export { default as Badge, CountBadge } from "./Badge";
 export { default as LayoutToggle } from "./LayoutToggle";
+export * from "./Switch";

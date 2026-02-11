@@ -227,6 +227,12 @@ export default function Card({
           window.open(url, "_blank", "noopener,noreferrer");
           return;
         }
+
+        if ($preferences.get().disableExternalLinkWarning) {
+          window.open(url, "_blank", "noopener,noreferrer");
+          return;
+        }
+
         const skipped = $preferences.get().externalLinkSkippedHostnames;
         if (skipped.includes(hostname)) {
           window.open(url, "_blank", "noopener,noreferrer");
