@@ -6,6 +6,7 @@ import Profile from "../views/profile/Profile";
 import CollectionDetail from "../views/collections/CollectionDetail";
 import AnnotationDetail from "../views/content/AnnotationDetail";
 import UserUrlPage from "../views/content/UserUrl";
+import SitePage from "../views/content/SitePage";
 
 export function ProfileWrapper() {
   const { did } = useParams();
@@ -30,4 +31,8 @@ export function AnnotationDetailWrapper() {
 
 export function UserUrlWrapper() {
   return <UserUrlPage />;
+}
+
+export function SiteWrapper() {
+  return <SitePage />;
 }

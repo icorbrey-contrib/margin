@@ -51,74 +51,6 @@ export const overlayStyles = /* css */ `
   pointer-events: none;
 }
 
-.margin-selection-toolbar {
-  position: fixed;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255,255,255,0.05);
-  z-index: 2147483647;
-  pointer-events: auto;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  opacity: 0;
-  transform: translateY(8px) scale(0.95);
-  animation: toolbar-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes toolbar-in {
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.toolbar-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.toolbar-btn:hover {
-  background: var(--bg-hover);
-}
-
-.toolbar-btn:active {
-  transform: scale(0.96);
-}
-
-.toolbar-btn svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.toolbar-btn.highlight-btn {
-  color: var(--highlight-yellow);
-}
-
-.toolbar-btn.highlight-btn:hover {
-  background: rgba(251, 191, 36, 0.15);
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--border);
-  margin: 0 2px;
-}
-
 .color-picker {
   position: absolute;
   top: 100%;
@@ -355,6 +287,90 @@ export const overlayStyles = /* css */ `
 .comment-action-btn:hover { 
   background: var(--bg-tertiary); 
   color: var(--text-primary); 
+}
+
+.btn-add-note {
+  color: var(--text-tertiary);
+}
+.btn-add-note:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.add-note-form {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-note-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.add-note-textarea:focus {
+  border-color: var(--primary);
+}
+
+.add-note-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.add-note-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.add-note-actions button {
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.add-note-actions button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.add-note-cancel {
+  color: var(--text-tertiary);
+}
+.add-note-cancel:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.add-note-submit {
+  color: var(--text-tertiary);
+}
+.add-note-submit:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.add-note-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .inline-compose-modal {

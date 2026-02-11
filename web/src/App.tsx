@@ -1,5 +1,11 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useSearchParams,
+} from "react-router-dom";
 import { initAuth } from "./store/auth";
 import { loadPreferences } from "./store/preferences";
 
@@ -9,7 +15,6 @@ import Login from "./views/auth/Login";
 import Notifications from "./views/core/Notifications";
 import Collections from "./views/collections/Collections";
 import Settings from "./views/core/Settings";
-import UrlPage from "./views/content/Url";
 import NewAnnotationPage from "./views/core/New";
 import MasonryFeed from "./components/feed/MasonryFeed";
 import {
@@ -18,9 +23,19 @@ import {
   CollectionDetailWrapper,
   AnnotationDetailWrapper,
   UserUrlWrapper,
+  SiteWrapper,
 } from "./routes/wrappers";
 import About from "./views/About";
 import AdminModeration from "./views/core/AdminModeration";
+
+function UrlRedirect() {
+  const [searchParams] = useSearchParams();
+  const q = searchParams.get("q");
+  if (q) {
+    return <Navigate to={`/site/${encodeURIComponent(q)}`} replace />;
+  }
+  return <Navigate to="/site" replace />;
+}
 
 export default function App() {
   React.useEffect(() => {
@@ -131,7 +146,7 @@ export default function App() {
           path="/url"
           element={
             <AppLayout>
-              <UrlPage />
+              <UrlRedirect />
             </AppLayout>
           }
         />
@@ -188,6 +203,14 @@ export default function App() {
           element={
             <AppLayout>
               <UserUrlWrapper />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/site/*"
+          element={
+            <AppLayout>
+              <SiteWrapper />
             </AppLayout>
           }
         />

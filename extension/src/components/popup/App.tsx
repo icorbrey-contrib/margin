@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Bookmark as BookmarkIcon,
   Highlighter,
-  MessageSquare,
   X,
   Sun,
   Moon,
@@ -19,15 +18,21 @@ import {
   Sparkles,
   FolderPlus,
   Folder,
+  PenTool,
+  Eye,
+  Send,
 } from 'lucide-react';
 
 type Tab = 'page' | 'bookmarks' | 'highlights' | 'collections';
+type PageFilter = 'all' | 'annotations' | 'highlights';
 
 export function App() {
   const [session, setSession] = useState<MarginSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('page');
+  const [pageFilter, setPageFilter] = useState<PageFilter>('all');
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [pageHighlights, setPageHighlights] = useState<Annotation[]>([]);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -138,8 +143,37 @@ export function App() {
   async function loadCurrentTab() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     if (tab?.url) {
-      setCurrentUrl(tab.url);
+      if (isPdfUrl(tab.url) && tab.id) {
+        await sendMessage('activateOnPdf', { tabId: tab.id, url: tab.url });
+        window.close();
+        return;
+      }
+
+      const resolved = extractOriginalUrl(tab.url);
+      setCurrentUrl(resolved);
       setCurrentTitle(tab.title || '');
+    }
+  }
+
+  function extractOriginalUrl(url: string): string {
+    if (url.includes('/pdfjs/web/viewer.html')) {
+      try {
+        const fileParam = new URL(url).searchParams.get('file');
+        if (fileParam) return fileParam;
+      } catch {
+        /* ignore */
+      }
+    }
+    return url;
+  }
+
+  function isPdfUrl(url: string): boolean {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+    try {
+      const { pathname } = new URL(url);
+      return /\.pdf$/i.test(pathname);
+    } catch {
+      return false;
     }
   }
 
@@ -153,10 +187,15 @@ export function App() {
         result = await sendMessage('getAnnotations', { url: currentUrl });
       }
 
-      const filtered = (result || []).filter((item: any) => item.type !== 'Bookmark');
-      setAnnotations(filtered);
+      const all = result || [];
+      const annots = all.filter(
+        (item: any) => item.type !== 'Bookmark' && item.type !== 'Highlight'
+      );
+      const hlights = all.filter((item: any) => item.type === 'Highlight');
+      setAnnotations(annots);
+      setPageHighlights(hlights);
 
-      const isBookmarked = (result || []).some(
+      const isBookmarked = all.some(
         (item: any) => item.type === 'Bookmark' && item.creator?.did === session?.did
       );
       setBookmarked(isBookmarked);
@@ -556,18 +595,32 @@ export function App() {
                     {currentUrl ? new URL(currentUrl).hostname : ''}
                   </div>
                 </div>
-                <button
-                  onClick={handleBookmark}
-                  disabled={bookmarking || bookmarked}
-                  className={`p-2 rounded-lg transition-all flex-shrink-0 ${
-                    bookmarked
-                      ? 'bg-[var(--success)]/15 text-[var(--success)]'
-                      : 'bg-[var(--bg-hover)] hover:bg-[var(--accent-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent)]'
-                  }`}
-                  title={bookmarked ? 'Bookmarked' : 'Bookmark page'}
-                >
-                  {bookmarked ? <Check size={16} /> : <BookmarkIcon size={16} />}
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      if (currentUrl) {
+                        const shareUrl = `${apiUrl}/site/${encodeURIComponent(currentUrl)}`;
+                        browser.tabs.create({ url: shareUrl });
+                      }
+                    }}
+                    className="p-2 rounded-lg bg-[var(--bg-hover)] hover:bg-[var(--accent-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-all"
+                    title="View all annotations on margin.at"
+                  >
+                    <Eye size={16} />
+                  </button>
+                  <button
+                    onClick={handleBookmark}
+                    disabled={bookmarking || bookmarked}
+                    className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                      bookmarked
+                        ? 'bg-[var(--success)]/15 text-[var(--success)]'
+                        : 'bg-[var(--bg-hover)] hover:bg-[var(--accent-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent)]'
+                    }`}
+                    title={bookmarked ? 'Bookmarked' : 'Bookmark page'}
+                  >
+                    {bookmarked ? <Check size={16} /> : <BookmarkIcon size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -592,42 +645,92 @@ export function App() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center px-4 py-3">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
                 <div className="flex items-center gap-2">
-                  <MessageSquare size={14} className="text-[var(--text-tertiary)]" />
                   <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                    Annotations
+                    Activity
+                  </span>
+                  <span className="text-xs font-semibold bg-[var(--accent-subtle)] text-[var(--accent)] px-2 py-0.5 rounded-full">
+                    {annotations.length + pageHighlights.length}
                   </span>
                 </div>
-                <span className="text-xs font-semibold bg-[var(--accent-subtle)] text-[var(--accent)] px-2.5 py-1 rounded-full">
-                  {annotations.length}
-                </span>
+                <div className="flex items-center bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-0.5">
+                  {(
+                    [
+                      { key: 'all', label: 'All', icon: undefined },
+                      {
+                        key: 'annotations',
+                        label: `${annotations.length}`,
+                        icon: <PenTool size={10} />,
+                      },
+                      {
+                        key: 'highlights',
+                        label: `${pageHighlights.length}`,
+                        icon: <Highlighter size={10} />,
+                      },
+                    ] as const
+                  ).map(({ key, label, icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setPageFilter(key as PageFilter)}
+                      className={`px-2 py-1 text-[10px] font-medium rounded-md transition-all flex items-center gap-1 ${
+                        pageFilter === key
+                          ? 'bg-[var(--accent)] text-white shadow-sm'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      {icon}
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {loadingAnnotations ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--accent)] border-t-transparent" />
                 </div>
-              ) : annotations.length === 0 ? (
+              ) : annotations.length + pageHighlights.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-[var(--text-tertiary)]">
                   <div className="w-14 h-14 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center mb-4">
                     <Sparkles size={24} className="opacity-40" />
                   </div>
-                  <p className="text-sm font-medium mb-1">No annotations yet</p>
+                  <p className="text-sm font-medium mb-1">No activity yet</p>
                   <p className="text-xs text-[var(--text-tertiary)]">
-                    Be the first to annotate this page
+                    Be the first to annotate or highlight this page
                   </p>
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
-                  {annotations.map((item) => (
-                    <AnnotationCard
-                      key={item.uri || item.id}
-                      item={item}
-                      formatDate={formatDate}
-                      onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
-                    />
-                  ))}
+                  {(pageFilter === 'all' || pageFilter === 'annotations') &&
+                    annotations.map((item) => (
+                      <AnnotationCard
+                        key={item.uri || item.id}
+                        item={item}
+                        formatDate={formatDate}
+                        onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
+                        onConverted={loadAnnotations}
+                      />
+                    ))}
+                  {(pageFilter === 'all' || pageFilter === 'highlights') &&
+                    pageHighlights.map((item) => (
+                      <AnnotationCard
+                        key={item.uri || item.id}
+                        item={item}
+                        formatDate={formatDate}
+                        onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
+                        onConverted={loadAnnotations}
+                      />
+                    ))}
+                  {((pageFilter === 'annotations' && annotations.length === 0) ||
+                    (pageFilter === 'highlights' && pageHighlights.length === 0)) && (
+                    <div className="flex flex-col items-center justify-center py-10 text-[var(--text-tertiary)]">
+                      <p className="text-xs">
+                        No {pageFilter === 'annotations' ? 'annotations' : 'highlights'} on this
+                        page
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -704,53 +807,12 @@ export function App() {
             ) : (
               <div className="space-y-3">
                 {highlights.map((item) => (
-                  <div
+                  <HighlightCard
                     key={item.uri || item.id}
-                    className="p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl hover:bg-[var(--bg-hover)] hover:border-[var(--border-strong)] transition-all group"
-                  >
-                    {item.target?.selector?.exact && (
-                      <div
-                        className="text-sm leading-relaxed border-l-3 pl-3 mb-3 py-1"
-                        style={{
-                          borderColor: item.color || '#fbbf24',
-                          background: `linear-gradient(90deg, ${item.color || '#fbbf24'}15, transparent)`,
-                        }}
-                      >
-                        "
-                        {item.target.selector.exact.length > 120
-                          ? item.target.selector.exact.slice(0, 120) + '...'
-                          : item.target.selector.exact}
-                        "
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div
-                        className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] flex-1 cursor-pointer hover:text-[var(--accent)]"
-                        onClick={() => {
-                          if (item.target?.source) {
-                            browser.tabs.create({ url: item.target.source });
-                          }
-                        }}
-                      >
-                        <Globe size={12} />
-                        {item.target?.source ? new URL(item.target.source).hostname : ''}
-                        <ChevronRight
-                          size={14}
-                          className="ml-auto text-[var(--text-tertiary)] group-hover:text-[var(--accent)] transition-colors"
-                        />
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openCollectionModal(item.uri || item.id || '');
-                        }}
-                        className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] rounded-lg transition-all ml-2"
-                        title="Add to collection"
-                      >
-                        <FolderPlus size={14} />
-                      </button>
-                    </div>
-                  </div>
+                    item={item}
+                    onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
+                    onConverted={loadHighlights}
+                  />
                 ))}
               </div>
             )}
@@ -908,17 +970,48 @@ function AnnotationCard({
   item,
   formatDate,
   onAddToCollection,
+  onConverted,
 }: {
   item: Annotation;
   formatDate: (d?: string) => string;
   onAddToCollection?: () => void;
+  onConverted?: () => void;
 }) {
+  const [noteInput, setNoteInput] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [converting, setConverting] = useState(false);
+
   const author = item.author || item.creator || {};
   const handle = author.handle || 'User';
   const text = item.body?.value || item.text || '';
   const selector = item.target?.selector;
   const quote = selector?.exact || '';
   const isHighlight = (item as any).type === 'Highlight';
+  const highlightColor = item.color || (isHighlight ? '#fbbf24' : 'var(--accent)');
+
+  async function handleConvert() {
+    if (!noteInput.trim()) return;
+    setConverting(true);
+    try {
+      const result = await sendMessage('convertHighlightToAnnotation', {
+        highlightUri: item.uri || item.id || '',
+        url: item.target?.source || '',
+        text: noteInput.trim(),
+        selector: item.target?.selector,
+      });
+      if (result.success) {
+        setShowNoteInput(false);
+        setNoteInput('');
+        onConverted?.();
+      } else {
+        console.error('Convert failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Convert error:', error);
+    } finally {
+      setConverting(false);
+    }
+  }
 
   return (
     <div className="px-4 py-4 hover:bg-[var(--bg-hover)] transition-colors">
@@ -939,27 +1032,51 @@ function AnnotationCard({
               {formatDate(item.created || item.createdAt)}
             </span>
             {isHighlight && (
-              <span className="text-[10px] font-semibold bg-[var(--warning)]/15 text-[var(--warning)] px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span
+                className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{
+                  backgroundColor: `${highlightColor}20`,
+                  color: highlightColor,
+                }}
+              >
                 <Highlighter size={10} /> Highlight
               </span>
             )}
-            {onAddToCollection && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddToCollection();
-                }}
-                className="ml-auto p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] rounded transition-all"
-                title="Add to collection"
-              >
-                <FolderPlus size={14} />
-              </button>
-            )}
+            <div className="ml-auto flex items-center gap-0.5">
+              {isHighlight && !showNoteInput && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNoteInput(true);
+                  }}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] rounded transition-all"
+                  title="Add note (convert to annotation)"
+                >
+                  <PenTool size={13} />
+                </button>
+              )}
+              {onAddToCollection && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCollection();
+                  }}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] rounded transition-all"
+                  title="Add to collection"
+                >
+                  <FolderPlus size={13} />
+                </button>
+              )}
+            </div>
           </div>
 
           {quote && (
             <div
-              className="text-sm text-[var(--text-secondary)] border-l-2 border-[var(--accent)] pl-3 mb-2.5 py-1.5 rounded-r bg-[var(--accent-subtle)] italic cursor-pointer hover:bg-[var(--accent)]/20 transition-colors"
+              className="text-sm text-[var(--text-secondary)] border-l-2 pl-3 mb-2.5 py-1.5 rounded-r italic cursor-pointer hover:opacity-80 transition-all"
+              style={{
+                borderColor: highlightColor,
+                backgroundColor: `${highlightColor}12`,
+              }}
               onClick={async (e) => {
                 e.stopPropagation();
                 const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -970,15 +1087,209 @@ function AnnotationCard({
               }}
               title="Jump to text on page"
             >
-              "{quote.length > 100 ? quote.slice(0, 100) + '...' : quote}"
+              "{quote.length > 200 ? quote.slice(0, 200) + '...' : quote}"
             </div>
           )}
 
           {text && (
             <div className="text-[13px] leading-relaxed text-[var(--text-primary)]">{text}</div>
           )}
+
+          {showNoteInput && (
+            <div className="mt-2.5 flex gap-2 items-end animate-fadeIn">
+              <textarea
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                placeholder="Add your note..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleConvert();
+                  }
+                  if (e.key === 'Escape') {
+                    setShowNoteInput(false);
+                    setNoteInput('');
+                  }
+                }}
+                className="flex-1 p-2.5 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg text-xs resize-none focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent-subtle)] min-h-[60px]"
+              />
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={handleConvert}
+                  disabled={converting || !noteInput.trim()}
+                  className="p-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="Convert to annotation"
+                >
+                  {converting ? (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Send size={14} />
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNoteInput(false);
+                    setNoteInput('');
+                  }}
+                  className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-lg transition-all"
+                  title="Cancel"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function HighlightCard({
+  item,
+  onAddToCollection,
+  onConverted,
+}: {
+  item: Highlight;
+  onAddToCollection?: () => void;
+  onConverted?: () => void;
+}) {
+  const [noteInput, setNoteInput] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [converting, setConverting] = useState(false);
+
+  const hlItem = item as any;
+  const selector = hlItem.target?.selector || hlItem.selector;
+  const source = hlItem.target?.source || hlItem.source || hlItem.url || '';
+  const quote = selector?.exact || '';
+  const color = hlItem.color || '#fbbf24';
+
+  async function handleConvert() {
+    if (!noteInput.trim()) return;
+    setConverting(true);
+    try {
+      const result = await sendMessage('convertHighlightToAnnotation', {
+        highlightUri: hlItem.uri || hlItem.id || '',
+        url: source,
+        text: noteInput.trim(),
+        selector: selector,
+      });
+      if (result.success) {
+        setShowNoteInput(false);
+        setNoteInput('');
+        onConverted?.();
+      } else {
+        console.error('Convert failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Convert error:', error);
+    } finally {
+      setConverting(false);
+    }
+  }
+
+  return (
+    <div className="p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl hover:bg-[var(--bg-hover)] hover:border-[var(--border-strong)] transition-all group">
+      {quote && (
+        <div
+          className="text-sm leading-relaxed border-l-3 pl-3 mb-3 py-1"
+          style={{
+            borderColor: color,
+            background: `linear-gradient(90deg, ${color}15, transparent)`,
+          }}
+        >
+          "{quote.length > 120 ? quote.slice(0, 120) + '...' : quote}"
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div
+          className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] flex-1 cursor-pointer hover:text-[var(--accent)]"
+          onClick={() => {
+            if (source) browser.tabs.create({ url: source });
+          }}
+        >
+          <Globe size={12} />
+          {source ? new URL(source).hostname : ''}
+          <ChevronRight
+            size={14}
+            className="ml-auto text-[var(--text-tertiary)] group-hover:text-[var(--accent)] transition-colors"
+          />
+        </div>
+        <div className="flex items-center gap-0.5 ml-2">
+          {!showNoteInput && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowNoteInput(true);
+              }}
+              className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] rounded-lg transition-all"
+              title="Add note (convert to annotation)"
+            >
+              <PenTool size={13} />
+            </button>
+          )}
+          {onAddToCollection && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCollection();
+              }}
+              className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] rounded-lg transition-all"
+              title="Add to collection"
+            >
+              <FolderPlus size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showNoteInput && (
+        <div className="mt-3 flex gap-2 items-end animate-fadeIn">
+          <textarea
+            value={noteInput}
+            onChange={(e) => setNoteInput(e.target.value)}
+            placeholder="Add your note..."
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleConvert();
+              }
+              if (e.key === 'Escape') {
+                setShowNoteInput(false);
+                setNoteInput('');
+              }
+            }}
+            className="flex-1 p-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-xs resize-none focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent-subtle)] min-h-[60px]"
+          />
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={handleConvert}
+              disabled={converting || !noteInput.trim()}
+              className="p-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title="Convert to annotation"
+            >
+              {converting ? (
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+              ) : (
+                <Send size={14} />
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setShowNoteInput(false);
+                setNoteInput('');
+              }}
+              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-lg transition-all"
+              title="Cancel"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

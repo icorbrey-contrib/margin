@@ -6,6 +6,7 @@ import {
   createAnnotation,
   createBookmark,
   createHighlight,
+  deleteHighlight,
   getUserBookmarks,
   getUserHighlights,
   getUserCollections,
@@ -19,6 +20,30 @@ import { overlayEnabledItem, apiUrlItem } from '@/utils/storage';
 export default defineBackground(() => {
   console.log('Margin extension loaded');
 
+  function getPDFViewerURL(originalUrl: string): string {
+    const viewerBase = browser.runtime.getURL('/pdfjs/web/viewer.html' as any);
+    try {
+      const parsed = new URL(originalUrl);
+      const hash = parsed.hash;
+      parsed.hash = '';
+      return `${viewerBase}?file=${encodeURIComponent(parsed.href)}${hash}`;
+    } catch {
+      return `${viewerBase}?file=${encodeURIComponent(originalUrl)}`;
+    }
+  }
+
+  function resolveTabUrl(tabUrl: string): string {
+    if (tabUrl.includes('/pdfjs/web/viewer.html')) {
+      try {
+        const fileParam = new URL(tabUrl).searchParams.get('file');
+        if (fileParam) return fileParam;
+      } catch {
+        /* ignore */
+      }
+    }
+    return tabUrl;
+  }
+
   const annotationCache = new Map<string, { annotations: Annotation[]; timestamp: number }>();
   const CACHE_TTL = 60000;
 
@@ -28,6 +53,13 @@ export default defineBackground(() => {
 
   onMessage('getAnnotations', async ({ data }) => {
     return await getAnnotations(data.url);
+  });
+
+  onMessage('activateOnPdf', async ({ data }) => {
+    const { tabId, url } = data;
+    const viewerUrl = getPDFViewerURL(url);
+    await browser.tabs.update(tabId, { url: viewerUrl });
+    return { redirected: true };
   });
 
   onMessage('createAnnotation', async ({ data }) => {
@@ -40,6 +72,30 @@ export default defineBackground(() => {
 
   onMessage('createHighlight', async ({ data }) => {
     return await createHighlight(data);
+  });
+
+  onMessage('deleteHighlight', async ({ data }) => {
+    return await deleteHighlight(data.uri);
+  });
+
+  onMessage('convertHighlightToAnnotation', async ({ data }) => {
+    const createResult = await createAnnotation({
+      url: data.url,
+      text: data.text,
+      title: data.title,
+      selector: data.selector,
+    });
+
+    if (!createResult.success) {
+      return { success: false, error: createResult.error || 'Failed to create annotation' };
+    }
+
+    const deleteResult = await deleteHighlight(data.highlightUri);
+    if (!deleteResult.success) {
+      console.warn('Created annotation but failed to delete highlight:', deleteResult.error);
+    }
+
+    return { success: true };
   });
 
   onMessage('getUserBookmarks', async ({ data }) => {
@@ -192,7 +248,7 @@ export default defineBackground(() => {
       }
 
       const result = await createBookmark({
-        url: tab.url,
+        url: resolveTabUrl(tab.url),
         title: tab.title,
       });
 
@@ -213,7 +269,7 @@ export default defineBackground(() => {
         await browser.tabs.sendMessage(tab.id!, {
           type: 'SHOW_INLINE_ANNOTATE',
           data: {
-            url: tab.url,
+            url: resolveTabUrl(tab.url),
             title: tab.title,
             selector: {
               type: 'TextQuoteSelector',
@@ -222,7 +278,7 @@ export default defineBackground(() => {
           },
         });
       } catch {
-        let composeUrl = `${apiUrl}/new?url=${encodeURIComponent(tab.url)}`;
+        let composeUrl = `${apiUrl}/new?url=${encodeURIComponent(resolveTabUrl(tab.url))}`;
         composeUrl += `&selector=${encodeURIComponent(
           JSON.stringify({
             type: 'TextQuoteSelector',
@@ -242,7 +298,7 @@ export default defineBackground(() => {
       }
 
       const result = await createHighlight({
-        url: tab.url,
+        url: resolveTabUrl(tab.url),
         title: tab.title,
         selector: {
           type: 'TextQuoteSelector',
@@ -314,7 +370,7 @@ export default defineBackground(() => {
       }
 
       const result = await createBookmark({
-        url: tab.url,
+        url: resolveTabUrl(tab.url),
         title: tab.title,
       });
 
@@ -345,7 +401,7 @@ export default defineBackground(() => {
           });
         } else if (command === 'highlight-selection') {
           const result = await createHighlight({
-            url: tab.url!,
+            url: resolveTabUrl(tab.url!),
             title: tab.title,
             selector: {
               type: 'TextQuoteSelector',

@@ -6,6 +6,7 @@ import { APP_URL } from '@/utils/types';
 import CollectionIcon from '@/components/CollectionIcon';
 
 type Tab = 'page' | 'bookmarks' | 'highlights' | 'collections';
+type PageFilter = 'all' | 'annotations' | 'highlights';
 
 const Icons = {
   settings: (
@@ -78,7 +79,9 @@ export function App() {
   const [session, setSession] = useState<MarginSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('page');
+  const [pageFilter, setPageFilter] = useState<PageFilter>('all');
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [pageHighlights, setPageHighlights] = useState<Annotation[]>([]);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -167,8 +170,36 @@ export function App() {
   async function loadCurrentTab() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     if (tab?.url) {
-      setCurrentUrl(tab.url);
+      if (isPdfUrl(tab.url) && tab.id) {
+        await sendMessage('activateOnPdf', { tabId: tab.id, url: tab.url });
+        return;
+      }
+
+      const resolved = extractOriginalUrl(tab.url);
+      setCurrentUrl(resolved);
       setCurrentTitle(tab.title || '');
+    }
+  }
+
+  function extractOriginalUrl(url: string): string {
+    if (url.includes('/pdfjs/web/viewer.html')) {
+      try {
+        const fileParam = new URL(url).searchParams.get('file');
+        if (fileParam) return fileParam;
+      } catch {
+        /* ignore */
+      }
+    }
+    return url;
+  }
+
+  function isPdfUrl(url: string): boolean {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+    try {
+      const { pathname } = new URL(url);
+      return /\.pdf$/i.test(pathname);
+    } catch {
+      return false;
     }
   }
 
@@ -182,10 +213,15 @@ export function App() {
         result = await sendMessage('getAnnotations', { url: currentUrl });
       }
 
-      const filtered = (result || []).filter((item: any) => item.type !== 'Bookmark');
-      setAnnotations(filtered);
+      const all = result || [];
+      const annots = all.filter(
+        (item: any) => item.type !== 'Bookmark' && item.type !== 'Highlight'
+      );
+      const hlights = all.filter((item: any) => item.type === 'Highlight');
+      setAnnotations(annots);
+      setPageHighlights(hlights);
 
-      const isBookmarked = (result || []).some(
+      const isBookmarked = all.some(
         (item: any) => item.type === 'Bookmark' && item.creator?.did === session?.did
       );
       setBookmarked(isBookmarked);
@@ -540,33 +576,74 @@ export function App() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-3">
-              <span className="font-semibold">
-                {annotations.length} annotation{annotations.length !== 1 ? 's' : ''}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">
+                  {annotations.length + pageHighlights.length} item
+                  {annotations.length + pageHighlights.length !== 1 ? 's' : ''}
+                </span>
+                <span className="text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                  {annotations.length} notes · {pageHighlights.length} highlights
+                </span>
+              </div>
+              <div className="flex items-center bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-0.5">
+                {(['all', 'annotations', 'highlights'] as const).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => setPageFilter(key)}
+                    className={`px-2 py-1 text-[10px] font-medium rounded-md transition-all ${
+                      pageFilter === key
+                        ? 'bg-[var(--accent)] text-white shadow-sm'
+                        : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {key === 'all' ? 'All' : key === 'annotations' ? 'Notes' : 'HL'}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {loadingAnnotations ? (
               <div className="flex items-center justify-center py-16">
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--accent)] border-t-transparent" />
               </div>
-            ) : annotations.length === 0 ? (
+            ) : annotations.length + pageHighlights.length === 0 ? (
               <div className="text-center py-16 text-[var(--text-tertiary)]">
                 <div className="w-14 h-14 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center mx-auto mb-4">
                   {Icons.sparkles}
                 </div>
-                <p className="font-medium mb-1">No annotations yet</p>
-                <p className="text-xs">Be the first to annotate</p>
+                <p className="font-medium mb-1">No activity yet</p>
+                <p className="text-xs">Be the first to annotate or highlight</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {annotations.map((item) => (
-                  <AnnotationCard
-                    key={item.uri || item.id}
-                    item={item}
-                    formatDate={formatDate}
-                    onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
-                  />
-                ))}
+                {(pageFilter === 'all' || pageFilter === 'annotations') &&
+                  annotations.map((item) => (
+                    <AnnotationCard
+                      key={item.uri || item.id}
+                      item={item}
+                      formatDate={formatDate}
+                      onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
+                      onConverted={loadAnnotations}
+                    />
+                  ))}
+                {(pageFilter === 'all' || pageFilter === 'highlights') &&
+                  pageHighlights.map((item) => (
+                    <AnnotationCard
+                      key={item.uri || item.id}
+                      item={item}
+                      formatDate={formatDate}
+                      onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
+                      onConverted={loadAnnotations}
+                    />
+                  ))}
+                {((pageFilter === 'annotations' && annotations.length === 0) ||
+                  (pageFilter === 'highlights' && pageHighlights.length === 0)) && (
+                  <div className="text-center py-10 text-[var(--text-tertiary)]">
+                    <p className="text-xs">
+                      No {pageFilter === 'annotations' ? 'annotations' : 'highlights'} on this page
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -651,59 +728,12 @@ export function App() {
             ) : (
               <div className="space-y-3">
                 {highlights.map((item) => (
-                  <div
+                  <SidepanelHighlightCard
                     key={item.uri || item.id}
-                    className="p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl hover:bg-[var(--bg-hover)] transition-all group"
-                  >
-                    {item.target?.selector?.exact && (
-                      <div
-                        className="text-sm leading-relaxed border-l-3 pl-3 mb-3 cursor-pointer"
-                        style={{
-                          borderColor: item.color || '#fbbf24',
-                          background: `linear-gradient(90deg, ${item.color || '#fbbf24'}10, transparent)`,
-                        }}
-                        onClick={() => {
-                          if (item.target?.source) {
-                            browser.tabs.create({ url: item.target.source });
-                          }
-                        }}
-                      >
-                        "
-                        {item.target.selector.exact.length > 150
-                          ? item.target.selector.exact.slice(0, 150) + '...'
-                          : item.target.selector.exact}
-                        "
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
-                      <span className="flex items-center gap-1.5">
-                        {Icons.globe}{' '}
-                        {item.target?.source ? new URL(item.target.source).hostname : ''}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (item.uri) openCollectionModal(item.uri);
-                          }}
-                          className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
-                          title="Add to collection"
-                        >
-                          {Icons.folderPlus}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (item.target?.source) {
-                              browser.tabs.create({ url: item.target.source });
-                            }
-                          }}
-                          className="group-hover:text-[var(--accent)]"
-                        >
-                          {Icons.chevronRight}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    item={item}
+                    onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
+                    onConverted={loadHighlights}
+                  />
                 ))}
               </div>
             )}
@@ -840,17 +870,48 @@ function AnnotationCard({
   item,
   formatDate,
   onAddToCollection,
+  onConverted,
 }: {
   item: Annotation;
   formatDate: (d?: string) => string;
   onAddToCollection?: () => void;
+  onConverted?: () => void;
 }) {
+  const [noteInput, setNoteInput] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [converting, setConverting] = useState(false);
+
   const author = item.author || item.creator || {};
   const handle = author.handle || 'User';
   const text = item.body?.value || item.text || '';
   const selector = item.target?.selector;
   const quote = selector?.exact || '';
   const isHighlight = (item as any).type === 'Highlight';
+  const highlightColor = item.color || (isHighlight ? '#fbbf24' : 'var(--accent)');
+
+  async function handleConvert() {
+    if (!noteInput.trim()) return;
+    setConverting(true);
+    try {
+      const result = await sendMessage('convertHighlightToAnnotation', {
+        highlightUri: item.uri || item.id || '',
+        url: item.target?.source || '',
+        text: noteInput.trim(),
+        selector: item.target?.selector,
+      });
+      if (result.success) {
+        setShowNoteInput(false);
+        setNoteInput('');
+        onConverted?.();
+      } else {
+        console.error('Convert failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Convert error:', error);
+    } finally {
+      setConverting(false);
+    }
+  }
 
   return (
     <div className="p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl hover:bg-[var(--bg-hover)] transition-all">
@@ -869,27 +930,62 @@ function AnnotationCard({
               {formatDate(item.created || item.createdAt)}
             </span>
             {isHighlight && (
-              <span className="text-[10px] font-semibold bg-amber-400/15 text-amber-400 px-2 py-0.5 rounded-full">
+              <span
+                className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{
+                  backgroundColor: `${highlightColor}20`,
+                  color: highlightColor,
+                }}
+              >
                 Highlight
               </span>
             )}
-            {onAddToCollection && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddToCollection();
-                }}
-                className="ml-auto p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
-                title="Add to collection"
-              >
-                {Icons.folderPlus}
-              </button>
-            )}
+            <div className="ml-auto flex items-center gap-0.5">
+              {isHighlight && !showNoteInput && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNoteInput(true);
+                  }}
+                  className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+                  title="Add note (convert to annotation)"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                    <path d="M2 2l7.586 7.586" />
+                    <circle cx="11" cy="11" r="2" />
+                  </svg>
+                </button>
+              )}
+              {onAddToCollection && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToCollection();
+                  }}
+                  className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+                  title="Add to collection"
+                >
+                  {Icons.folderPlus}
+                </button>
+              )}
+            </div>
           </div>
 
           {quote && (
             <div
-              className="text-sm text-[var(--text-secondary)] border-l-2 border-[var(--accent)] pl-3 mb-2 py-1 rounded-r bg-[var(--accent)]/10 italic cursor-pointer hover:bg-[var(--accent)]/20 transition-colors"
+              className="text-sm text-[var(--text-secondary)] border-l-2 pl-3 mb-2 py-1 rounded-r italic cursor-pointer hover:opacity-80 transition-all"
+              style={{
+                borderColor: highlightColor,
+                backgroundColor: `${highlightColor}12`,
+              }}
               onClick={async (e) => {
                 e.stopPropagation();
                 const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -899,13 +995,237 @@ function AnnotationCard({
               }}
               title="Jump to text on page"
             >
-              "{quote.length > 150 ? quote.slice(0, 150) + '...' : quote}"
+              "{quote.length > 250 ? quote.slice(0, 250) + '...' : quote}"
             </div>
           )}
 
           {text && <div className="text-sm leading-relaxed">{text}</div>}
+
+          {showNoteInput && (
+            <div className="mt-2.5 flex gap-2 items-end">
+              <textarea
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                placeholder="Add your note..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleConvert();
+                  }
+                  if (e.key === 'Escape') {
+                    setShowNoteInput(false);
+                    setNoteInput('');
+                  }
+                }}
+                className="flex-1 p-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-xs resize-none focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 min-h-[60px]"
+              />
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={handleConvert}
+                  disabled={converting || !noteInput.trim()}
+                  className="p-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="Convert to annotation"
+                >
+                  {converting ? (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <line x1="22" x2="11" y1="2" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNoteInput(false);
+                    setNoteInput('');
+                  }}
+                  className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-lg transition-all"
+                  title="Cancel"
+                >
+                  {Icons.x}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SidepanelHighlightCard({
+  item,
+  onAddToCollection,
+  onConverted,
+}: {
+  item: Highlight;
+  onAddToCollection?: () => void;
+  onConverted?: () => void;
+}) {
+  const [noteInput, setNoteInput] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [converting, setConverting] = useState(false);
+
+  const hlItem = item as any;
+  const selector = hlItem.target?.selector || hlItem.selector;
+  const source = hlItem.target?.source || hlItem.source || hlItem.url || '';
+  const quote = selector?.exact || '';
+  const color = hlItem.color || '#fbbf24';
+
+  async function handleConvert() {
+    if (!noteInput.trim()) return;
+    setConverting(true);
+    try {
+      const result = await sendMessage('convertHighlightToAnnotation', {
+        highlightUri: hlItem.uri || hlItem.id || '',
+        url: source,
+        text: noteInput.trim(),
+        selector: selector,
+      });
+      if (result.success) {
+        setShowNoteInput(false);
+        setNoteInput('');
+        onConverted?.();
+      } else {
+        console.error('Convert failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Convert error:', error);
+    } finally {
+      setConverting(false);
+    }
+  }
+
+  return (
+    <div className="p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl hover:bg-[var(--bg-hover)] transition-all group">
+      {quote && (
+        <div
+          className="text-sm leading-relaxed border-l-3 pl-3 mb-3 cursor-pointer"
+          style={{
+            borderColor: color,
+            background: `linear-gradient(90deg, ${color}10, transparent)`,
+          }}
+          onClick={() => {
+            if (source) browser.tabs.create({ url: source });
+          }}
+        >
+          "{quote.length > 150 ? quote.slice(0, 150) + '...' : quote}"
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
+        <span className="flex items-center gap-1.5">
+          {Icons.globe} {source ? new URL(source).hostname : ''}
+        </span>
+        <div className="flex items-center gap-1">
+          {!showNoteInput && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowNoteInput(true);
+              }}
+              className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+              title="Add note (convert to annotation)"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                <path d="M2 2l7.586 7.586" />
+                <circle cx="11" cy="11" r="2" />
+              </svg>
+            </button>
+          )}
+          {onAddToCollection && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCollection();
+              }}
+              className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+              title="Add to collection"
+            >
+              {Icons.folderPlus}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (source) browser.tabs.create({ url: source });
+            }}
+            className="group-hover:text-[var(--accent)]"
+          >
+            {Icons.chevronRight}
+          </button>
+        </div>
+      </div>
+
+      {showNoteInput && (
+        <div className="mt-3 flex gap-2 items-end">
+          <textarea
+            value={noteInput}
+            onChange={(e) => setNoteInput(e.target.value)}
+            placeholder="Add your note..."
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleConvert();
+              }
+              if (e.key === 'Escape') {
+                setShowNoteInput(false);
+                setNoteInput('');
+              }
+            }}
+            className="flex-1 p-2.5 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-xs resize-none focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 min-h-[60px]"
+          />
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={handleConvert}
+              disabled={converting || !noteInput.trim()}
+              className="p-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title="Convert to annotation"
+            >
+              {converting ? (
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+              ) : (
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <line x1="22" x2="11" y1="2" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setShowNoteInput(false);
+                setNoteInput('');
+              }}
+              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-lg transition-all"
+              title="Cancel"
+            >
+              {Icons.x}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

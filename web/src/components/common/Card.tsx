@@ -17,6 +17,8 @@ import {
   EyeOff,
   Eye,
   Tag,
+  Send,
+  X,
 } from "lucide-react";
 import ShareMenu from "../modals/ShareMenu";
 import AddToCollectionModal from "../modals/AddToCollectionModal";
@@ -31,6 +33,7 @@ import {
   deleteItem,
   blockUser,
   muteUser,
+  convertHighlightToAnnotation,
 } from "../../api/client";
 import { $user } from "../../store/auth";
 import { $preferences } from "../../store/preferences";
@@ -126,6 +129,9 @@ export default function Card({
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEditHistory, setShowEditHistory] = useState(false);
   const [contentRevealed, setContentRevealed] = useState(false);
+  const [showConvertInput, setShowConvertInput] = useState(false);
+  const [convertText, setConvertText] = useState("");
+  const [converting, setConverting] = useState(false);
   const [ogData, setOgData] = useState<{
     title?: string;
     description?: string;
@@ -208,6 +214,25 @@ export default function Card({
     if (window.confirm("Delete this item?")) {
       const success = await deleteItem(item.uri, type);
       if (success && onDelete) onDelete(item.uri);
+    }
+  };
+
+  const handleConvert = async () => {
+    if (!convertText.trim() || converting) return;
+    setConverting(true);
+    const pageUrl = item.target?.source || item.source || "";
+    const res = await convertHighlightToAnnotation(
+      item.uri,
+      pageUrl,
+      convertText.trim(),
+      item.target?.selector,
+      item.target?.title,
+    );
+    setConverting(false);
+    if (res.success) {
+      setShowConvertInput(false);
+      setConvertText("");
+      if (onDelete) onDelete(item.uri);
     }
   };
 
@@ -665,6 +690,16 @@ export default function Card({
         {isAuthor && (
           <>
             <div className="flex-1" />
+            {type === "highlight" && !showConvertInput && (
+              <button
+                onClick={() => setShowConvertInput(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-surface-400 dark:text-surface-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all text-xs font-medium"
+                title="Annotate this highlight"
+              >
+                <MessageSquare size={14} />
+                <span className="hidden sm:inline">Annotate</span>
+              </button>
+            )}
             <button
               onClick={() => setShowEditModal(true)}
               className="flex items-center px-2.5 py-1.5 rounded-lg text-surface-400 dark:text-surface-500 hover:text-surface-600 dark:hover:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-all"
@@ -722,6 +757,59 @@ export default function Card({
           </>
         )}
       </div>
+
+      {showConvertInput && (
+        <div
+          className={clsx(
+            "mt-3 animate-fade-in",
+            layout === "mosaic" ? "" : "ml-[52px]",
+          )}
+        >
+          <div className="flex gap-2 items-end">
+            <textarea
+              value={convertText}
+              onChange={(e) => setConvertText(e.target.value)}
+              placeholder="Add your note to convert this highlight into an annotation..."
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleConvert();
+                }
+                if (e.key === "Escape") {
+                  setShowConvertInput(false);
+                  setConvertText("");
+                }
+              }}
+              className="flex-1 p-3 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl text-sm resize-none focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20 min-h-[80px] placeholder:text-surface-400"
+            />
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={handleConvert}
+                disabled={converting || !convertText.trim()}
+                className="p-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                title="Convert to annotation"
+              >
+                {converting ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                ) : (
+                  <Send size={16} />
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowConvertInput(false);
+                  setConvertText("");
+                }}
+                className="p-2.5 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-xl transition-all"
+                title="Cancel"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AddToCollectionModal
         isOpen={showCollectionModal}

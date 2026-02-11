@@ -12,6 +12,7 @@ interface ProtocolMap {
   checkSession(): MarginSession;
 
   getAnnotations(data: { url: string }): Annotation[];
+  activateOnPdf(data: { tabId: number; url: string }): { redirected: boolean };
   createAnnotation(data: { url: string; text: string; title?: string; selector?: TextSelector }): {
     success: boolean;
     data?: Annotation;
@@ -38,6 +39,15 @@ interface ProtocolMap {
     error?: string;
   };
   getItemCollections(data: { annotationUri: string }): string[];
+
+  deleteHighlight(data: { uri: string }): { success: boolean; error?: string };
+  convertHighlightToAnnotation(data: {
+    highlightUri: string;
+    url: string;
+    text: string;
+    title?: string;
+    selector?: TextSelector;
+  }): { success: boolean; error?: string };
 
   getReplies(data: { uri: string }): Annotation[];
   createReply(data: {

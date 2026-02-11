@@ -264,6 +264,26 @@ export async function getItemCollections(annotationUri: string): Promise<string[
   }
 }
 
+export async function deleteHighlight(uri: string) {
+  try {
+    const rkey = (uri || '').split('/').pop();
+    if (!rkey) return { success: false, error: 'Invalid URI' };
+
+    const res = await apiRequest(`/highlights?rkey=${rkey}`, {
+      method: 'DELETE',
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
 export async function getReplies(uri: string) {
   try {
     const res = await apiRequest(`/annotations/${encodeURIComponent(uri)}/replies`);

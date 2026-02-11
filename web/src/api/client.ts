@@ -473,6 +473,39 @@ export async function deleteItem(
   }
 }
 
+export async function convertHighlightToAnnotation(
+  highlightUri: string,
+  url: string,
+  text: string,
+  selector?: { exact: string; prefix?: string; suffix?: string },
+  title?: string,
+): Promise<{ success: boolean; item?: AnnotationItem; error?: string }> {
+  try {
+    const createRes = await apiRequest("/api/annotations", {
+      method: "POST",
+      body: JSON.stringify({ url, text, title, selector }),
+    });
+    if (!createRes.ok) {
+      const err = await createRes.text();
+      return { success: false, error: err };
+    }
+    const created = normalizeItem(await createRes.json());
+
+    const rkey = (highlightUri || "").split("/").pop();
+    if (rkey) {
+      await apiRequest(`/api/highlights?rkey=${rkey}`, { method: "DELETE" });
+    }
+
+    return { success: true, item: created };
+  } catch (e) {
+    console.error("Failed to convert highlight:", e);
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : "Unknown error",
+    };
+  }
+}
+
 export async function updateAnnotation(
   uri: string,
   text: string,
