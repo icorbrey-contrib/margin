@@ -707,6 +707,7 @@ export function App() {
                       <AnnotationCard
                         key={item.uri || item.id}
                         item={item}
+                        sessionDid={session?.did}
                         formatDate={formatDate}
                         onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
                         onConverted={loadAnnotations}
@@ -717,6 +718,7 @@ export function App() {
                       <AnnotationCard
                         key={item.uri || item.id}
                         item={item}
+                        sessionDid={session?.did}
                         formatDate={formatDate}
                         onAddToCollection={() => openCollectionModal(item.uri || item.id || '')}
                         onConverted={loadAnnotations}
@@ -968,11 +970,13 @@ export function App() {
 
 function AnnotationCard({
   item,
+  sessionDid,
   formatDate,
   onAddToCollection,
   onConverted,
 }: {
   item: Annotation;
+  sessionDid?: string;
   formatDate: (d?: string) => string;
   onAddToCollection?: () => void;
   onConverted?: () => void;
@@ -987,6 +991,7 @@ function AnnotationCard({
   const selector = item.target?.selector;
   const quote = selector?.exact || '';
   const isHighlight = (item as any).type === 'Highlight';
+  const isOwned = sessionDid && author.did === sessionDid;
   const highlightColor = item.color || (isHighlight ? '#fbbf24' : 'var(--accent)');
 
   async function handleConvert() {
@@ -1043,7 +1048,7 @@ function AnnotationCard({
               </span>
             )}
             <div className="ml-auto flex items-center gap-0.5">
-              {isHighlight && !showNoteInput && (
+              {isHighlight && isOwned && !showNoteInput && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

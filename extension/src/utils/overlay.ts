@@ -214,33 +214,60 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
 
     const truncatedQuote = quoteText.length > 150 ? quoteText.slice(0, 150) + '...' : quoteText;
 
-    composeModal.innerHTML = `
-        <div class="compose-header">
-          <span class="compose-title">New Annotation</span>
-          <button class="compose-close">${Icons.close}</button>
-        </div>
-        <div class="compose-body">
-          <div class="inline-compose-quote">"${escapeHtml(truncatedQuote)}"</div>
-          <textarea class="inline-compose-textarea" placeholder="Write your annotation..."></textarea>
-        </div>
-        <div class="compose-footer">
-          <button class="btn-cancel">Cancel</button>
-          <button class="btn-submit">Post</button>
-        </div>
-      `;
+    const header = document.createElement('div');
+    header.className = 'compose-header';
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'compose-title';
+    titleSpan.textContent = 'New Annotation';
+    header.appendChild(titleSpan);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'compose-close';
+    closeBtn.innerHTML = Icons.close;
+    header.appendChild(closeBtn);
+
+    composeModal.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'compose-body';
+
+    const quoteDiv = document.createElement('div');
+    quoteDiv.className = 'inline-compose-quote';
+    quoteDiv.textContent = `"${truncatedQuote}"`;
+    body.appendChild(quoteDiv);
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'inline-compose-textarea';
+    textarea.placeholder = 'Write your annotation...';
+    body.appendChild(textarea);
+
+    composeModal.appendChild(body);
+
+    const footer = document.createElement('div');
+    footer.className = 'compose-footer';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn-cancel';
+    cancelBtn.textContent = 'Cancel';
+    footer.appendChild(cancelBtn);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'btn-submit';
+    submitBtn.textContent = 'Post';
+    footer.appendChild(submitBtn);
+
+    composeModal.appendChild(footer);
 
     composeModal.querySelector('.compose-close')?.addEventListener('click', () => {
       composeModal?.remove();
       composeModal = null;
     });
 
-    composeModal.querySelector('.btn-cancel')?.addEventListener('click', () => {
+    cancelBtn.addEventListener('click', () => {
       composeModal?.remove();
       composeModal = null;
     });
-
-    const textarea = composeModal.querySelector('.inline-compose-textarea') as HTMLTextAreaElement;
-    const submitBtn = composeModal.querySelector('.btn-submit') as HTMLButtonElement;
 
     submitBtn.addEventListener('click', async () => {
       const text = textarea?.value.trim();
@@ -362,10 +389,14 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
 
     const toast = document.createElement('div');
     toast.className = `margin-toast ${type === 'success' ? 'toast-success' : ''}`;
-    toast.innerHTML = `
-        <span class="toast-icon">${type === 'success' ? Icons.check : Icons.close}</span>
-        <span>${message}</span>
-      `;
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toast-icon';
+    iconSpan.innerHTML = type === 'success' ? Icons.check : Icons.close;
+    toast.appendChild(iconSpan);
+
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = message;
+    toast.appendChild(msgSpan);
 
     container.appendChild(toast);
 
@@ -844,7 +875,7 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
     });
 
     popoverEl.querySelectorAll('.btn-share').forEach((btn) => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', async (_e) => {
         const text = (btn as HTMLElement).getAttribute('data-text') || '';
         try {
           await navigator.clipboard.writeText(text);
