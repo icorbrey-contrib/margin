@@ -48,6 +48,7 @@ import {
   Eye,
   EyeOff,
   XCircle,
+  Upload,
 } from "lucide-react";
 import {
   Avatar,
@@ -59,6 +60,7 @@ import {
 } from "../../components/ui";
 import { AppleIcon } from "../../components/common/Icons";
 import { Link } from "react-router-dom";
+import { HighlightImporter } from "./HighlightImporter";
 
 export default function Settings() {
   const user = useStore($user);
@@ -213,6 +215,18 @@ export default function Settings() {
               onCheckedChange={setDisableExternalLinkWarning}
             />
           </div>
+        </section>
+
+        <section className="card p-5">
+          <h2 className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Upload size={16} />
+            Batch Import Highlights
+          </h2>
+          <p className="text-sm text-surface-500 dark:text-surface-400 mb-4">
+            Upload highlights from CSV. Required: url, text. Optional: title,
+            tags, color, created_at
+          </p>
+          <HighlightImporter />
         </section>
 
         <section className="card p-5">
