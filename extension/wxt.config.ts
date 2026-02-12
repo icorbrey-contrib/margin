@@ -40,12 +40,12 @@ export default defineConfig({
         128: '/icons/icon-128.png',
       },
       commands: {
-        'open-sidebar': {
+        'toggle-sidebar': {
           suggested_key: {
             default: 'Alt+M',
             mac: 'Alt+M',
           },
-          description: 'Open Margin sidebar',
+          description: 'Toggle Margin sidebar',
         },
         'annotate-selection': {
           suggested_key: {

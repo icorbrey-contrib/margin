@@ -340,20 +340,37 @@ export default defineBackground(() => {
     }
   }
 
+  let sidePanelOpen = false;
+
+  browser.runtime.onConnect.addListener((port) => {
+    if (port.name === 'sidepanel') {
+      sidePanelOpen = true;
+      port.onDisconnect.addListener(() => {
+        sidePanelOpen = false;
+      });
+    }
+  });
+
   browser.commands?.onCommand.addListener((command) => {
-    if (command === 'open-sidebar') {
+    if (command === 'toggle-sidebar') {
       const browserAny = browser as any;
       if (browserAny.sidePanel) {
         chrome.windows.getCurrent((win) => {
           if (win?.id) {
-            browserAny.sidePanel.open({ windowId: win.id }).catch((err: Error) => {
-              console.error('Could not open side panel:', err);
-            });
+            if (sidePanelOpen && typeof browserAny.sidePanel.close === 'function') {
+              browserAny.sidePanel.close({ windowId: win.id }).catch((err: Error) => {
+                console.error('Could not close side panel:', err);
+              });
+            } else {
+              browserAny.sidePanel.open({ windowId: win.id }).catch((err: Error) => {
+                console.error('Could not open side panel:', err);
+              });
+            }
           }
         });
       } else if (browserAny.sidebarAction) {
-        browserAny.sidebarAction.open().catch((err: Error) => {
-          console.warn('Could not open Firefox sidebar:', err);
+        browserAny.sidebarAction.toggle().catch((err: Error) => {
+          console.warn('Could not toggle Firefox sidebar:', err);
         });
       }
       return;
