@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams, Navigate } from "react-router-dom";
 import { AtSign } from "lucide-react";
-import { BlueskyIcon, MarginIcon } from "../../components/common/Icons";
 import SignUpModal from "../../components/modals/SignUpModal";
 import {
   searchActors,
@@ -47,6 +46,8 @@ export default function Login() {
     "altq.net",
   ];
 
+  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
+
   useEffect(() => {
     const cycleText = () => {
       setMorphClass("opacity-0 translate-y-2 blur-sm");
@@ -70,6 +71,12 @@ export default function Login() {
           if (!handle.includes(".")) {
             const data = await searchActors(handle);
             setSuggestions(data.actors || []);
+
+            const exactMatch = data.actors?.find((s) => s.handle === handle);
+            if (exactMatch) {
+              setSelectedAvatar(exactMatch.avatar || null);
+            }
+
             setShowSuggestions(true);
             setSelectedIndex(-1);
           }
@@ -116,6 +123,7 @@ export default function Login() {
   const selectSuggestion = (actor: ActorSearchItem) => {
     isSelectionRef.current = true;
     setHandle(actor.handle);
+    setSelectedAvatar(actor.avatar || null);
     setSuggestions([]);
     setShowSuggestions(false);
     inputRef.current?.blur();
@@ -148,32 +156,35 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950 p-4">
-      <div className="w-full max-w-[440px] flex flex-col items-center">
-        <div className="flex items-center justify-center gap-6 mb-12">
-          <MarginIcon size={60} />
-          <span className="text-3xl font-light text-surface-300 dark:text-surface-600 pb-1">
-            ×
-          </span>
-          <div className="text-[#0285FF]">
-            <BlueskyIcon size={60} />
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-surface-100 dark:bg-surface-800 p-4">
+      <div className="w-full max-w-[440px] bg-white dark:bg-surface-900 rounded-2xl border border-surface-200/60 dark:border-surface-800 p-8 shadow-sm dark:shadow-none">
+        <div className="flex flex-col items-center mb-8">
+          <h1 className="text-2xl font-bold font-display text-surface-900 dark:text-white text-center leading-snug">
+            Sign in with your <br />
+            <span
+              className={`inline-block transition-all duration-400 ease-out text-transparent bg-clip-text bg-gradient-to-r from-[#027bff] to-[#0285FF] ${morphClass}`}
+            >
+              {providers[providerIndex]}
+            </span>{" "}
+            handle
+          </h1>
         </div>
 
-        <h1 className="text-2xl font-bold font-display text-surface-900 dark:text-white mb-8 text-center leading-relaxed">
-          Sign in with your <br />
-          <span
-            className={`inline-block transition-all duration-400 ease-out text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-600 ${morphClass}`}
-          >
-            {providers[providerIndex]}
-          </span>{" "}
-          handle
-        </h1>
-
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
-          <div className="relative">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 dark:text-surface-500">
-              <AtSign size={20} className="stroke-[2.5]" />
+        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+          <div className="relative group">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 dark:text-surface-500 transition-colors pointer-events-none">
+              {selectedAvatar ? (
+                <Avatar
+                  src={selectedAvatar}
+                  size="xs"
+                  className="ring-2 ring-white dark:ring-surface-900 shadow-sm"
+                />
+              ) : (
+                <AtSign
+                  size={20}
+                  className="stroke-[2.5] group-focus-within:text-[#027bff]"
+                />
+              )}
             </div>
             <input
               ref={inputRef}
@@ -182,6 +193,7 @@ export default function Login() {
               onChange={(e) => {
                 const val = e.target.value;
                 setHandle(val);
+                if (selectedAvatar) setSelectedAvatar(null);
                 if (val.length < 3) {
                   setSuggestions([]);
                   setShowSuggestions(false);
@@ -195,7 +207,7 @@ export default function Login() {
                 setShowSuggestions(true)
               }
               placeholder="handle.bsky.social"
-              className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl shadow-sm outline-none focus:border-primary-500 dark:focus:border-primary-400 focus:ring-4 focus:ring-primary-500/10 transition-all font-medium text-lg text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500"
+              className="w-full pl-12 pr-4 py-3.5 bg-surface-50 dark:bg-surface-950 border border-surface-200 dark:border-surface-700 rounded-xl focus:border-[#027bff] dark:focus:border-[#027bff] outline-none focus:ring-4 focus:ring-[#027bff]/10 transition-all font-medium text-lg text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500"
               autoCapitalize="none"
               autoCorrect="off"
               autoComplete="off"
@@ -206,7 +218,7 @@ export default function Login() {
             {showSuggestions && suggestions.length > 0 && (
               <div
                 ref={suggestionsRef}
-                className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white/90 dark:bg-surface-900/95 backdrop-blur-xl border border-surface-200 dark:border-surface-700 rounded-xl shadow-xl overflow-hidden z-50 animate-fade-in max-h-[300px] overflow-y-auto"
+                className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-xl shadow-xl overflow-hidden z-50 animate-fade-in max-h-[300px] overflow-y-auto"
               >
                 {suggestions.map((actor, index) => (
                   <button
@@ -231,7 +243,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg border border-red-100 dark:border-red-800 text-center font-medium">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg border border-red-100 dark:border-red-800 text-center font-medium animate-fade-in">
               {error}
             </div>
           )}
@@ -239,30 +251,29 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading || !handle}
-            className="w-full py-3.5 bg-primary-600 dark:bg-primary-500 hover:bg-primary-700 dark:hover:bg-primary-400 text-white rounded-xl font-bold text-lg shadow-lg shadow-primary-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[#027bff] hover:bg-[#0269d9] active:scale-[0.98] text-white rounded-xl font-bold text-lg shadow-md shadow-[#027bff]/20 focus:outline-none focus:ring-4 focus:ring-[#027bff]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
           >
             {loading ? "Connecting..." : "Continue"}
           </button>
 
-          <p className="text-center text-sm text-surface-400 dark:text-surface-500 mt-2">
+          <p className="text-center text-sm text-surface-400 dark:text-surface-500 mt-2 leading-relaxed">
             By signing in, you agree to our{" "}
             <Link
               to="/terms"
-              className="text-surface-900 dark:text-white hover:underline"
+              className="text-surface-900 dark:text-white hover:underline font-medium hover:text-[#027bff] dark:hover:text-[#027bff] transition-colors"
             >
               Terms of Service
             </Link>{" "}
             and{" "}
             <Link
               to="/privacy"
-              className="text-surface-900 dark:text-white hover:underline"
+              className="text-surface-900 dark:text-white hover:underline font-medium hover:text-[#027bff] dark:hover:text-[#027bff] transition-colors"
             >
               Privacy Policy
             </Link>
-            .
           </p>
 
-          <div className="flex items-center gap-4 py-2">
+          <div className="flex items-center gap-4 py-2 opacity-50">
             <div className="h-px bg-surface-200 dark:bg-surface-700 flex-1" />
             <span className="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider">
               or
@@ -273,7 +284,7 @@ export default function Login() {
           <button
             type="button"
             onClick={() => setShowSignUp(true)}
-            className="w-full py-3.5 bg-transparent border-2 border-surface-200 dark:border-surface-700 hover:border-surface-400 dark:hover:border-surface-500 hover:bg-surface-50 dark:hover:bg-surface-900 text-surface-700 dark:text-surface-300 rounded-xl font-bold transition-all"
+            className="w-full py-3.5 bg-transparent border border-surface-200 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white rounded-xl font-bold transition-all text-sm"
           >
             Create New Account
           </button>

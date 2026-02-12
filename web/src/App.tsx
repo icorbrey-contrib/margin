@@ -27,6 +27,7 @@ import {
 } from "./routes/wrappers";
 import About from "./views/About";
 import AdminModeration from "./views/core/AdminModeration";
+import NotFound from "./views/NotFound";
 
 function UrlRedirect() {
   const [searchParams] = useSearchParams();
@@ -241,7 +242,7 @@ export default function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

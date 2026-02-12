@@ -11,53 +11,47 @@ func (db *DB) GetTrendingTags(limit int) ([]TrendingTag, error) {
 	var query string
 	if db.driver == "postgres" {
 		query = `
-			SELECT tag, SUM(cnt) as count FROM (
-				SELECT value as tag, COUNT(*) as cnt
+			SELECT tag, COUNT(*) as count FROM (
+				SELECT value as tag, author_did
 				FROM annotations, json_array_elements_text(tags_json::json) as value
 				WHERE tags_json IS NOT NULL AND tags_json != '' AND tags_json != '[]'
 					AND created_at > NOW() - INTERVAL '14 days'
-				GROUP BY tag
 				UNION ALL
-				SELECT value as tag, COUNT(*) as cnt
+				SELECT value as tag, author_did
 				FROM highlights, json_array_elements_text(tags_json::json) as value
 				WHERE tags_json IS NOT NULL AND tags_json != '' AND tags_json != '[]'
 					AND created_at > NOW() - INTERVAL '14 days'
-				GROUP BY tag
 				UNION ALL
-				SELECT value as tag, COUNT(*) as cnt
+				SELECT value as tag, author_did
 				FROM bookmarks, json_array_elements_text(tags_json::json) as value
 				WHERE tags_json IS NOT NULL AND tags_json != '' AND tags_json != '[]'
 					AND created_at > NOW() - INTERVAL '14 days'
-				GROUP BY tag
 			) combined
 			GROUP BY tag
-			HAVING SUM(cnt) >= 2
+			HAVING COUNT(DISTINCT author_did) >= 3
 			ORDER BY count DESC
 			LIMIT $1
 		`
 	} else {
 		query = `
-			SELECT tag, SUM(cnt) as count FROM (
-				SELECT json_each.value as tag, COUNT(*) as cnt
+			SELECT tag, COUNT(*) as count FROM (
+				SELECT json_each.value as tag, author_did
 				FROM annotations, json_each(annotations.tags_json)
 				WHERE tags_json IS NOT NULL AND tags_json != '' AND tags_json != '[]'
 					AND created_at > datetime('now', '-14 days')
-				GROUP BY tag
 				UNION ALL
-				SELECT json_each.value as tag, COUNT(*) as cnt
+				SELECT json_each.value as tag, author_did
 				FROM highlights, json_each(highlights.tags_json)
 				WHERE tags_json IS NOT NULL AND tags_json != '' AND tags_json != '[]'
 					AND created_at > datetime('now', '-14 days')
-				GROUP BY tag
 				UNION ALL
-				SELECT json_each.value as tag, COUNT(*) as cnt
+				SELECT json_each.value as tag, author_did
 				FROM bookmarks, json_each(bookmarks.tags_json)
 				WHERE tags_json IS NOT NULL AND tags_json != '' AND tags_json != '[]'
 					AND created_at > datetime('now', '-14 days')
-				GROUP BY tag
 			) combined
 			GROUP BY tag
-			HAVING SUM(cnt) >= 2
+			HAVING COUNT(DISTINCT author_did) >= 3
 			ORDER BY count DESC
 			LIMIT ?
 		`

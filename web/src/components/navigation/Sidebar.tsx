@@ -87,9 +87,6 @@ export default function Sidebar() {
           className="px-3 hover:opacity-80 transition-opacity w-fit flex items-center gap-2.5"
         >
           <img src="/logo.svg" alt="Margin" className="w-8 h-8" />
-          <span className="font-display font-bold text-lg text-surface-900 dark:text-white tracking-tight hidden lg:inline">
-            Margin
-          </span>
         </Link>
 
         <nav className="flex flex-col gap-0.5">
