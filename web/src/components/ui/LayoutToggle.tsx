@@ -19,7 +19,7 @@ export default function LayoutToggle({ className }: { className?: string }) {
   return (
     <div
       className={clsx(
-        "inline-flex items-center rounded-lg border border-surface-200 dark:border-surface-700 p-0.5 bg-surface-100 dark:bg-surface-800/60",
+        "inline-flex items-center rounded-lg border border-surface-200 dark:border-surface-700 p-0.5 bg-surface-50 dark:bg-surface-800/60",
         className,
       )}
     >

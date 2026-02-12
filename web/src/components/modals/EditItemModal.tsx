@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, ShieldAlert } from "lucide-react";
 import {
   updateAnnotation,
   updateHighlight,
   updateBookmark,
+  sessionAtom,
+  getUserTags,
+  getTrendingTags,
 } from "../../api/client";
 import type { AnnotationItem, ContentLabelValue } from "../../types";
+import TagInput from "../ui/TagInput";
 
 const SELF_LABEL_OPTIONS: { value: ContentLabelValue; label: string }[] = [
   { value: "sexual", label: "Sexual" },
@@ -58,7 +62,7 @@ function EditItemModalContent({
 }: Omit<EditItemModalProps, "isOpen">) {
   const [text, setText] = useState(item.body?.value || "");
   const [tags, setTags] = useState<string[]>(item.tags || []);
-  const [tagInput, setTagInput] = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [color, setColor] = useState(item.color || "yellow");
   const [title, setTitle] = useState(item.title || item.target?.title || "");
   const [description, setDescription] = useState(item.description || "");
@@ -73,17 +77,27 @@ function EditItemModalContent({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const addTag = () => {
-    const t = tagInput.trim().toLowerCase();
-    if (t && !tags.includes(t)) {
-      setTags([...tags, t]);
+  useEffect(() => {
+    const session = sessionAtom.get();
+    if (session?.did) {
+      Promise.all([
+        getUserTags(session.did).catch(() => [] as string[]),
+        getTrendingTags(50)
+          .then((tags) => tags.map((t) => t.tag))
+          .catch(() => [] as string[]),
+      ]).then(([userTags, trendingTags]) => {
+        const seen = new Set(userTags);
+        const merged = [...userTags];
+        for (const t of trendingTags) {
+          if (!seen.has(t)) {
+            merged.push(t);
+            seen.add(t);
+          }
+        }
+        setTagSuggestions(merged);
+      });
     }
-    setTagInput("");
-  };
-
-  const removeTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
-  };
+  }, []);
 
   const toggleLabel = (val: ContentLabelValue) => {
     setSelfLabels((prev) =>
@@ -262,44 +276,12 @@ function EditItemModalContent({
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
               Tags
             </label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-medium"
-                >
-                  #{tag}
-                  <button
-                    onClick={() => removeTag(tag)}
-                    className="hover:text-red-500 transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTag();
-                  }
-                }}
-                className="flex-1 px-3 py-1.5 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 text-surface-900 dark:text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Add a tag..."
-              />
-              <button
-                onClick={addTag}
-                disabled={!tagInput.trim()}
-                className="px-3 py-1.5 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                Add
-              </button>
-            </div>
+            <TagInput
+              tags={tags}
+              onChange={setTags}
+              suggestions={tagSuggestions}
+              placeholder="Add a tag..."
+            />
           </div>
 
           <div>

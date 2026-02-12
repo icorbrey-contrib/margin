@@ -149,7 +149,7 @@ export default function MasonryFeed({
       )}
 
       {showTabs && (
-        <div className="sticky top-0 z-10 bg-surface-50/95 dark:bg-surface-950/95 backdrop-blur-sm pb-4 mb-2 -mx-1 px-1 pt-1">
+        <div className="sticky top-0 z-10 bg-white/95 dark:bg-surface-800/95 backdrop-blur-sm pb-4 mb-2 -mx-1 px-1 pt-1">
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <Tabs

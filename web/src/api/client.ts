@@ -369,15 +369,17 @@ export async function createBookmark({
   url,
   title,
   description,
+  tags,
 }: {
   url: string;
   title?: string;
   description?: string;
+  tags?: string[];
 }) {
   try {
     const res = await apiRequest("/api/bookmarks", {
       method: "POST",
-      body: JSON.stringify({ url, title, description }),
+      body: JSON.stringify({ url, title, description, tags }),
     });
     if (!res.ok) throw new Error(await res.text());
     const raw = await res.json();
@@ -772,9 +774,9 @@ export interface Tag {
   count: number;
 }
 
-export async function getTrendingTags(limit = 10): Promise<Tag[]> {
+export async function getTrendingTags(limit = 50): Promise<Tag[]> {
   try {
-    const res = await apiRequest(`/api/tags/trending?limit=${limit}`, {
+    const res = await apiRequest(`/api/trending-tags?limit=${limit}`, {
       skipAuthRedirect: true,
     });
     if (!res.ok) return [];
@@ -782,6 +784,20 @@ export async function getTrendingTags(limit = 10): Promise<Tag[]> {
     return Array.isArray(data) ? data : data.tags || [];
   } catch (e) {
     console.error("Failed to fetch trending tags:", e);
+    return [];
+  }
+}
+
+export async function getUserTags(did: string, limit = 50): Promise<string[]> {
+  try {
+    const res = await apiRequest(`/api/users/${did}/tags?limit=${limit}`, {
+      skipAuthRedirect: true,
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).map((t: Tag) => t.tag);
+  } catch (e) {
+    console.error("Failed to fetch user tags:", e);
     return [];
   }
 }

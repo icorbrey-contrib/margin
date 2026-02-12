@@ -23,7 +23,7 @@ export default function RightSidebar() {
   };
 
   useEffect(() => {
-    getTrendingTags().then(setTags);
+    getTrendingTags(10).then(setTags);
   }, []);
 
   const extensionLink =
@@ -34,7 +34,7 @@ export default function RightSidebar() {
         : "https://chromewebstore.google.com/detail/margin/cgpmbiiagnehkikhcbnhiagfomajncpa";
 
   return (
-    <aside className="hidden xl:block w-[280px] shrink-0 sticky top-0 h-screen overflow-y-auto px-5 py-6 border-l border-surface-200/60 dark:border-surface-800/60">
+    <aside className="hidden xl:block w-[320px] shrink-0 sticky top-0 h-screen overflow-y-auto px-6 py-6">
       <div className="space-y-5">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -85,7 +85,7 @@ export default function RightSidebar() {
                 <a
                   key={t.tag}
                   href={`/home?tag=${encodeURIComponent(t.tag)}`}
-                  className="px-2 py-2.5 hover:bg-surface-100 dark:hover:bg-surface-800/60 rounded-lg transition-colors group"
+                  className="px-2 py-2.5 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-lg transition-colors group"
                 >
                   <div className="font-semibold text-sm text-surface-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                     #{t.tag}

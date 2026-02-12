@@ -26,6 +26,7 @@ export interface Annotation {
   };
   selector?: TextSelector;
   color?: string;
+  tags?: string[];
   created?: string;
   createdAt?: string;
   creator?: Author;
@@ -47,6 +48,7 @@ export interface Bookmark {
   title?: string;
   description?: string;
   image?: string;
+  tags?: string[];
   createdAt?: string;
 }
 
@@ -58,6 +60,7 @@ export interface Highlight {
     selector?: TextSelector;
   };
   color?: string;
+  tags?: string[];
   title?: string;
   createdAt?: string;
 }

@@ -255,7 +255,7 @@ export default function Feed({
       )}
 
       {showTabs && (
-        <div className="sticky top-0 z-10 bg-surface-50/95 dark:bg-surface-950/95 backdrop-blur-sm pb-3 mb-2 -mx-1 px-1 pt-1 space-y-2">
+        <div className="sticky top-0 z-10 bg-white/95 dark:bg-surface-800/95 backdrop-blur-sm pb-3 mb-2 -mx-1 px-1 pt-1 space-y-2">
           {!tag && (
             <Tabs
               tabs={tabs}

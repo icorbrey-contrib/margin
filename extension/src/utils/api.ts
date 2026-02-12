@@ -127,6 +127,7 @@ export async function createAnnotation(data: {
   text: string;
   title?: string;
   selector?: TextSelector;
+  tags?: string[];
 }) {
   try {
     const res = await apiRequest('/annotations', {
@@ -136,6 +137,7 @@ export async function createAnnotation(data: {
         text: data.text,
         title: data.title,
         selector: data.selector,
+        tags: data.tags,
       }),
     });
 
@@ -150,11 +152,11 @@ export async function createAnnotation(data: {
   }
 }
 
-export async function createBookmark(data: { url: string; title?: string }) {
+export async function createBookmark(data: { url: string; title?: string; tags?: string[] }) {
   try {
     const res = await apiRequest('/bookmarks', {
       method: 'POST',
-      body: JSON.stringify({ url: data.url, title: data.title }),
+      body: JSON.stringify({ url: data.url, title: data.title, tags: data.tags }),
     });
 
     if (!res.ok) {
@@ -173,6 +175,7 @@ export async function createHighlight(data: {
   title?: string;
   selector: TextSelector;
   color?: string;
+  tags?: string[];
 }) {
   try {
     const res = await apiRequest('/highlights', {
@@ -182,6 +185,7 @@ export async function createHighlight(data: {
         title: data.title,
         selector: data.selector,
         color: data.color,
+        tags: data.tags,
       }),
     });
 
@@ -281,6 +285,30 @@ export async function deleteHighlight(uri: string) {
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
+  }
+}
+
+export async function getUserTags(did: string) {
+  try {
+    const res = await apiRequest(`/users/${did}/tags?limit=50`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).map((t: { tag: string }) => t.tag);
+  } catch (error) {
+    console.error('Get user tags error:', error);
+    return [];
+  }
+}
+
+export async function getTrendingTags() {
+  try {
+    const res = await apiRequest('/trending-tags?limit=50');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).map((t: { tag: string }) => t.tag);
+  } catch (error) {
+    console.error('Get trending tags error:', error);
+    return [];
   }
 }
 

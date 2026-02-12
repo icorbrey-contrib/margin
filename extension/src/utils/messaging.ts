@@ -13,20 +13,32 @@ interface ProtocolMap {
 
   getAnnotations(data: { url: string }): Annotation[];
   activateOnPdf(data: { tabId: number; url: string }): { redirected: boolean };
-  createAnnotation(data: { url: string; text: string; title?: string; selector?: TextSelector }): {
+  createAnnotation(data: {
+    url: string;
+    text: string;
+    title?: string;
+    selector?: TextSelector;
+    tags?: string[];
+  }): {
     success: boolean;
     data?: Annotation;
     error?: string;
   };
 
-  createBookmark(data: { url: string; title?: string }): {
+  createBookmark(data: { url: string; title?: string; tags?: string[] }): {
     success: boolean;
     data?: Bookmark;
     error?: string;
   };
   getUserBookmarks(data: { did: string }): Bookmark[];
 
-  createHighlight(data: { url: string; title?: string; selector: TextSelector; color?: string }): {
+  createHighlight(data: {
+    url: string;
+    title?: string;
+    selector: TextSelector;
+    color?: string;
+    tags?: string[];
+  }): {
     success: boolean;
     data?: Highlight;
     error?: string;
@@ -59,6 +71,9 @@ interface ProtocolMap {
   }): { success: boolean; error?: string };
 
   getOverlayEnabled(): boolean;
+
+  getUserTags(data: { did: string }): string[];
+  getTrendingTags(): string[];
 
   openAppUrl(data: { path: string }): void;
 

@@ -1,45 +1,45 @@
 export const overlayStyles = /* css */ `
 :host { 
   all: initial; 
-  --bg-primary: #020617;
-  --bg-secondary: #0f172a;
-  --bg-tertiary: #1e293b;
-  --bg-card: #0f172a;
-  --bg-elevated: #1e293b;
-  --bg-hover: #334155;
+  --bg-primary: #0c0c0c;
+  --bg-secondary: #141414;
+  --bg-tertiary: #1c1c1c;
+  --bg-card: #161616;
+  --bg-elevated: #1e1e1e;
+  --bg-hover: #262626;
   
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --border: rgba(148, 163, 184, 0.12);
+  --text-primary: #e8e8e3;
+  --text-secondary: #a1a09a;
+  --text-tertiary: #6b6a65;
+  --border: rgba(255, 255, 255, 0.08);
   
-  --accent: #8b5cf6;
-  --accent-hover: #a78bfa;
-  --accent-subtle: rgba(139, 92, 246, 0.15);
+  --accent: #7aa2f7;
+  --accent-hover: #9bbcff;
+  --accent-subtle: rgba(122, 162, 247, 0.14);
   
   --highlight-yellow: #fbbf24;
   --highlight-green: #34d399;
   --highlight-blue: #60a5fa;
   --highlight-pink: #f472b6;
-  --highlight-purple: #a78bfa;
+  --highlight-purple: #9bbcff;
 }
 
 :host(.light) {
-  --bg-primary: #f8fafc;
+  --bg-primary: #fafaf8;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
+  --bg-tertiary: #f2f2ef;
   --bg-card: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-hover: #e2e8f0;
+  --bg-hover: #eaeae6;
   
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
-  --border: rgba(100, 116, 139, 0.15);
+  --text-primary: #1a1a18;
+  --text-secondary: #6b6a65;
+  --text-tertiary: #a1a09a;
+  --border: rgba(0, 0, 0, 0.08);
   
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
-  --accent-subtle: rgba(124, 58, 237, 0.12);
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-subtle: rgba(59, 130, 246, 0.08);
 }
 
 .margin-overlay {
@@ -527,6 +527,114 @@ export const overlayStyles = /* css */ `
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+.compose-tags-section {
+  margin-top: 12px;
+  position: relative;
+}
+
+.compose-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 34px;
+  cursor: text;
+  transition: border-color 0.15s;
+}
+
+.compose-tags-container:focus-within {
+  border-color: var(--accent);
+}
+
+.compose-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.compose-tag-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.compose-tag-remove:hover {
+  opacity: 1;
+}
+
+.compose-tag-remove svg {
+  width: 10px;
+  height: 10px;
+}
+
+.compose-tag-input {
+  flex: 1;
+  min-width: 60px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 0;
+}
+
+.compose-tag-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.compose-tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  overflow: hidden;
+  z-index: 10;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.compose-tag-suggestion-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.compose-tag-suggestion-item:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
 }
 
 .margin-hover-indicator {

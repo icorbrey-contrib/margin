@@ -14,6 +14,8 @@ import {
   getItemCollections,
   getReplies,
   createReply,
+  getUserTags,
+  getTrendingTags,
 } from '@/utils/api';
 import { overlayEnabledItem, apiUrlItem } from '@/utils/storage';
 
@@ -130,6 +132,14 @@ export default defineBackground(() => {
     return await overlayEnabledItem.getValue();
   });
 
+  onMessage('getUserTags', async ({ data }) => {
+    return await getUserTags(data.did);
+  });
+
+  onMessage('getTrendingTags', async () => {
+    return await getTrendingTags();
+  });
+
   onMessage('openAppUrl', async ({ data }) => {
     const apiUrl = await apiUrlItem.getValue();
     await browser.tabs.create({ url: `${apiUrl}${data.path}` });
@@ -141,12 +151,12 @@ export default defineBackground(() => {
 
     if (tabId) {
       await browser.action.setBadgeText({ text, tabId });
-      await browser.action.setBadgeBackgroundColor({ color: '#6366f1', tabId });
+      await browser.action.setBadgeBackgroundColor({ color: '#3b82f6', tabId });
     } else {
       const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         await browser.action.setBadgeText({ text, tabId: tab.id });
-        await browser.action.setBadgeBackgroundColor({ color: '#6366f1', tabId: tab.id });
+        await browser.action.setBadgeBackgroundColor({ color: '#3b82f6', tabId: tab.id });
       }
     }
   });

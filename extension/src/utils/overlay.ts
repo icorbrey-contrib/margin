@@ -47,6 +47,7 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
   const injectedStyles = new Set<string>();
   let overlayEnabled = true;
   let currentUserDid: string | null = null;
+  let cachedUserTags: string[] = [];
 
   function getPageUrl(): string {
     const pdfUrl = document.documentElement.dataset.marginPdfUrl;
@@ -79,6 +80,19 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
     .then((session) => {
       if (session.authenticated && session.did) {
         currentUserDid = session.did;
+        Promise.all([
+          sendMessage('getUserTags', { did: session.did }).catch(() => [] as string[]),
+          sendMessage('getTrendingTags', undefined).catch(() => [] as string[]),
+        ]).then(([userTags, trendingTags]) => {
+          const seen = new Set(userTags);
+          cachedUserTags = [...userTags];
+          for (const t of trendingTags) {
+            if (!seen.has(t)) {
+              cachedUserTags.push(t);
+              seen.add(t);
+            }
+          }
+        });
       }
     })
     .catch(() => {});
@@ -242,6 +256,97 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
     textarea.placeholder = 'Write your annotation...';
     body.appendChild(textarea);
 
+    const tagSection = document.createElement('div');
+    tagSection.className = 'compose-tags-section';
+
+    const tagContainer = document.createElement('div');
+    tagContainer.className = 'compose-tags-container';
+
+    const tagInput = document.createElement('input');
+    tagInput.type = 'text';
+    tagInput.className = 'compose-tag-input';
+    tagInput.placeholder = 'Add tags...';
+
+    const tagSuggestionsDropdown = document.createElement('div');
+    tagSuggestionsDropdown.className = 'compose-tag-suggestions';
+    tagSuggestionsDropdown.style.display = 'none';
+
+    const composeTags: string[] = [];
+
+    function renderTags() {
+      tagContainer.querySelectorAll('.compose-tag-pill').forEach((el) => el.remove());
+      composeTags.forEach((tag) => {
+        const pill = document.createElement('span');
+        pill.className = 'compose-tag-pill';
+        pill.innerHTML = `${escapeHtml(tag)} <button class="compose-tag-remove">${Icons.close}</button>`;
+        pill.querySelector('.compose-tag-remove')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = composeTags.indexOf(tag);
+          if (idx > -1) composeTags.splice(idx, 1);
+          renderTags();
+        });
+        tagContainer.insertBefore(pill, tagInput);
+      });
+      tagInput.placeholder = composeTags.length === 0 ? 'Add tags...' : '';
+    }
+
+    function addComposeTag(tag: string) {
+      const normalized = tag
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '');
+      if (normalized && !composeTags.includes(normalized) && composeTags.length < 10) {
+        composeTags.push(normalized);
+        renderTags();
+      }
+      tagInput.value = '';
+      tagSuggestionsDropdown.style.display = 'none';
+      tagInput.focus();
+    }
+
+    function showTagSuggestions() {
+      const query = tagInput.value.trim().toLowerCase();
+      if (!query) {
+        tagSuggestionsDropdown.style.display = 'none';
+        return;
+      }
+      const matches = cachedUserTags
+        .filter((t) => t.toLowerCase().includes(query) && !composeTags.includes(t))
+        .slice(0, 6);
+      if (matches.length === 0) {
+        tagSuggestionsDropdown.style.display = 'none';
+        return;
+      }
+      tagSuggestionsDropdown.innerHTML = matches
+        .map((t) => `<button class="compose-tag-suggestion-item">${escapeHtml(t)}</button>`)
+        .join('');
+      tagSuggestionsDropdown.style.display = 'block';
+      tagSuggestionsDropdown.querySelectorAll('.compose-tag-suggestion-item').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          addComposeTag(btn.textContent || '');
+        });
+      });
+    }
+
+    tagInput.addEventListener('input', showTagSuggestions);
+    tagInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        if (tagInput.value.trim()) addComposeTag(tagInput.value);
+      } else if (e.key === 'Backspace' && !tagInput.value && composeTags.length > 0) {
+        composeTags.pop();
+        renderTags();
+      } else if (e.key === 'Escape') {
+        tagSuggestionsDropdown.style.display = 'none';
+      }
+    });
+
+    tagContainer.appendChild(tagInput);
+    tagSection.appendChild(tagContainer);
+    tagSection.appendChild(tagSuggestionsDropdown);
+    body.appendChild(tagSection);
+
     composeModal.appendChild(body);
 
     const footer = document.createElement('div');
@@ -282,6 +387,7 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
           title: document.title,
           text,
           selector: { type: 'TextQuoteSelector', exact: quoteText },
+          tags: composeTags.length > 0 ? composeTags : undefined,
         });
 
         if (!res.success) {
@@ -339,13 +445,13 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
       const tempHighlight = new Highlight(range);
       const hlName = 'margin-scroll-flash';
       CSS.highlights.set(hlName, tempHighlight);
-      injectHighlightStyle(hlName, '#6366f1');
+      injectHighlightStyle(hlName, '#3b82f6');
 
       const flashStyle = document.createElement('style');
       flashStyle.textContent = `::highlight(${hlName}) {
           background-color: rgba(99, 102, 241, 0.25);
           text-decoration: underline;
-          text-decoration-color: #6366f1;
+          text-decoration-color: #3b82f6;
           text-decoration-thickness: 3px;
           text-underline-offset: 2px;
         }`;
@@ -359,7 +465,7 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
       try {
         const highlight = document.createElement('mark');
         highlight.style.cssText =
-          'background: rgba(99, 102, 241, 0.25); color: inherit; padding: 2px 0; border-radius: 2px; text-decoration: underline; text-decoration-color: #6366f1; text-decoration-thickness: 3px; transition: all 0.5s;';
+          'background: rgba(59, 130, 246, 0.25); color: inherit; padding: 2px 0; border-radius: 2px; text-decoration: underline; text-decoration-color: #3b82f6; text-decoration-thickness: 3px; transition: all 0.5s;';
         range.surroundContents(highlight);
 
         setTimeout(() => {
@@ -454,7 +560,7 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
         activeItems.push({ range, item });
 
         const isHighlight = (item as any).type === 'Highlight';
-        const defaultColor = isHighlight ? '#f59e0b' : '#6366f1';
+        const defaultColor = isHighlight ? '#f59e0b' : '#3b82f6';
         const color = item.color || defaultColor;
         if (!rangesByColor[color]) rangesByColor[color] = [];
         rangesByColor[color].push(range);
@@ -578,7 +684,7 @@ export async function initContentScript(ctx: { onInvalidated: (cb: () => void) =
             if (avatar) {
               return `<img src="${avatar}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid #09090b; margin-left: ${marginLeft};">`;
             } else {
-              return `<div style="width: 24px; height: 24px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: -apple-system, sans-serif; border: 2px solid #09090b; margin-left: ${marginLeft};">${handle[0]?.toUpperCase() || 'U'}</div>`;
+              return `<div style="width: 24px; height: 24px; border-radius: 50%; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: -apple-system, sans-serif; border: 2px solid #09090b; margin-left: ${marginLeft};">${handle[0]?.toUpperCase() || 'U'}</div>`;
             }
           })
           .join('');

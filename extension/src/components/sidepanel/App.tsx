@@ -4,6 +4,7 @@ import { themeItem, overlayEnabledItem } from '@/utils/storage';
 import type { MarginSession, Annotation, Bookmark, Highlight, Collection } from '@/utils/types';
 import { APP_URL } from '@/utils/types';
 import CollectionIcon from '@/components/CollectionIcon';
+import TagInput from '@/components/TagInput';
 
 type Tab = 'page' | 'bookmarks' | 'highlights' | 'collections';
 type PageFilter = 'all' | 'annotations' | 'highlights';
@@ -101,6 +102,8 @@ export function App() {
   const [collectionModalItem, setCollectionModalItem] = useState<string | null>(null);
   const [addingToCollection, setAddingToCollection] = useState<string | null>(null);
   const [containingCollections, setContainingCollections] = useState<Set<string>>(new Set());
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     checkSession();
@@ -116,6 +119,25 @@ export function App() {
       browser.tabs.onActivated.removeListener(loadCurrentTab);
     };
   }, []);
+
+  useEffect(() => {
+    if (session?.authenticated && session.did) {
+      Promise.all([
+        sendMessage('getUserTags', { did: session.did }).catch(() => [] as string[]),
+        sendMessage('getTrendingTags', undefined).catch(() => [] as string[]),
+      ]).then(([userTags, trendingTags]) => {
+        const seen = new Set(userTags);
+        const merged = [...userTags];
+        for (const t of trendingTags) {
+          if (!seen.has(t)) {
+            merged.push(t);
+            seen.add(t);
+          }
+        }
+        setTagSuggestions(merged);
+      });
+    }
+  }, [session]);
 
   useEffect(() => {
     if (session?.authenticated && currentUrl) {
@@ -279,9 +301,11 @@ export function App() {
         url: currentUrl,
         text: text.trim(),
         title: currentTitle,
+        tags: tags.length > 0 ? tags : undefined,
       });
       if (result.success) {
         setText('');
+        setTags([]);
         loadAnnotations();
       } else {
         alert('Failed to post annotation');
@@ -564,6 +588,9 @@ export function App() {
                 placeholder="Share your thoughts on this page..."
                 className="w-full p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl text-sm resize-none focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 min-h-[100px]"
               />
+              <div className="mt-2">
+                <TagInput tags={tags} onChange={setTags} suggestions={tagSuggestions} />
+              </div>
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handlePost}

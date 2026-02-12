@@ -3,6 +3,7 @@ import { sendMessage } from '@/utils/messaging';
 import { themeItem, apiUrlItem, overlayEnabledItem } from '@/utils/storage';
 import type { MarginSession, Annotation, Bookmark, Highlight, Collection } from '@/utils/types';
 import CollectionIcon from '@/components/CollectionIcon';
+import TagInput from '@/components/TagInput';
 import {
   Settings,
   ExternalLink,
@@ -53,6 +54,8 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [apiUrl, setApiUrl] = useState('https://margin.at');
   const [overlayEnabled, setOverlayEnabled] = useState(true);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     checkSession();
@@ -60,6 +63,25 @@ export function App() {
     loadTheme();
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (session?.authenticated && session.did) {
+      Promise.all([
+        sendMessage('getUserTags', { did: session.did }).catch(() => [] as string[]),
+        sendMessage('getTrendingTags', undefined).catch(() => [] as string[]),
+      ]).then(([userTags, trendingTags]) => {
+        const seen = new Set(userTags);
+        const merged = [...userTags];
+        for (const t of trendingTags) {
+          if (!seen.has(t)) {
+            merged.push(t);
+            seen.add(t);
+          }
+        }
+        setTagSuggestions(merged);
+      });
+    }
+  }, [session]);
 
   useEffect(() => {
     if (session?.authenticated && currentUrl) {
@@ -298,9 +320,11 @@ export function App() {
         url: currentUrl,
         text: text.trim(),
         title: currentTitle,
+        tags: tags.length > 0 ? tags : undefined,
       });
       if (result.success) {
         setText('');
+        setTags([]);
         loadAnnotations();
       } else {
         alert('Failed to post annotation');
@@ -625,14 +649,17 @@ export function App() {
             </div>
 
             <div className="p-4 border-b border-[var(--border)]">
-              <div className="relative">
+              <div>
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Share your thoughts on this page..."
-                  className="w-full p-3 pb-12 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl text-sm resize-none focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-subtle)] min-h-[90px]"
+                  className="w-full p-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl text-sm resize-none focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-subtle)] min-h-[90px]"
                 />
-                <div className="absolute bottom-3 right-3">
+                <div className="mt-2">
+                  <TagInput tags={tags} onChange={setTags} suggestions={tagSuggestions} />
+                </div>
+                <div className="flex justify-end mt-2">
                   <button
                     onClick={handlePost}
                     disabled={posting || !text.trim()}

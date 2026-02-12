@@ -77,6 +77,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/users/{did}/highlights", h.GetUserHighlights)
 		r.Get("/users/{did}/bookmarks", h.GetUserBookmarks)
 		r.Get("/users/{did}/targets", h.GetUserTargetItems)
+		r.Get("/users/{did}/tags", h.HandleGetUserTags)
+
+		r.Get("/trending-tags", h.HandleGetTrendingTags)
 
 		r.Get("/replies", h.GetReplies)
 		r.Get("/likes", h.GetLikeCount)

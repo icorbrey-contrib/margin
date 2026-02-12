@@ -1,7 +1,14 @@
-import React, { useState } from "react";
-import { createAnnotation, createHighlight } from "../../api/client";
+import React, { useState, useEffect } from "react";
+import {
+  createAnnotation,
+  createHighlight,
+  sessionAtom,
+  getUserTags,
+  getTrendingTags,
+} from "../../api/client";
 import type { Selector, ContentLabelValue } from "../../types";
 import { X, ShieldAlert } from "lucide-react";
+import TagInput from "../ui/TagInput";
 
 const SELF_LABEL_OPTIONS: { value: ContentLabelValue; label: string }[] = [
   { value: "sexual", label: "Sexual" },
@@ -27,13 +34,36 @@ export default function Composer({
 }: ComposerProps) {
   const [text, setText] = useState("");
   const [quoteText, setQuoteText] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [selector, setSelector] = useState(initialSelector);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showQuoteInput, setShowQuoteInput] = useState(false);
   const [selfLabels, setSelfLabels] = useState<ContentLabelValue[]>([]);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
+
+  useEffect(() => {
+    const session = sessionAtom.get();
+    if (session?.did) {
+      Promise.all([
+        getUserTags(session.did).catch(() => [] as string[]),
+        getTrendingTags(50)
+          .then((tags) => tags.map((t) => t.tag))
+          .catch(() => [] as string[]),
+      ]).then(([userTags, trendingTags]) => {
+        const seen = new Set(userTags);
+        const merged = [...userTags];
+        for (const t of trendingTags) {
+          if (!seen.has(t)) {
+            merged.push(t);
+            seen.add(t);
+          }
+        }
+        setTagSuggestions(merged);
+      });
+    }
+  }, []);
 
   const highlightedText =
     selector?.type === "TextQuoteSelector" ? selector.exact : null;
@@ -54,10 +84,7 @@ export default function Composer({
         };
       }
 
-      const tagList = tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
+      const tagList = tags.filter(Boolean);
 
       if (!text.trim()) {
         if (!finalSelector) throw new Error("No text selected");
@@ -84,6 +111,7 @@ export default function Composer({
 
       setText("");
       setQuoteText("");
+      setTags([]);
       setSelector(null);
       if (onSuccess) onSuccess();
     } catch (err) {
@@ -176,12 +204,11 @@ export default function Composer({
         disabled={loading}
       />
 
-      <input
-        type="text"
-        value={tags}
-        onChange={(e) => setTags(e.target.value)}
-        placeholder="Tags (comma separated)"
-        className="w-full p-2.5 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-400 outline-none text-sm"
+      <TagInput
+        tags={tags}
+        onChange={setTags}
+        suggestions={tagSuggestions}
+        placeholder="Add tags..."
         disabled={loading}
       />
 

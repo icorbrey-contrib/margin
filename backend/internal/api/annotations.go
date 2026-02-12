@@ -757,9 +757,10 @@ func (s *AnnotationService) CreateHighlight(w http.ResponseWriter, r *http.Reque
 }
 
 type CreateBookmarkRequest struct {
-	URL         string `json:"url"`
-	Title       string `json:"title,omitempty"`
-	Description string `json:"description,omitempty"`
+	URL         string   `json:"url"`
+	Title       string   `json:"title,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
 }
 
 func (s *AnnotationService) CreateBookmark(w http.ResponseWriter, r *http.Request) {
@@ -782,6 +783,9 @@ func (s *AnnotationService) CreateBookmark(w http.ResponseWriter, r *http.Reques
 
 	urlHash := db.HashURL(req.URL)
 	record := xrpc.NewBookmarkRecord(req.URL, urlHash, req.Title, req.Description)
+	if len(req.Tags) > 0 {
+		record.Tags = req.Tags
+	}
 
 	if err := record.Validate(); err != nil {
 		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
@@ -814,6 +818,13 @@ func (s *AnnotationService) CreateBookmark(w http.ResponseWriter, r *http.Reques
 		descPtr = &req.Description
 	}
 
+	var tagsJSONPtr *string
+	if len(req.Tags) > 0 {
+		tagsBytes, _ := json.Marshal(req.Tags)
+		tagsStr := string(tagsBytes)
+		tagsJSONPtr = &tagsStr
+	}
+
 	cid := result.CID
 	bookmark := &db.Bookmark{
 		URI:         result.URI,
@@ -822,6 +833,7 @@ func (s *AnnotationService) CreateBookmark(w http.ResponseWriter, r *http.Reques
 		SourceHash:  urlHash,
 		Title:       titlePtr,
 		Description: descPtr,
+		TagsJSON:    tagsJSONPtr,
 		CreatedAt:   time.Now(),
 		IndexedAt:   time.Now(),
 		CID:         &cid,
